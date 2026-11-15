@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
-import type { ComponentRequest } from '../design-system/component-request.service';
+import type { ComponentRequest, RequestActor } from '../component-requests/component-request.types';
 import { DocumentStore, VersionConflictError } from '../reviews/document-store';
 import { NOTIFICATION_STORE, Notification, NotificationType } from './notification.types';
 
@@ -116,14 +116,14 @@ export class NotificationService {
 
   // ---------- Component request notifications ----------
 
-  // Notify request creator when request is updated
-  notifyRequestUpdated(request: ComponentRequest, updatedBy: string): void {
-    if (request.requestedBy !== updatedBy) {
+  /** Tells the request's author someone else changed it */
+  notifyRequestUpdated(request: ComponentRequest, updatedBy: RequestActor): void {
+    if (request.requestedBy !== updatedBy.id) {
       this.notify({
         userId: request.requestedBy,
         type: 'request-updated',
         title: `Request "${request.title}" updated`,
-        message: `Your request has been updated by ${updatedBy}`,
+        message: `Your request has been updated by ${updatedBy.name}`,
         link: `/feedback?request=${request.id}`,
       });
     }
@@ -140,26 +140,16 @@ export class NotificationService {
     });
   }
 
-  // Notify when comment is added
-  notifyCommentAdded(request: ComponentRequest, commentAuthor: string): void {
-    // Notify request creator if not the commenter
-    if (request.requestedBy !== commentAuthor) {
+  /** Tells the author and the assignee (unless they wrote it) about a new comment */
+  notifyCommentAdded(request: ComponentRequest, commentAuthor: RequestActor): void {
+    const recipients = new Set([request.requestedBy, request.assignedTo].filter((id): id is string => !!id));
+    recipients.delete(commentAuthor.id);
+    for (const userId of recipients) {
       this.notify({
-        userId: request.requestedBy,
+        userId,
         type: 'request-commented',
         title: `New comment on "${request.title}"`,
-        message: `${commentAuthor} added a comment`,
-        link: `/feedback?request=${request.id}`,
-      });
-    }
-
-    // Notify assignee if different from creator and commenter
-    if (request.assignedTo && request.assignedTo !== commentAuthor && request.assignedTo !== request.requestedBy) {
-      this.notify({
-        userId: request.assignedTo,
-        type: 'request-commented',
-        title: `New comment on "${request.title}"`,
-        message: `${commentAuthor} added a comment`,
+        message: `${commentAuthor.name} added a comment`,
         link: `/feedback?request=${request.id}`,
       });
     }

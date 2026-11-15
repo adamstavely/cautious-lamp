@@ -140,7 +140,9 @@ Besides the routes above, these need a permission on the server (`403` otherwise
 | `POST /feature-flags`, `PUT /feature-flags/:id`, `PUT /feature-flags/:id/toggle`, `DELETE /feature-flags/:id`, `POST /feature-flags/enable-all` | `admin:system_health` |
 | `POST /performance/budgets`, `PUT`/`DELETE /performance/budgets/:id` | `admin:performance_analysis` |
 | `POST /roadmap/items`, `PUT`/`DELETE /roadmap/items/:id` | `roadmap:edit` |
-| Request triage: `PUT /requests/:id/status`, `PUT /requests/:id/assign`, `POST /requests/:id/merge`, and `PATCH /component-requests/:id/status`, `POST /component-requests/:id/{assign,approve,reject,promote}` | `roadmap:edit` (the frontend shows these actions to the same people) |
+| Component request triage: `PATCH /component-requests/:id/{status,priority}`, `POST`/`DELETE /component-requests/:id/assign`, `POST /component-requests/:id/{approve,reject,promote,link-component,unlink-component}` | `roadmap:edit` (the frontend shows these actions to the same people) |
+| `PUT /component-requests/:id` (title, description, use case only) | the request's author, while it is submitted, under review or needs more info |
+| `DELETE /component-requests/:id` | the request's author while it is open, or `roadmap:edit` |
 | `POST /components` | `component:create`, and the `editor` role in `workspaceId` if one is given. `isGlobal` is ignored: sharing is set through the workspace routes. |
 | `POST /components/:id/variants`, `DELETE /components/:id/variants/:name` | `component:edit`, and for a workspace's component the `editor` role in that workspace (see [Components and workspaces](#components-and-workspaces)) |
 | `PUT /components/:id/status`, `PUT /components/:id/deprecation`, `PUT /components/:id/dependencies` (lifecycle: status, deprecation with replacement and sunset date, dependencies) | `component:edit`, and for a workspace's component the `editor` role in that workspace. A replacement or dependency must be a component the caller can see; dependencies can't form a cycle. |

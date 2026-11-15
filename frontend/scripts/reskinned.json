@@ -33,6 +33,7 @@
     "src/components/admin/UserPicker.vue",
     "src/components/applications/ApplicationCapabilitiesForm.vue",
     "src/components/applications/ApplicationDetailsForm.vue",
+    "src/components/feedback/ComponentRequests.vue",
     "src/components/font-previewer/FontDetail.vue",
     "src/components/maps/BubbleMap.js",
     "src/components/maps/ChoroplethMap.js",
