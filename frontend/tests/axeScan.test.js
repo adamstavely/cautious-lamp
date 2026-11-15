@@ -2,7 +2,7 @@
 // rules that don't exist in axe-core, so axe.run rejected every scan.
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AXE_SCAN_OPTIONS } from '../src/utils/axeScan.js';
+import { AXE_SCAN_OPTIONS, axeCategoryState } from '../src/utils/axeScan.js';
 
 const FRAGMENTS = {
   chart: `<div class="rounded-lg shadow-sm border"><figure role="figure" aria-label="Sales"><canvas role="img" aria-label="Sales chart"></canvas><figcaption>Sales</figcaption></figure><table><thead><tr><th scope="col">Label</th><th scope="col">Value</th></tr></thead><tbody><tr><td>A</td><td>1</td></tr></tbody></table><button></button></div>`,
@@ -68,4 +68,30 @@ describe('AXE_SCAN_OPTIONS', () => {
       expect(ran).not.toContain('document-title');
     });
   }
+});
+
+// The generators' "Keyboard navigation" and "Screen reader" items used to be
+// hard-coded passes; they now come from the last real scan.
+describe('axeCategoryState', () => {
+  const violation = (id, tags) => ({ id, tags, nodes: [] });
+
+  it('is unchecked before a scan and after a failed one', () => {
+    expect(axeCategoryState(null, 'keyboard')).toBe('unchecked');
+    expect(axeCategoryState({ violations: [violation('scan-error', [])] }, 'screenReader')).toBe('unchecked');
+    expect(axeCategoryState({ violations: [], error: 'boom' }, 'keyboard')).toBe('unchecked');
+  });
+
+  it('fails only the category a violation belongs to', () => {
+    const results = { violations: [violation('button-name', ['cat.name-role-value', 'wcag2a'])] };
+    expect(axeCategoryState(results, 'screenReader')).toBe('fail');
+    expect(axeCategoryState(results, 'keyboard')).toBe('ok');
+    expect(axeCategoryState({ violations: [violation('scrollable-region-focusable', ['cat.keyboard'])] }, 'keyboard')).toBe('fail');
+  });
+
+  it('reflects a real scan of an unnamed button', async () => {
+    document.body.innerHTML = '<main><button></button></main>';
+    const results = await axe.run(document.body, AXE_SCAN_OPTIONS);
+    expect(axeCategoryState(results, 'screenReader')).toBe('fail');
+    document.body.innerHTML = '';
+  });
 });

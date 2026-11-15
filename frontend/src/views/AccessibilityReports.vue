@@ -100,7 +100,7 @@
                 :value="`${currentReport.trend.scoreChange >= 0 ? '+' : ''}${currentReport.trend.scoreChange.toFixed(1)}`"
                 :hint="`${currentReport.trend.fixedIssues} fixed, ${currentReport.trend.newIssues} new`"
               />
-              <UiStat v-else label="Trend" icon="move-right" value="–" hint="First report for this application." />
+              <UiStat v-else label="Trend" icon="move-right" value="–" :hint="currentReport.source === 'url' ? 'First scan of this URL.' : 'First pasted-HTML report for this application.'" />
             </div>
 
             <!-- Issues by category -->
@@ -263,7 +263,10 @@
                 <tr v-for="app in complianceSummary.applications" :key="app.applicationId">
                   <th scope="row" class="font-medium text-ink-strong">
                     <button v-if="app.latestReportId" type="button" class="link-button" @click="openReport(app.latestReportId)">{{ app.applicationName }}</button>
-                    <span v-else>{{ app.applicationName }}</span>
+                    <template v-else>
+                      {{ app.applicationName }}
+                      <span v-if="app.complianceScore !== null" class="block text-xs font-normal text-ink-muted">Its latest report belongs to another workspace</span>
+                    </template>
                   </th>
                   <td>
                     <span v-if="app.complianceScore !== null" class="text-lg font-semibold" :class="toneText(scoreTone(app.complianceScore))">{{ app.complianceScore }}%</span>
@@ -451,7 +454,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import jsPDF from 'jspdf';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
@@ -638,13 +641,31 @@ const loadReports = async () => {
   }
 };
 
-const loadSchedules = async () => {
+const loadSchedules = async ({ quiet = false } = {}) => {
   try {
+    const before = new Map(schedules.value.map((s) => [s.id, s.lastReportId]));
     const { data } = await apiClient.get('/api/v1/accessibility-reports/schedules');
     schedules.value = data;
+    // A scheduled run added a report since the last look: refresh the report list too
+    if (data.some((s) => s.lastReportId && before.has(s.id) && before.get(s.id) !== s.lastReportId)) await loadReports();
   } catch (error) {
-    fail(error, 'Could not load schedules.');
+    if (!quiet) fail(error, 'Could not load schedules.');
   }
+};
+
+// Scheduled runs, retries and dead letters happen on the server, so the Schedules tab
+// checks again every 30 seconds while it's open and the page is visible
+const SCHEDULE_REFRESH_MS = 30_000;
+let scheduleTimer = null;
+const stopScheduleRefresh = () => {
+  clearInterval(scheduleTimer);
+  scheduleTimer = null;
+};
+const startScheduleRefresh = () => {
+  stopScheduleRefresh();
+  scheduleTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') loadSchedules({ quiet: true });
+  }, SCHEDULE_REFRESH_MS);
 };
 
 const loadSLAs = async () => {
@@ -860,7 +881,15 @@ const deleteSLA = async (slaId) => {
 watch(activeTab, (tab) => {
   confirmingDelete.value = null;
   if (tab === 'multi-app' && !complianceSummary.value) loadComplianceSummary();
+  if (tab === 'schedules') {
+    loadSchedules();
+    startScheduleRefresh();
+  } else {
+    stopScheduleRefresh();
+  }
 });
+
+onBeforeUnmount(stopScheduleRefresh);
 
 onMounted(async () => {
   await loadApplications();
@@ -936,7 +965,20 @@ const exportToPDF = () => {
     hour: '2-digit',
     minute: '2-digit'
   })}`, margin, yPos);
-  yPos += sectionSpacing + 5; // Extra spacing before next section
+  yPos += lineHeight;
+  const report = currentReport.value;
+  addText(
+    `Scanned: ${report.source === 'url' ? `${report.url || 'the application URL'} in a browser` : 'supplied HTML, without a browser'}${report.scheduled ? ' (scheduled)' : ''}`,
+    10,
+  );
+  yPos += 4;
+
+  // The same caveats the dashboard shows: what the automated result can and can't tell you
+  if (report.conformance) {
+    addText(CONFORMANCE[report.conformance.status].title, 12, true);
+    addText(conformanceText(report.conformance), 10);
+  }
+  yPos += sectionSpacing;
 
   // WCAG Compliance Overview - 4 Key Metrics
   checkPageBreak(30);
@@ -1009,9 +1051,12 @@ const exportToPDF = () => {
   doc.setFont(undefined, 'normal');
   doc.text(`${currentReport.value.highIssues} high, ${currentReport.value.moderateIssues} moderate, ${currentReport.value.lowIssues} low`, margin + 5, yPos + 22);
 
-  // Trend Box
-  const trendColor = currentReport.value.trend.scoreChange >= 0 
-    ? [34, 197, 94] 
+  // Trend Box: only when there's an earlier comparable report (score change is in points, not %)
+  const hasTrend = !!currentReport.value.previousReportId;
+  const trendColor = !hasTrend
+    ? [100, 116, 139]
+    : currentReport.value.trend.scoreChange >= 0
+    ? [34, 197, 94]
     : [239, 68, 68];
   doc.setDrawColor(trendColor[0], trendColor[1], trendColor[2]);
   doc.setFillColor(trendColor[0], trendColor[1], trendColor[2]);
@@ -1022,13 +1067,26 @@ const exportToPDF = () => {
   doc.text('Trend', margin + boxWidth + boxMargin + 5, yPos + 7);
   doc.setFontSize(18);
   doc.setFont(undefined, 'bold');
-  const trendSign = currentReport.value.trend.scoreChange >= 0 ? '+' : '';
-  doc.text(`${trendSign}${currentReport.value.trend.scoreChange.toFixed(1)}%`, margin + boxWidth + boxMargin + 5, yPos + 16);
+  const trendSign = hasTrend && currentReport.value.trend.scoreChange >= 0 ? '+' : '';
+  doc.text(hasTrend ? `${trendSign}${currentReport.value.trend.scoreChange.toFixed(1)} pts` : '–', margin + boxWidth + boxMargin + 5, yPos + 16);
   doc.setFontSize(8);
   doc.setFont(undefined, 'normal');
-  doc.text(`${currentReport.value.trend.fixedIssues} fixed, ${currentReport.value.trend.newIssues} new`, margin + boxWidth + boxMargin + 5, yPos + 22);
+  doc.text(
+    hasTrend ? `${currentReport.value.trend.fixedIssues} fixed, ${currentReport.value.trend.newIssues} new` : 'First report of this kind for the application',
+    margin + boxWidth + boxMargin + 5,
+    yPos + 22,
+  );
 
-  yPos += boxHeight + sectionSpacing + 5; // Extra spacing after overview boxes
+  yPos += boxHeight + boxMargin;
+  if (currentReport.value.sampling) {
+    addText(
+      `Counts include every failing element; ${currentReport.value.sampling.rules.length} rule(s) list only the first ${currentReport.value.sampling.examplesPerRule} as examples.`,
+      9,
+      false,
+      [100, 116, 139],
+    );
+  }
+  yPos += sectionSpacing; // Extra spacing after overview boxes
   
   // Reset text color
   doc.setTextColor(0, 0, 0);
@@ -1303,8 +1361,8 @@ const exportToPDF = () => {
     yPos += itemSpacing; // Increased spacing between criteria items
   });
 
-  // Trend Information
-  if (currentReport.value.trend) {
+  // Trend Information (only against an earlier comparable report)
+  if (currentReport.value.previousReportId && currentReport.value.trend) {
     checkPageBreak(25);
     doc.setFontSize(16);
     doc.setFont(undefined, 'bold');
@@ -1321,7 +1379,7 @@ const exportToPDF = () => {
       : [239, 68, 68];
     doc.setTextColor(trendColor[0], trendColor[1], trendColor[2]);
     doc.setFont(undefined, 'bold');
-    doc.text(`Score Change: ${currentReport.value.trend.scoreChange >= 0 ? '+' : ''}${currentReport.value.trend.scoreChange.toFixed(1)}%`, margin, yPos);
+    doc.text(`Score Change: ${currentReport.value.trend.scoreChange >= 0 ? '+' : ''}${currentReport.value.trend.scoreChange.toFixed(1)} points`, margin, yPos);
     yPos += lineHeight;
     
     doc.setTextColor(0, 0, 0);

@@ -24,3 +24,20 @@ export const AXE_SCAN_OPTIONS = Object.freeze({
     region: { enabled: false },
   },
 });
+
+// axe groups its rules by category tag; these are what the generator pages'
+// "Keyboard navigation" and "Screen reader" checklist items stand for.
+const CATEGORY_TAGS = {
+  keyboard: ['cat.keyboard'],
+  screenReader: ['cat.aria', 'cat.name-role-value', 'cat.text-alternatives', 'cat.tables', 'cat.semantics', 'cat.structure', 'cat.forms'],
+};
+
+/**
+ * A checklist state from the last axe scan: 'unchecked' until a scan has run
+ * (or when it failed), 'fail' if any violation falls in the category, else 'ok'.
+ */
+export function axeCategoryState(results, category) {
+  if (!results || results.error || results.violations?.some((v) => v.id === 'scan-error')) return 'unchecked';
+  const tags = CATEGORY_TAGS[category];
+  return results.violations.some((v) => (v.tags ?? []).some((tag) => tags.includes(tag))) ? 'fail' : 'ok';
+}

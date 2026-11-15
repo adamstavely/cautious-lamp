@@ -167,6 +167,27 @@ describe('Accessibility reports HTTP API', () => {
     expect(summary.body.applications.find((a: { applicationId: string }) => a.applicationId === 'app-2').latestReportId).toBe(latest.id);
   });
 
+  it('compares a URL scan only with earlier scans of that URL, never with pasted HTML', async () => {
+    const earlierUrlScan = (await admin('GET', '/accessibility-reports/reports?applicationId=app-2')).body.find((r: AccessibilityReport) => r.source === 'url');
+    expect(earlierUrlScan).toBeDefined();
+    const pasted = await admin('POST', '/accessibility-reports/generate/app-2', { html: FIXTURE });
+    expect(pasted.status).toBe(201);
+    const res = await admin('POST', '/accessibility-reports/generate/app-2', {});
+    expect(res.status).toBe(201);
+    expect(res.body.previousReportId).toBe(earlierUrlScan.id);
+    expect(res.body.trend.fixedIssues).toBe(0);
+  }, 30000);
+
+  it('rejects html that is only whitespace instead of scanning the URL', async () => {
+    const stored = reportStore.docs.size;
+    const calls = scanUrl.mock.calls.length;
+    const res = await admin('POST', '/accessibility-reports/generate/app-2', { html: '   ' });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/empty/);
+    expect(reportStore.docs.size).toBe(stored);
+    expect(scanUrl.mock.calls.length).toBe(calls);
+  });
+
   it('rejects server-owned and unknown fields in bodies', async () => {
     const sla = { applicationId: 'app-1', targetScore: 90, targetLevel: 'AA', criticalIssuesThreshold: 0, highIssuesThreshold: 5 };
     expect((await admin('POST', '/accessibility-reports/slas', { ...sla, id: 'mine' })).status).toBe(400);
@@ -289,6 +310,23 @@ describe('Accessibility report visibility', () => {
     expect(await summaryIds('alice')).toEqual(['app-alpha']);
     expect(await summaryIds('bob')).toEqual([]);
     expect((await summaryIds('gov')).sort()).toEqual(['app-alpha', 'app-none']);
+  }, 30000);
+
+  it("doesn't link a latest report the viewer can't open after the application moves workspace", async () => {
+    const report = await h.call('POST', '/accessibility-reports/generate/app-alpha', { html: FIXTURE }, ADMIN_KEY);
+    const original = applications.apps.get('app-alpha')!;
+    applications.apps.set('app-alpha', { ...original, workspaceId: 'ws_beta' });
+    try {
+      const forBob = (await as('bob', 'GET', '/accessibility-reports/summary')).body.applications.find((a: { applicationId: string }) => a.applicationId === 'app-alpha');
+      expect(forBob).toBeDefined();
+      expect(forBob.latestReportId).toBeUndefined();
+      // The report keeps the workspace it was generated in
+      expect((await as('bob', 'GET', `/accessibility-reports/reports/${report.body.id}`)).status).toBe(404);
+      const forGov = (await as('gov', 'GET', '/accessibility-reports/summary')).body.applications.find((a: { applicationId: string }) => a.applicationId === 'app-alpha');
+      expect(forGov.latestReportId).toBe(report.body.id);
+    } finally {
+      applications.apps.set('app-alpha', original);
+    }
   }, 30000);
 
   it('reads reports stored before access metadata existed as governance-admin-only', async () => {

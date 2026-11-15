@@ -160,8 +160,8 @@
             <ul class="flex flex-col gap-2 text-sm">
               <li v-for="check in accessibilityChecks" :key="check.label" class="flex items-center justify-between">
                 <span class="text-ink-secondary">{{ check.label }}</span>
-                <AppIcon :name="check.ok ? 'circle-check' : 'circle-alert'" class="text-base" :class="check.ok ? 'text-success' : 'text-danger'" />
-                <span class="sr-only">{{ check.ok ? 'Passes' : 'Needs work' }}</span>
+                <AppIcon :name="checkIcon[check.state]" class="text-base" :class="checkTone[check.state]" />
+                <span class="sr-only">{{ checkText[check.state] }}</span>
               </li>
             </ul>
 
@@ -215,7 +215,7 @@ import {
 import UiChoiceCards from '../components/ui/UiChoiceCards.vue';
 import { useNotice } from '../composables/useNotice.js';
 import axe from 'axe-core';
-import { AXE_SCAN_OPTIONS } from '../utils/axeScan.js';
+import { AXE_SCAN_OPTIONS, axeCategoryState } from '../utils/axeScan.js';
 import { generateTimelineCode } from '../utils/timelineExport.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
@@ -353,11 +353,15 @@ const accessibilityScore = computed(() => {
   return Math.round((score / maxScore) * 100);
 });
 
+// Alt text from the form; keyboard and screen reader from the last axe scan (unchecked until it runs)
 const accessibilityChecks = computed(() => [
-  { label: 'Alt text', ok: !!(config.value.title && config.value.summary && config.value.keyInsight) },
-  { label: 'Keyboard navigation', ok: true },
-  { label: 'Screen reader', ok: true }
+  { label: 'Alt text', state: config.value.title && config.value.summary && config.value.keyInsight ? 'ok' : 'fail' },
+  { label: 'Keyboard navigation', state: axeCategoryState(axeScanResults.value, 'keyboard') },
+  { label: 'Screen reader', state: axeCategoryState(axeScanResults.value, 'screenReader') },
 ]);
+const checkTone = { ok: 'text-success', fail: 'text-danger', unchecked: 'text-ink-muted' };
+const checkIcon = { ok: 'circle-check', fail: 'circle-alert', unchecked: 'circle-help' };
+const checkText = { ok: 'Passes', fail: 'Needs work', unchecked: 'Not checked yet: run the accessibility check' };
 
 // User-chosen values for the preview, passed to CSS through v-bind()
 const previewColor = computed(() => config.value.timelineColor);

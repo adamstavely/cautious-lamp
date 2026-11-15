@@ -183,6 +183,25 @@ describe('Scheduled accessibility reports: leases, retries and dead letters', ()
     expect(stored()).toMatchObject({ lastStatus: 'success', deadLetters: [expect.objectContaining({ occurrence })] });
   }, 30000);
 
+  it('removes the schedule and SLA of a deleted application instead of failing every period', async () => {
+    const { apps, instance, schedules, slas, reports, control, schedule } = await setup();
+    await instance().createSLA({ applicationId: 'app-1', targetScore: 90, targetLevel: 'AA', criticalIssuesThreshold: 0, highIssuesThreshold: 5 });
+    apps.apps.delete('app-1');
+    expect(await instance().runDueSchedules(due)).toBe(0);
+    expect(schedules.docs.has(schedule.id)).toBe(false);
+    expect(slas.docs.size).toBe(0);
+    expect(reports.docs.size).toBe(0);
+    expect(control.calls).toEqual([]);
+  });
+
+  it('keeps the schedule when the application lookup fails, to try again next tick', async () => {
+    const { apps, instance, schedules, schedule, control } = await setup();
+    jest.spyOn(apps, 'get').mockRejectedValueOnce(new Error('Storage is unavailable'));
+    expect(await instance().runDueSchedules(due)).toBe(0);
+    expect(schedules.docs.has(schedule.id)).toBe(true);
+    expect(control.calls).toEqual([]);
+  });
+
   it('a transient failure is retried and succeeds', async () => {
     const { reports, control, instance, stored } = await setup();
     control.failNext(new Error('Navigation timeout'));
