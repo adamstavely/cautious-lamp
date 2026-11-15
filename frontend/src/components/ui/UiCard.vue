@@ -1,6 +1,6 @@
 <template>
   <component :is="tag" v-bind="linkAttrs" class="ui-card group" :class="{ 'ui-card-link': isLink, 'ui-card-compact': compact }">
-    <SpotArt v-if="spot" :name="spot" :size="compact ? 'sm' : 'md'" class="-ml-1 mb-2" />
+    <SpotArt v-if="spot" :name="spot" :size="compact ? 'md' : 'lg'" class="-ml-1 mb-2" />
     <slot name="media" />
     <h3 v-if="title" class="ui-card-title">
       {{ title }}
