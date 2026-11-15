@@ -6,9 +6,10 @@ import { CONNECTION_PROPERTIES } from '../token-sync/connection-registry';
 import { DesignSyncController } from './design-sync.controller';
 import { DESIGN_SYNC_CONNECTIONS_INDEX, DESIGN_SYNC_CONNECTION_STORE, DesignSyncService } from './design-sync.service';
 import { DesignSystemModule } from '../design-system/design-system.module';
+import { DesignToolsModule } from '../design-tools/design-tools.module';
 
 @Module({
-  imports: [DesignSystemModule],
+  imports: [DesignSystemModule, DesignToolsModule],
   controllers: [DesignSyncController],
   providers: [
     DesignSyncService,

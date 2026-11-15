@@ -1084,7 +1084,7 @@ const reviewItems = [
 
 const reviewUtilities = [
   { text: 'Handoff Tools', link: '/review/handoff', icon: 'arrow-left-right' },
-  { text: 'Design-to-Code Sync', link: '/design-sync', icon: 'refresh-cw' },
+  { text: 'Design Sync', link: '/design-sync', icon: 'refresh-cw' },
   { text: 'Visual Regression Testing', link: '/tools/visual-regression', icon: 'git-compare' },
   { text: 'Theme Builder', link: '/theme-builder', icon: 'sliders-horizontal' }
 ];

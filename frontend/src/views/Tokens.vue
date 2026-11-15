@@ -236,7 +236,7 @@
               </router-link>
               <router-link to="/tokens/sync" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Token Sync</h3>
-                <p class="text-white/80 text-sm">Sync design tokens from Figma, Penpot, and Adobe XD directly into your design system with automatic conflict resolution.</p>
+                <p class="text-white/80 text-sm">Pull design tokens from Figma or Penpot, review how they differ from yours, and apply only the changes you choose.</p>
               </router-link>
               <router-link to="/tokens/extract" class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
                 <h3 class="text-white font-semibold text-xl mb-2">Design Extractor</h3>

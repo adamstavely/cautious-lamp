@@ -29,11 +29,8 @@ const FREE_FORM_BODIES: Record<string, string> = {
   'DesignSyncController.updateConnection': 'validated by the design-sync service per provider',
   // Multipart: validated in the handler against VersionDto, so a refused request can delete its staged upload
   'ReviewsController.addVersion': 'validated in the handler (VersionDto) after the upload is staged',
-  // Not converted yet: these belong to the design-system, contribution, sync connection
+  // Not converted yet: these belong to the design-system, contribution
   // and scaffolding work, and are passed on without validation as before
-  'TokenSyncController.resolveConflict': 'not converted yet (sync connections)',
-  'DesignSyncController.sync': 'not converted yet (sync connections)',
-  'DesignSyncController.generateComponentCode': 'not converted yet (sync connections)',
   'PatternsLibraryController.createPattern': 'not converted yet (patterns)',
   'PatternsLibraryController.updatePattern': 'not converted yet (patterns)',
   'ContributionWorkflowController.createGuideline': 'not converted yet (contributions)',

@@ -17,7 +17,7 @@ export interface FetchedPage {
  * can't pass assertPublicHttpUrl and then resolve somewhere internal (DNS
  * rebinding). Node skips lookup for IP literals; assertPublicHttpUrl covers those.
  */
-const publicOnlyLookup: LookupFunction = (hostname, options, callback) => {
+export const publicOnlyLookup: LookupFunction = (hostname, options, callback) => {
   dnsLookup(hostname, { ...options, all: true }, (error, addresses: any) => {
     if (error) return (callback as any)(error);
     const list = (Array.isArray(addresses) ? addresses : [{ address: addresses, family: 4 }]) as Array<{ address: string; family: number }>;

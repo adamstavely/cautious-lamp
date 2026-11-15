@@ -1,12 +1,16 @@
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { AuthPrincipal, Principal } from '../auth/principal';
-import { DesignSyncConnectionView, DesignSyncService } from './design-sync.service';
+import { SyncRun, SyncRunSummary } from '../design-tools/sync-runs';
+import { EnableAutoSyncDto } from '../token-sync/token-sync.dto';
+import { CompareDesignDto, SetComponentLinkDto } from './design-sync.dto';
+import { DesignFileView, DesignSyncConnectionView, DesignSyncService } from './design-sync.service';
 
 /**
- * Design sync connections. Each connection belongs to its creator (admin:users
- * holders see all); responses never include the credential, only `hasApiKey`.
- * Fetching files, syncing, code generation and auto-sync answer 501: there is
- * no Figma or Penpot integration.
+ * Design sync connections and compares. Each connection belongs to its
+ * creator (admin:users holders see all); responses never include the
+ * credential, only `hasApiKey`. Design sync reads Figma and Penpot files and
+ * reports how their components line up with the library; it never writes to
+ * the design file or generates code.
  */
 @Controller('api/v1/design-sync')
 export class DesignSyncController {
@@ -38,22 +42,32 @@ export class DesignSyncController {
     return { success: true };
   }
 
-  /** 501 */
+  /** The design file's components, read live */
   @Get('connections/:id/file')
-  getDesignFile(@Principal() principal: AuthPrincipal, @Param('id') id: string) {
+  getDesignFile(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<DesignFileView> {
     return this.designSyncService.fetchDesignFile(principal, id);
   }
 
-  /** 501 */
+  /** Compares the design file's components with the library and records the report */
   @Post('connections/:id/sync')
-  sync(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() body: { direction?: string }) {
+  sync(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() body: CompareDesignDto): Promise<SyncRun> {
     return this.designSyncService.sync(principal, id, body?.direction);
   }
 
-  /** 501 */
-  @Post('components/:componentId/generate')
-  generateComponentCode(@Principal() principal: AuthPrincipal, @Body() body: { connectionId?: string }) {
-    return this.designSyncService.generateComponentCode(principal, String(body?.connectionId ?? ''));
+  @Get('connections/:id/runs')
+  listRuns(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<SyncRunSummary[]> {
+    return this.designSyncService.listRuns(principal, id);
+  }
+
+  @Get('runs/:runId')
+  getRun(@Principal() principal: AuthPrincipal, @Param('runId') runId: string): Promise<SyncRun> {
+    return this.designSyncService.getRun(principal, runId);
+  }
+
+  /** Links a library component to its design node (designNodeId null unlinks) */
+  @Put('connections/:id/links')
+  setComponentLink(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() body: SetComponentLinkDto): Promise<DesignSyncConnectionView> {
+    return this.designSyncService.setComponentLink(principal, id, body);
   }
 
   @Get('connections/:id/versions')
@@ -61,10 +75,10 @@ export class DesignSyncController {
     return this.designSyncService.getFileVersions(principal, id);
   }
 
-  /** 501 */
+  /** Scheduled compares; each is recorded as a run */
   @Post('connections/:id/auto-sync')
-  enableAutoSync(@Principal() principal: AuthPrincipal, @Param('id') id: string) {
-    return this.designSyncService.enableAutoSync(principal, id);
+  enableAutoSync(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() body: EnableAutoSyncDto): Promise<DesignSyncConnectionView> {
+    return this.designSyncService.enableAutoSync(principal, id, body);
   }
 
   @Delete('connections/:id/auto-sync')

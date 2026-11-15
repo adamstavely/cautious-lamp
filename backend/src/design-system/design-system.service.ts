@@ -350,6 +350,69 @@ export class DesignSystemService implements OnModuleInit {
   }
 
   /**
+   * Stores a new token after the existing ones; a 409 if one with that name
+   * exists. Callers check token:create.
+   */
+  async createToken(token: Token): Promise<Token> {
+    await this.ready();
+    const tokens = this.loaded.tokens;
+    const doc: StoredToken = {
+      ...structuredClone(token),
+      id: token.name,
+      position: tokens.reduce((max, t) => Math.max(max, t.position), -1) + 1,
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await this.tokenStore.create(doc);
+    } catch (error) {
+      if (error instanceof DuplicateDocumentError) throw new ConflictException(`Token '${token.name}' already exists`);
+      throw error;
+    }
+    this.cacheToken(doc);
+    return structuredClone(toToken(doc));
+  }
+
+  /**
+   * Changes a token's value (and optionally type, category or description),
+   * compare-and-swap like component writes. Callers check token:edit.
+   */
+  async updateToken(name: string, change: Partial<Pick<Token, 'value' | 'type' | 'category' | 'description'>>): Promise<Token> {
+    await this.ready();
+    for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
+      const stored = await this.tokenStore.get(name);
+      if (!stored) throw new NotFoundException(`Token '${name}' not found`);
+      const doc = stored.doc;
+      assignDefined(doc, change, ['value', 'type', 'category', 'description']);
+      try {
+        await this.tokenStore.replace(doc, stored.version);
+      } catch (error) {
+        if (error instanceof VersionConflictError) continue;
+        throw error;
+      }
+      this.cacheToken(doc);
+      return structuredClone(toToken(doc));
+    }
+    throw new ConflictException('The token was changed by someone else at the same time, please try again');
+  }
+
+  /** Deletes a token; false when there was none. Callers check token:delete. */
+  async deleteToken(name: string): Promise<boolean> {
+    await this.ready();
+    const deleted = await this.tokenStore.delete(name);
+    const tokens = this.loaded.tokens;
+    const index = tokens.findIndex((t) => t.id === name);
+    if (index >= 0) tokens.splice(index, 1);
+    return deleted;
+  }
+
+  private cacheToken(doc: StoredToken): void {
+    const tokens = this.loaded.tokens;
+    const index = tokens.findIndex((t) => t.id === doc.id);
+    if (index >= 0) tokens[index] = structuredClone(doc);
+    else tokens.push(structuredClone(doc));
+  }
+
+  /**
    * Get token relationships - analyzes references, aliases, semantic relationships, and dependencies
    */
   getTokenRelationships(tokenName?: string): {
