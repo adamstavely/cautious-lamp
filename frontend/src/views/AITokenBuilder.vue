@@ -1,720 +1,172 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
+  <PageShell width="wide">
+    <PageHero
+      :back="{ to: '/tokens', label: 'Design tokens' }"
+      title="AI tokens"
+      lead="Define design tokens for AI interfaces: agent identity, confidence, explainability, risk, citations and more. Start from suggested token names, set the values yourself, then save them to a workspace's style library or export them."
+      spot="ai/ai-token-builder"
+      size="tool"
     >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-          <div class="max-w-7xl mx-auto mb-8">
-            <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-              <!-- Background texture/grain effect -->
-              <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-              
-              <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div class="flex-1">
-                  <div class="flex items-center gap-4 mb-4">
-                    <h1 class="text-5xl md:text-6xl font-bold text-white leading-tight">
-                      AI Tokens
-                    </h1>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                      DTCG Compliant
-                    </span>
-                  </div>
-                  <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mb-4">
-                    Create and manage design tokens for AI agents and GenAI applications. Standardize agent identity, confidence indicators, explainability, risk management, and more.
-                  </p>
-                  <div class="flex items-center gap-4 text-sm text-white/70">
-                    <span class="flex items-center gap-2">
-                      <AppIcon name="bot" class="text-base" />
-                      AI & GenAI
-                    </span>
-                    <span class="flex items-center gap-2">
-                      <AppIcon name="refresh-ccw" class="text-base" />
-                      Updated {{ new Date().toLocaleDateString() }}
-                    </span>
-                  </div>
-                </div>
-                <div class="hidden md:block flex-shrink-0">
-                  <div class="w-64 h-64 relative">
-                    <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                      <defs>
-                        <linearGradient id="aiTokenStudioGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                        </linearGradient>
-                      </defs>
-                      <!-- AI-themed illustration: Neural network / connected nodes -->
-                      <!-- Central node -->
-                      <circle cx="100" cy="100" r="25" fill="url(#aiTokenStudioGradient)" opacity="0.8"/>
-                      <circle cx="100" cy="100" r="15" fill="url(#aiTokenStudioGradient)" opacity="0.6"/>
-                      
-                      <!-- Surrounding nodes -->
-                      <circle cx="50" cy="50" r="12" fill="url(#aiTokenStudioGradient)" opacity="0.6"/>
-                      <circle cx="150" cy="50" r="12" fill="url(#aiTokenStudioGradient)" opacity="0.6"/>
-                      <circle cx="50" cy="150" r="12" fill="url(#aiTokenStudioGradient)" opacity="0.6"/>
-                      <circle cx="150" cy="150" r="12" fill="url(#aiTokenStudioGradient)" opacity="0.6"/>
-                      <circle cx="100" cy="30" r="10" fill="url(#aiTokenStudioGradient)" opacity="0.5"/>
-                      <circle cx="100" cy="170" r="10" fill="url(#aiTokenStudioGradient)" opacity="0.5"/>
-                      <circle cx="30" cy="100" r="10" fill="url(#aiTokenStudioGradient)" opacity="0.5"/>
-                      <circle cx="170" cy="100" r="10" fill="url(#aiTokenStudioGradient)" opacity="0.5"/>
-                      
-                      <!-- Connection lines -->
-                      <line x1="100" y1="100" x2="50" y2="50" stroke="url(#aiTokenStudioGradient)" stroke-width="2" opacity="0.3"/>
-                      <line x1="100" y1="100" x2="150" y2="50" stroke="url(#aiTokenStudioGradient)" stroke-width="2" opacity="0.3"/>
-                      <line x1="100" y1="100" x2="50" y2="150" stroke="url(#aiTokenStudioGradient)" stroke-width="2" opacity="0.3"/>
-                      <line x1="100" y1="100" x2="150" y2="150" stroke="url(#aiTokenStudioGradient)" stroke-width="2" opacity="0.3"/>
-                      <line x1="100" y1="100" x2="100" y2="30" stroke="url(#aiTokenStudioGradient)" stroke-width="2" opacity="0.3"/>
-                      <line x1="100" y1="100" x2="100" y2="170" stroke="url(#aiTokenStudioGradient)" stroke-width="2" opacity="0.3"/>
-                      <line x1="100" y1="100" x2="30" y2="100" stroke="url(#aiTokenStudioGradient)" stroke-width="2" opacity="0.3"/>
-                      <line x1="100" y1="100" x2="170" y2="100" stroke="url(#aiTokenStudioGradient)" stroke-width="2" opacity="0.3"/>
-                      
-                      <!-- Additional small nodes for depth -->
-                      <circle cx="75" cy="75" r="6" fill="url(#aiTokenStudioGradient)" opacity="0.4"/>
-                      <circle cx="125" cy="75" r="6" fill="url(#aiTokenStudioGradient)" opacity="0.4"/>
-                      <circle cx="75" cy="125" r="6" fill="url(#aiTokenStudioGradient)" opacity="0.4"/>
-                      <circle cx="125" cy="125" r="6" fill="url(#aiTokenStudioGradient)" opacity="0.4"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <template #actions>
+        <UiButton variant="primary" icon="save" :disabled="!tokens.length" @click="showSaveDialog = true">Save to library</UiButton>
+        <UiButton icon="upload" @click="fileInput?.click()">Import JSON</UiButton>
+        <UiButton icon="library" to="/tokens/library">Style library</UiButton>
+      </template>
+    </PageHero>
+    <input ref="fileInput" type="file" accept=".json,application/json" class="sr-only" tabindex="-1" aria-hidden="true" @change="importFile" />
 
-          <!-- Main Content -->
-          <div class="max-w-7xl mx-auto">
-            <div class="grid lg:grid-cols-4 gap-6">
-              <!-- Left Sidebar: AI Token Categories -->
-              <div class="lg:col-span-1">
-                <div 
-                  class="rounded-lg border p-6 sticky top-8"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div class="mb-6">
-                    <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <AppIcon name="shapes" class="text-base text-indigo-600" />
-                      AI Token Categories
-                    </h2>
-                  </div>
-                  
-                  <div class="space-y-1">
-                    <button
-                      v-for="category in aiCategories"
-                      :key="category.id"
-                      @click="selectedCategory = category.id"
-                      class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors text-left"
-                      :class="getCategoryButtonClass(category.id)"
-                    >
-                      <div class="flex items-center gap-2">
-                        <AppIcon :name="category.icon" class="text-base" />
-                        <span>{{ category.name }}</span>
-                      </div>
-                      <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                        {{ getCategoryTokenCount(category.id) }}
-                      </span>
-                    </button>
-                  </div>
-
-                  <!-- Export Section -->
-                  <div class="mt-8 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <h3 class="text-sm font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <AppIcon name="arrow-left-right" class="text-base text-indigo-600" />
-                      Import / Export
-                    </h3>
-                    <div class="space-y-2 mb-4">
-                      <button
-                        @click="importTokens"
-                        class="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left"
-                        :class="isDarkMode ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                      >
-                        <AppIcon name="upload" class="text-base align-middle mr-2" />
-                        Import JSON
-                      </button>
-                      <button
-                        @click="showSaveModal = true"
-                        class="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left"
-                        :class="isDarkMode ? 'bg-indigo-600 text-indigo-100 hover:bg-indigo-500' : 'bg-indigo-600 text-white hover:bg-indigo-700'"
-                      >
-                        <AppIcon name="save" class="text-base align-middle mr-2" />
-                        Save to Library
-                      </button>
-                    </div>
-                    <div class="space-y-2">
-                      <button
-                        @click="exportTokens('json')"
-                        class="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                      >
-                        <AppIcon name="code" class="text-base align-middle mr-2" />
-                        JSON (DTCG)
-                      </button>
-                      <button
-                        @click="exportTokens('css')"
-                        class="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                      >
-                        <AppIcon name="file-code" class="text-base align-middle mr-2" />
-                        CSS Variables
-                      </button>
-                      <button
-                        @click="exportTokens('ios')"
-                        class="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                      >
-                        <AppIcon name="smartphone" class="text-base align-middle mr-2" />
-                        iOS
-                      </button>
-                      <button
-                        @click="exportTokens('android')"
-                        class="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left"
-                        :class="isDarkMode 
-                          ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
-                      >
-                        <AppIcon name="smartphone" class="text-base align-middle mr-2" />
-                        Android
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Main Content: Token List -->
-              <div class="lg:col-span-3">
-                <div 
-                  class="rounded-lg border p-6"
-                  :class="isDarkMode 
-                    ? 'bg-slate-900 border-gray-700' 
-                    : 'bg-white border-gray-200'"
-                >
-                  <div class="flex items-center justify-between mb-6">
-                    <div>
-                      <h2 class="text-xl font-semibold mb-1 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        <AppIcon :name="getCategoryIcon(selectedCategory)" class="text-lg text-indigo-600" />
-                        {{ getCategoryName(selectedCategory) }} Tokens
-                      </h2>
-                      <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ filteredTokens.length }} token{{ filteredTokens.length !== 1 ? 's' : '' }}
-                      </p>
-                    </div>
-                    <button
-                      @click="showAddTokenModal = true"
-                      class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                    >
-                      <AppIcon name="plus" class="text-lg" />
-                      Add Token
-                    </button>
-                  </div>
-
-                  <!-- Token List -->
-                  <div v-if="filteredTokens.length > 0" class="space-y-2">
-                    <div
-                      v-for="token in filteredTokens"
-                      :key="token.id"
-                      class="flex items-center justify-between p-4 rounded-lg border transition-colors group"
-                      :class="isDarkMode ? 'border-gray-700 bg-slate-800 hover:border-indigo-600' : 'border-gray-200 bg-gray-50 hover:border-indigo-300'"
-                    >
-                      <div class="flex items-center gap-4 flex-1">
-                        <!-- Token Preview (for colors) -->
-                        <div 
-                          v-if="getTokenType(token) === 'color'"
-                          class="w-12 h-12 rounded-lg border-2 flex-shrink-0"
-                          :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                          :style="{ backgroundColor: getTokenValue(token) }"
-                        ></div>
-                        <div 
-                          v-else-if="getTokenType(token) === 'dimension'"
-                          class="w-12 h-12 rounded-lg border-2 flex items-center justify-center flex-shrink-0"
-                          :class="isDarkMode ? 'border-gray-600 bg-slate-700' : 'border-gray-300 bg-white'"
-                        >
-                          <span class="text-xs font-mono" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                            {{ getTokenValue(token) }}
-                          </span>
-                        </div>
-                        <div 
-                          v-else
-                          class="w-12 h-12 rounded-lg border-2 flex items-center justify-center flex-shrink-0"
-                          :class="isDarkMode ? 'border-gray-600 bg-slate-700' : 'border-gray-300 bg-white'"
-                        >
-                          <AppIcon :name="getTokenIcon(getTokenType(token))" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" />
-                        </div>
-                        
-                        <div class="flex-1 min-w-0">
-                          <div class="flex items-center gap-2 mb-1">
-                            <code class="text-sm font-mono font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                              {{ token.name }}
-                            </code>
-                            <span 
-                              class="px-2 py-0.5 rounded text-xs font-medium"
-                              :class="isDarkMode ? 'bg-indigo-900/30 text-indigo-300' : 'bg-indigo-100 text-indigo-700'"
-                            >
-                              {{ getTokenType(token) }}
-                            </span>
-                          </div>
-                          <div class="text-sm font-mono" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                            {{ getTokenValue(token) }}
-                          </div>
-                          <div v-if="getTokenDescription(token)" class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                            {{ getTokenDescription(token) }}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          @click="editToken(token)"
-                          class="p-2 rounded-lg transition-colors"
-                          :class="isDarkMode ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-700' : 'text-gray-400 hover:text-indigo-600 hover:bg-gray-100'"
-                          title="Edit token"
-                        >
-                          <AppIcon name="pencil" class="text-lg" />
-                        </button>
-                        <button
-                          @click="deleteToken(token.id)"
-                          class="p-2 rounded-lg transition-colors"
-                          :class="isDarkMode ? 'text-gray-400 hover:text-red-400 hover:bg-slate-700' : 'text-gray-400 hover:text-red-600 hover:bg-gray-100'"
-                          title="Delete token"
-                        >
-                          <AppIcon name="trash-2" class="text-lg" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Empty State -->
-                  <div v-else class="text-center py-12">
-                    <AppIcon :name="getCategoryIcon(selectedCategory)" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
-                    <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      No tokens yet
-                    </p>
-                    <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                      Get started by adding your first {{ getCategoryName(selectedCategory).toLowerCase() }} token
-                    </p>
-                    <button
-                      @click="showAddTokenModal = true"
-                      class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      Add Token
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="flex flex-col gap-4 mb-6">
+      <InlineNotice :notice="notice" @dismiss="clearNotice" />
+      <UiCallout v-if="loadedDictionary" tone="info" role="status">
+        Editing <strong>{{ loadedDictionary.name }}</strong> from {{ library.workspaceName(loadedDictionary.workspaceId) ?? 'a shared workspace' }}.
+        <template v-if="!library.canEdit(loadedDictionary)"> You can read it but not change it; saving makes a copy.</template>
+      </UiCallout>
+      <p v-if="openingDictionary" class="flex items-center gap-2 text-sm text-ink-secondary"><UiSpinner /> Opening the style dictionary…</p>
     </div>
 
-    <!-- Add/Edit Token Modal -->
-    <div
-      v-if="showAddTokenModal || editingToken"
-      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      @click.self="closeTokenModal"
-      @keydown.escape="closeTokenModal"
-      role="dialog"
-      aria-modal="true"
-      :aria-labelledby="editingToken ? 'edit-token-title' : 'add-token-title'"
-    >
-      <div 
-        class="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        :class="isDarkMode ? 'bg-slate-900' : 'bg-white'"
-      >
-        <div 
-          class="p-6 border-b"
-          :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-        >
-          <div class="flex items-center justify-between">
-            <h3 :id="editingToken ? 'edit-token-title' : 'add-token-title'" class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <AppIcon :name="editingToken ? 'pencil' : 'plus'" class="text-lg text-indigo-600" />
-              {{ editingToken ? 'Edit Token' : 'Add Token' }}
-            </h3>
-            <button
-              @click="closeTokenModal"
-              class="p-2 rounded-lg transition-colors"
-              :class="isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
-              aria-label="Close modal"
-            >
-              <AppIcon name="x" />
-            </button>
+    <div class="grid lg:grid-cols-4 gap-6 pb-12">
+      <div class="lg:col-span-1 flex flex-col gap-6">
+        <UiPanel title="Categories">
+          <nav aria-label="AI token categories">
+            <ul class="flex flex-col gap-1">
+              <li v-for="category in aiCategories" :key="category.id">
+                <button
+                  type="button"
+                  class="category-button"
+                  :class="{ 'category-button-active': selectedCategory === category.id }"
+                  :aria-current="selectedCategory === category.id ? 'true' : undefined"
+                  @click="selectedCategory = category.id"
+                >
+                  <span class="flex items-center gap-2 min-w-0"><AppIcon :name="category.icon" class="text-base shrink-0" /><span class="truncate">{{ category.name }}</span></span>
+                  <span class="text-xs text-ink-muted">{{ categoryCount(category.id) }}</span>
+                </button>
+              </li>
+            </ul>
+          </nav>
+        </UiPanel>
+
+        <UiPanel title="Export" description="Every token, in one file.">
+          <div class="flex flex-col gap-2">
+            <UiButton v-for="format in EXPORT_FORMATS" :key="format.value" :icon="format.icon" size="sm" :disabled="!tokens.length" @click="exportTokens(format.value)">
+              {{ format.label }}
+            </UiButton>
           </div>
-        </div>
-        <div class="p-6">
-          <div class="space-y-4">
-            <!-- Category Info -->
-            <div class="mb-4 p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-indigo-50'">
-              <p class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-indigo-300' : 'text-indigo-700'">
-                Category: {{ getCategoryName(selectedCategory) }}
-              </p>
-              <p class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                {{ getCategoryDescription(selectedCategory) }}
-              </p>
-            </div>
+        </UiPanel>
+      </div>
 
-            <!-- Token Template Selector -->
-            <div v-if="availableTemplates.length > 0 && !editingToken" class="mb-4">
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Create from Template
-              </label>
-              <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 rounded-lg border" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
-                <button
-                  v-for="template in availableTemplates"
-                  :key="template.name"
-                  @click="createFromTemplate(template)"
-                  :disabled="existingTokenNames.includes(getCategoryPrefix(selectedCategory) + template.name)"
-                  class="text-left px-3 py-2 rounded text-sm transition-colors"
-                  :class="existingTokenNames.includes(getCategoryPrefix(selectedCategory) + template.name)
-                    ? (isDarkMode ? 'bg-slate-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')
-                    : (isDarkMode ? 'bg-slate-700 text-gray-300 hover:bg-slate-600 hover:text-white' : 'bg-white text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 border border-gray-200')"
-                >
-                  <div class="font-mono text-xs mb-1">{{ template.name }}</div>
-                  <div class="text-xs opacity-75">{{ template.description }}</div>
-                  <span v-if="existingTokenNames.includes(getCategoryPrefix(selectedCategory) + template.name)" class="text-xs text-green-500 ml-2">✓ Created</span>
-                </button>
-              </div>
-              <div class="mt-2 pt-2 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
-                <button
-                  @click="tokenForm.fromTemplate = false"
-                  class="text-sm text-indigo-600 hover:text-indigo-700"
-                  :class="isDarkMode ? 'text-indigo-400 hover:text-indigo-300' : ''"
-                >
-                  Or create custom token
-                </button>
-              </div>
-            </div>
+      <div class="lg:col-span-3 flex flex-col gap-6">
+        <UiPanel :title="`${currentCategory.name} tokens`" :description="currentCategory.description">
+          <template #actions>
+            <UiButton variant="primary" icon="plus" size="sm" @click="openNewToken()">Add token</UiButton>
+          </template>
+          <TokenList v-if="filteredTokens.length" :tokens="filteredTokens" @edit="editToken" @delete="deleteToken" />
+          <UiEmptyState
+            v-else
+            title="No tokens yet"
+            :body="`Add your first ${currentCategory.name.toLowerCase()} token, start from a suggestion below, or import a DTCG JSON file.`"
+            :bordered="false"
+          />
+        </UiPanel>
 
-            <!-- Custom Token Name (shown when not using template) -->
-            <div v-if="!tokenForm.fromTemplate">
-              <!-- Token Name -->
-              <div>
-                <label for="token-name-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Token Name <span class="text-red-500" aria-label="required">*</span>
-                </label>
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-mono px-2 py-1 rounded" :class="isDarkMode ? 'bg-slate-800 text-gray-400' : 'bg-gray-100 text-gray-600'">
-                    {{ getCategoryPrefix(selectedCategory) }}
-                  </span>
-                  <input
-                    id="token-name-input"
-                    v-model="tokenForm.name"
-                    type="text"
-                    :placeholder="getTokenNamePlaceholder(selectedCategory)"
-                    @blur="validateTokenName"
-                    class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                    :class="[
-                      isDarkMode 
-                        ? (tokenFormErrors.name ? 'border-red-500 bg-slate-700 text-white' : 'border-gray-600 bg-slate-700 text-white')
-                        : (tokenFormErrors.name ? 'border-red-500 bg-white text-gray-900' : 'border-gray-300 bg-white text-gray-900')
-                    ]"
-                    aria-required="true"
-                    :aria-invalid="!!tokenFormErrors.name"
-                    :aria-describedby="tokenFormErrors.name ? 'token-name-error' : 'token-name-hint'"
-                  />
-                </div>
-                <p v-if="tokenFormErrors.name" id="token-name-error" class="text-xs mt-1 text-red-500" role="alert">
-                  {{ tokenFormErrors.name }}
-                </p>
-                <p v-else id="token-name-hint" class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                  Full name will be: <code class="font-mono">{{ getCategoryPrefix(selectedCategory) }}{{ tokenForm.name || '...' }}</code>
-                </p>
-              </div>
-            </div>
-            <!-- Template Token Name (read-only when using template) -->
-            <div v-else class="mb-4 p-3 rounded-lg" :class="isDarkMode ? 'bg-slate-800' : 'bg-indigo-50'">
-              <label class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Token Name
-              </label>
-              <code class="text-sm font-mono" :class="isDarkMode ? 'text-indigo-300' : 'text-indigo-700'">
-                {{ getCategoryPrefix(selectedCategory) }}{{ tokenForm.name }}
-              </code>
-            </div>
-
-            <!-- Token Type -->
-            <div>
-              <label for="token-type-select" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Type <span class="text-red-500" aria-label="required">*</span>
-              </label>
-              <Dropdown
-                id="token-type-select"
-                v-model="tokenForm.$type"
-                :options="tokenTypeOptions"
-                :is-dark-mode="isDarkMode"
-              />
-            </div>
-
-            <!-- Token Value -->
-            <div>
-              <label for="token-value-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Value <span class="text-red-500" aria-label="required">*</span>
-              </label>
-              <div class="flex items-center gap-3">
-                <button
-                  v-if="tokenForm.$type === 'color'"
-                  @click="openColorPicker($event)"
-                  class="w-16 h-12 rounded border-2 cursor-pointer transition-colors flex-shrink-0"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 hover:border-indigo-400' 
-                    : 'border-gray-300 hover:border-indigo-500'"
-                  :style="{ backgroundColor: tokenForm.$value || '#000000' }"
-                  title="Pick color"
-                  aria-label="Open color picker"
-                ></button>
-                <input
-                  id="token-value-input"
-                  v-model="tokenForm.$value"
-                  type="text"
-                  :placeholder="getValuePlaceholder(tokenForm.$type)"
-                  @blur="validateTokenValue"
-                  class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                  :class="[
-                    isDarkMode 
-                      ? (tokenFormErrors.value ? 'border-red-500 bg-slate-700 text-white' : 'border-gray-600 bg-slate-700 text-white')
-                      : (tokenFormErrors.value ? 'border-red-500 bg-white text-gray-900' : 'border-gray-300 bg-white text-gray-900')
-                  ]"
-                  aria-required="true"
-                  :aria-invalid="!!tokenFormErrors.value"
-                  :aria-describedby="tokenFormErrors.value ? `token-value-error-${tokenForm.$type}` : `token-value-hint-${tokenForm.$type}`"
-                />
-              </div>
-              <p v-if="tokenFormErrors.value" :id="`token-value-error-${tokenForm.$type}`" class="text-xs mt-1 text-red-500" role="alert">
-                {{ tokenFormErrors.value }}
-              </p>
-              <p v-else :id="`token-value-hint-${tokenForm.$type}`" class="text-xs mt-1" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                {{ getValueHint(tokenForm.$type) }}
-              </p>
-            </div>
-
-            <!-- Token Description -->
-            <div>
-              <label for="token-description-textarea" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Description
-              </label>
-              <textarea
-                id="token-description-textarea"
-                v-model="tokenForm.$description"
-                rows="3"
-                placeholder="Optional description for this token"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
-                :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-                aria-label="Optional description for this token"
-              ></textarea>
-            </div>
-
-            <!-- Extensions (for aliases/references) -->
-            <div v-if="tokenForm.$type === 'color'">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  v-model="tokenForm.useAlias"
-                  type="checkbox"
-                  class="w-4 h-4 rounded"
-                  :class="isDarkMode ? 'accent-indigo-500' : 'accent-indigo-600'"
-                />
-                <span class="text-sm font-medium" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Reference another token (alias)
+        <UiPanel v-if="availableTemplates.length" title="Suggested tokens" :description="`Common ${currentCategory.name.toLowerCase()} tokens. Pick one to set its value.`">
+          <ul class="grid sm:grid-cols-2 gap-2">
+            <li v-for="template in availableTemplates" :key="template.name">
+              <button type="button" class="template-button" :disabled="hasToken(template)" @click="openNewToken(template)">
+                <span class="flex items-center justify-between gap-2">
+                  <code class="font-code text-xs text-ink-strong break-all">{{ currentCategory.prefix }}{{ template.name }}</code>
+                  <UiChip v-if="hasToken(template)" tone="success" icon="check">Added</UiChip>
                 </span>
-              </label>
-              <input
-                v-if="tokenForm.useAlias"
-                v-model="tokenForm.$value"
-                type="text"
-                placeholder="{color.primary.500}"
-                class="w-full mt-2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-              />
-            </div>
-          </div>
-
-          <div class="flex justify-end gap-3 mt-6">
-            <button
-              @click="closeTokenModal"
-              class="px-4 py-2 border rounded-lg transition-colors"
-              :class="isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-            >
-              Cancel
-            </button>
-            <button
-              @click="saveToken"
-              :disabled="!tokenForm.name || !tokenForm.$type || !tokenForm.$value"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {{ editingToken ? 'Update' : 'Create' }} Token
-            </button>
-          </div>
-        </div>
+                <span class="text-xs text-ink-secondary">{{ template.description }}</span>
+              </button>
+            </li>
+          </ul>
+        </UiPanel>
       </div>
     </div>
 
-    <!-- Save to Library Modal -->
-    <div
-      v-if="showSaveModal"
-      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-      @click.self="showSaveModal = false"
-      @keydown.escape="showSaveModal = false"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="save-library-title"
-    >
-      <div 
-        class="rounded-lg shadow-xl max-w-md w-full"
-        :class="isDarkMode ? 'bg-slate-900' : 'bg-white'"
-      >
-        <div 
-          class="p-6 border-b"
-          :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-        >
-          <div class="flex items-center justify-between">
-            <h3 id="save-library-title" class="text-xl font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              Save to Style Library
-            </h3>
-            <button
-              @click="showSaveModal = false"
-              class="p-2 rounded-lg transition-colors"
-              :class="isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
-              aria-label="Close modal"
-            >
-              <AppIcon name="x" />
-            </button>
-          </div>
+    <UiDialog v-model:open="showTokenDialog" :title="editingToken ? 'Edit token' : 'Add token'">
+      <form id="ai-token-form" class="flex flex-col gap-5" @submit.prevent="saveToken">
+        <UiCallout tone="info">
+          <strong>{{ currentCategory.name }}.</strong> {{ currentCategory.description }}
+        </UiCallout>
+        <UiInput
+          v-model="tokenForm.name"
+          label="Token name"
+          required
+          mono
+          :placeholder="namePlaceholder(selectedCategory)"
+          :hint="`Full name: ${currentCategory.prefix}${tokenForm.name || '…'}`"
+          :error="tokenFormErrors.name"
+          @blur="validateTokenName"
+        />
+        <UiSelect v-model="tokenForm.$type" label="Type" :options="tokenTypeOptions" required />
+        <UiCheckbox v-if="tokenForm.$type === 'color'" v-model="tokenForm.useAlias" label="Reference another token (alias)" />
+        <UiInput
+          v-model="tokenForm.$value"
+          label="Value"
+          required
+          mono
+          :placeholder="tokenForm.useAlias ? '{color.primary.500}' : valuePlaceholder(tokenForm.$type)"
+          :hint="tokenForm.useAlias ? 'The name of another token in braces' : valueHint(tokenForm.$type)"
+          :error="tokenFormErrors.value"
+          @blur="validateTokenValue"
+        />
+        <div v-if="tokenForm.$type === 'color' && !tokenForm.useAlias" class="w-32">
+          <UiInput
+            type="color"
+            label="Pick a colour"
+            :model-value="pickerValue(tokenForm.$value)"
+            @update:model-value="tokenForm.$value = $event"
+          />
         </div>
-        <div class="p-6">
-          <div class="space-y-4">
-            <div>
-              <label for="dictionary-name-input" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Dictionary Name <span class="text-red-500" aria-label="required">*</span>
-              </label>
-              <input
-                id="dictionary-name-input"
-                v-model="saveDictionaryName"
-                type="text"
-                placeholder="e.g., AI Tokens 2024"
-                @blur="validateSaveDictionaryName"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                :class="[
-                  isDarkMode 
-                    ? (saveFormErrors.name ? 'border-red-500 bg-slate-700 text-white' : 'border-gray-600 bg-slate-700 text-white')
-                    : (saveFormErrors.name ? 'border-red-500 bg-white text-gray-900' : 'border-gray-300 bg-white text-gray-900')
-                ]"
-                aria-required="true"
-                :aria-invalid="!!saveFormErrors.name"
-                :aria-describedby="saveFormErrors.name ? 'dictionary-name-error' : undefined"
-              />
-              <p v-if="saveFormErrors.name" id="dictionary-name-error" class="text-xs mt-1 text-red-500" role="alert">
-                {{ saveFormErrors.name }}
-              </p>
-            </div>
-            <div>
-              <label for="dictionary-description-textarea" class="block text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                Description
-              </label>
-              <textarea
-                id="dictionary-description-textarea"
-                v-model="saveDictionaryDescription"
-                rows="3"
-                placeholder="Optional description for this style dictionary"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
-                :class="isDarkMode ? 'border-gray-600 bg-slate-700 text-white' : 'border-gray-300 bg-white text-gray-900'"
-              ></textarea>
-            </div>
-            <div class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-              <span class="font-medium">{{ tokens.length }}</span> tokens will be saved
-            </div>
-          </div>
-          <div class="flex justify-end gap-3 mt-6">
-            <button
-              @click="showSaveModal = false"
-              class="px-4 py-2 border rounded-lg transition-colors"
-              :class="isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'"
-            >
-              Cancel
-            </button>
-            <button
-              @click="saveToLibrary"
-              :disabled="!saveDictionaryName || tokens.length === 0"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Save to Library
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <UiTextarea v-model="tokenForm.$description" label="Description" :rows="3" placeholder="What the token is for" />
+      </form>
+      <template #footer>
+        <UiButton @click="showTokenDialog = false">Cancel</UiButton>
+        <UiButton variant="primary" type="submit" form="ai-token-form" :disabled="!tokenForm.name || !tokenForm.$type || !tokenForm.$value">
+          {{ editingToken ? 'Save token' : 'Add token' }}
+        </UiButton>
+      </template>
+    </UiDialog>
 
-    <!-- Color Picker -->
-    <ColorPicker
-      :show="showColorPicker"
-      :initial-color="pickerColor"
-      :position="pickerPosition"
-      @update:show="showColorPicker = $event"
-      @apply="handleColorPickerApply"
-      @cancel="showColorPicker = false"
-    />
-  </div>
+    <SaveDictionaryDialog v-model:open="showSaveDialog" :tokens="tokensForLibrary" :dictionary="loadedDictionary" :library="library" :tags="['ai']" @saved="onSaved" />
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import Dropdown from '../components/Dropdown.vue';
-import ColorPicker from '../components/ColorPicker.vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import InlineNotice from '../components/InlineNotice.vue';
+import SaveDictionaryDialog from '../components/tokens/SaveDictionaryDialog.vue';
+import TokenList from '../components/tokens/TokenList.vue';
+import {
+  PageHero, PageShell, UiButton, UiCallout, UiCheckbox, UiChip, UiDialog, UiEmptyState, UiInput, UiPanel, UiSelect, UiSpinner, UiTextarea,
+} from '../components/ui';
+import { useNotice } from '../composables/useNotice.js';
+import { useResourceLibrary } from '../composables/useResourceLibrary.js';
+import { dictionaryTokens, dtcgToTokens, tokensToDtcg } from '../utils/styleDictionary.js';
+import { EXPORT_FORMATS, downloadText, exportTokenFile } from '../utils/tokenExport.js';
 
 const route = useRoute();
+const router = useRouter();
+const { notice, showNotice, clearNotice } = useNotice();
+const library = useResourceLibrary('style-dictionaries');
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const selectedCategory = ref('agent-identity');
-const showAddTokenModal = ref(false);
-const showSaveModal = ref(false);
-const editingToken = ref(null);
-const saveDictionaryName = ref('');
-const saveDictionaryDescription = ref('');
+// The working draft stays in this browser between visits; saved dictionaries live in a workspace
+const DRAFT_KEY = 'aiDesignTokens';
 
-// Form validation errors
-const tokenFormErrors = ref({
-  name: '',
-  type: '',
-  value: ''
-});
-
-const saveFormErrors = ref({
-  name: ''
-});
-
-// Color picker state
-const showColorPicker = ref(false);
-const pickerColor = ref('#000000');
-const pickerPosition = ref({ left: 0, top: 0 });
-
-// Token type options for dropdown
 const tokenTypeOptions = [
   { label: 'Color', value: 'color' },
   { label: 'Dimension', value: 'dimension' },
-  { label: 'Font Family', value: 'fontFamily' },
-  { label: 'Font Weight', value: 'fontWeight' },
+  { label: 'Font family', value: 'fontFamily' },
+  { label: 'Font weight', value: 'fontWeight' },
   { label: 'Duration', value: 'duration' },
-  { label: 'Cubic Bezier', value: 'cubicBezier' },
+  { label: 'Cubic bezier', value: 'cubicBezier' },
   { label: 'Number', value: 'number' },
   { label: 'String', value: 'string' },
 ];
 
-// AI Token Templates - specific tokens for each category
+// Suggested tokens for each category: a name (after the category prefix), type and description
 const aiTokenTemplates = {
   'agent-identity': [
     { name: 'id', type: 'string', description: 'Agent identifier' },
@@ -797,9 +249,9 @@ const aiTokenTemplates = {
   'human-ai-teaming': [
     { name: 'hitl.requiredIndicator.color', type: 'color', description: 'HITL required indicator color' },
     { name: 'hotl.alert.style', type: 'string', description: 'HOTL alert style' },
-    { name: 'ai.handoff.step.color', type: 'color', description: 'AI handoff step color' },
-    { name: 'ai.handoff.callout.background', type: 'color', description: 'AI handoff callout background' },
-    { name: 'ai.handoff.requiredAction.icon', type: 'string', description: 'AI handoff required action icon' }
+    { name: 'handoff.step.color', type: 'color', description: 'AI handoff step color' },
+    { name: 'handoff.callout.background', type: 'color', description: 'AI handoff callout background' },
+    { name: 'handoff.requiredAction.icon', type: 'string', description: 'AI handoff required action icon' }
   ],
   'safety-boundary': [
     { name: 'softLimit.color', type: 'color', description: 'Soft limit color' },
@@ -824,18 +276,18 @@ const aiTokenTemplates = {
   ]
 };
 
-// AI Token Categories with definitions
-const aiCategories = ref([
+// The categories of AI-interface tokens, each with the name prefix its tokens share
+const aiCategories = [
   {
     id: 'agent-identity',
-    name: 'Agent Identity',
+    name: 'Agent identity',
     icon: 'bot',
     prefix: 'agent.',
     description: 'Represent agent personality, role, trust profile, and visual identity'
   },
   {
     id: 'confidence',
-    name: 'Confidence & Uncertainty',
+    name: 'Confidence and uncertainty',
     icon: 'trending-up',
     prefix: 'ai.confidence.',
     description: 'Visual and behavioral representation of model uncertainty'
@@ -849,7 +301,7 @@ const aiCategories = ref([
   },
   {
     id: 'risk-safety',
-    name: 'Risk & Safety',
+    name: 'Risk and safety',
     icon: 'shield',
     prefix: 'ai.risk.',
     description: 'GenAI guardrails and HOTL/HITL patterns'
@@ -863,14 +315,14 @@ const aiCategories = ref([
   },
   {
     id: 'message-state',
-    name: 'Message State',
+    name: 'Message state',
     icon: 'message-circle',
     prefix: 'message.state.',
     description: 'Reflecting streaming, thinking, planning, and tool-use states'
   },
   {
     id: 'citation',
-    name: 'Citation & Provenance',
+    name: 'Citation and provenance',
     icon: 'link',
     prefix: 'citation.',
     description: 'Essential for compliance and transparency'
@@ -884,743 +336,272 @@ const aiCategories = ref([
   },
   {
     id: 'human-ai-teaming',
-    name: 'Human-AI Teaming',
+    name: 'Human-AI teaming',
     icon: 'handshake',
-    prefix: 'hitl.',
+    prefix: 'ai.teaming.',
     description: 'HITL/HOTL UX guidance tokens'
   },
   {
     id: 'safety-boundary',
-    name: 'Safety & Boundary',
+    name: 'Safety and boundaries',
     icon: 'triangle-alert',
     prefix: 'ai.boundary.',
     description: 'GenAI guardrail UI tokens'
   },
   {
     id: 'model-behavior',
-    name: 'Model Behavior',
+    name: 'Model behavior',
     icon: 'brain',
     prefix: 'model.behavior.',
     description: 'MCP, LangChain, LangGraph agent states'
   },
   {
     id: 'multi-agent',
-    name: 'Multi-Agent Interaction',
+    name: 'Multi-agent interaction',
     icon: 'users-round',
     prefix: 'agent.interaction.',
     description: 'Agent Crowd / Team-of-Agents design tokens'
   }
-]);
+];
 
+// Names written before the categories had their current prefixes
+const LEGACY_PREFIXES = [
+  ['ai.safety.', 'risk-safety'],
+  ['provenance.', 'citation'],
+  ['hitl.', 'human-ai-teaming'],
+  ['hotl.', 'human-ai-teaming'],
+  ['ai.handoff.', 'human-ai-teaming'],
+  ['ai.moderation.', 'safety-boundary'],
+];
+const PREFIXES = [...aiCategories.map((c) => [c.prefix, c.id]), ...LEGACY_PREFIXES].sort((a, b) => b[0].length - a[0].length);
+
+/** The AI category a token name belongs to (longest matching prefix; agent identity otherwise) */
+const categoryFromName = (name) => PREFIXES.find(([prefix]) => name.startsWith(prefix))?.[1] ?? 'agent-identity';
+
+const NAME_PLACEHOLDERS = {
+  'agent-identity': 'role',
+  confidence: 'color.high',
+  explainability: 'highlightColor',
+  'risk-safety': 'color.critical',
+  prompting: 'input.background',
+  'message-state': 'thinking.color',
+  citation: 'badge.color',
+  memory: 'longTerm.badge.color',
+  'human-ai-teaming': 'hitl.requiredIndicator.color',
+  'safety-boundary': 'hardLimit.color',
+  'model-behavior': 'color.reasoning',
+  'multi-agent': 'lineColor',
+};
+const namePlaceholder = (id) => NAME_PLACEHOLDERS[id] ?? 'token.name';
+
+const PLACEHOLDERS = {
+  color: '#2f5ea8', dimension: '16px', fontFamily: 'Inter, sans-serif', fontWeight: '400',
+  duration: '200ms', cubicBezier: '0.4, 0.0, 0.2, 1', number: '0.8', string: 'value',
+};
+const HINTS = {
+  color: 'Hex, RGB or HSL',
+  dimension: 'A value with a unit (px, rem, em)',
+  fontFamily: 'A font family or stack',
+  fontWeight: 'A weight from 100 to 900',
+  duration: 'A time with a unit (ms, s)',
+  cubicBezier: 'Four comma-separated numbers',
+  number: 'A number',
+  string: 'Text',
+};
+const valuePlaceholder = (type) => PLACEHOLDERS[type] ?? '';
+const valueHint = (type) => HINTS[type] ?? '';
+
+const selectedCategory = ref('agent-identity');
 const tokens = ref([]);
+const loadedDictionary = ref(null);
+const openingDictionary = ref(false);
+const fileInput = ref(null);
+const showTokenDialog = ref(false);
+const showSaveDialog = ref(false);
+const editingToken = ref(null);
 
-const tokenForm = ref({
-  name: '',
-  category: '',
-  $type: 'color',
-  $value: '',
-  $description: '',
-  useAlias: false,
-  fromTemplate: false
-});
+const blankForm = () => ({ name: '', $type: 'color', $value: '', $description: '', useAlias: false });
+const tokenForm = ref(blankForm());
+const tokenFormErrors = ref({ name: '', value: '' });
 
-const showTemplateSelector = ref(false);
-const availableTemplates = computed(() => {
-  return aiTokenTemplates[selectedCategory.value] || [];
-});
+const currentCategory = computed(() => aiCategories.find((c) => c.id === selectedCategory.value) ?? aiCategories[0]);
+const tokenCategory = (token) => token.aiCategory || categoryFromName(token.name);
+const filteredTokens = computed(() => tokens.value.filter((token) => tokenCategory(token) === selectedCategory.value));
+const categoryCount = (id) => tokens.value.filter((token) => tokenCategory(token) === id).length;
+const availableTemplates = computed(() => aiTokenTemplates[selectedCategory.value] ?? []);
+const hasToken = (template) => tokens.value.some((t) => t.name === currentCategory.value.prefix + template.name);
 
-const existingTokenNames = computed(() => {
-  return filteredTokens.value.map(t => t.name);
-});
+// The library keeps names, types and values; the AI category comes back from the name prefix
+const tokensForLibrary = computed(() => tokens.value.map(({ aiCategory, category, ...token }) => token));
 
-const getTemplatesForCategory = (categoryId) => {
-  return aiTokenTemplates[categoryId] || [];
-};
+const isHex = (value) => /^#[0-9a-f]{6}$/i.test(String(value ?? ''));
+// A native colour input only takes #rrggbb
+const pickerValue = (value) => (isHex(value) ? value : '#000000');
+const isAlias = (value) => typeof value === 'string' && /^\{[^{}]+\}$/.test(value.trim());
 
-const filteredTokens = computed(() => {
-  return tokens.value.filter(token => {
-    const tokenAiCategory = token.aiCategory || getCategoryFromTokenName(token.name);
-    return tokenAiCategory === selectedCategory.value;
-  });
-});
-
-const getCategoryTokenCount = (categoryId) => {
-  return tokens.value.filter(token => {
-    const tokenAiCategory = token.aiCategory || getCategoryFromTokenName(token.name);
-    return tokenAiCategory === categoryId;
-  }).length;
-};
-
-const getCategoryName = (categoryId) => {
-  const category = aiCategories.value.find(c => c.id === categoryId);
-  return category ? category.name : 'All';
-};
-
-const getCategoryIcon = (categoryId) => {
-  const category = aiCategories.value.find(c => c.id === categoryId);
-  return category ? category.icon : 'swatch-book';
-};
-
-const getCategoryDescription = (categoryId) => {
-  const category = aiCategories.value.find(c => c.id === categoryId);
-  return category ? category.description : '';
-};
-
-const getCategoryPrefix = (categoryId) => {
-  const category = aiCategories.value.find(c => c.id === categoryId);
-  return category ? category.prefix : '';
-};
-
-const getCategoryFromTokenName = (name) => {
-  // Map token prefixes to category IDs
-  if (name.startsWith('agent.') && !name.startsWith('agent.interaction.')) {
-    return 'agent-identity';
-  } else if (name.startsWith('agent.interaction.')) {
-    return 'multi-agent';
-  } else if (name.startsWith('ai.confidence.')) {
-    return 'confidence';
-  } else if (name.startsWith('ai.explainability.')) {
-    return 'explainability';
-  } else if (name.startsWith('ai.risk.') || name.startsWith('ai.safety.')) {
-    return 'risk-safety';
-  } else if (name.startsWith('prompt.')) {
-    return 'prompting';
-  } else if (name.startsWith('message.state.')) {
-    return 'message-state';
-  } else if (name.startsWith('citation.') || name.startsWith('provenance.')) {
-    return 'citation';
-  } else if (name.startsWith('memory.')) {
-    return 'memory';
-  } else if (name.startsWith('hitl.') || name.startsWith('hotl.') || name.startsWith('ai.handoff.')) {
-    return 'human-ai-teaming';
-  } else if (name.startsWith('ai.boundary.') || name.startsWith('ai.moderation.')) {
-    return 'safety-boundary';
-  } else if (name.startsWith('model.behavior.')) {
-    return 'model-behavior';
+const saveDraft = () => {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(tokens.value));
+  } catch {
+    // Storage can be full or blocked; the draft just won't survive a reload
   }
-  return 'agent-identity'; // default
 };
 
-const getTokenNamePlaceholder = (categoryId) => {
-  const placeholders = {
-    'agent-identity': 'id, name, role, persona.tone',
-    'confidence': 'level, color.low, color.medium, color.high',
-    'explainability': 'summaryStyle, highlightColor, stepIndicator.color',
-    'risk-safety': 'level, color.low, color.med, color.high, color.critical',
-    'prompting': 'input.background, input.placeholder, roleSystem.color',
-    'message-state': 'thinking.color, toolUse.color, streaming.cursorColor',
-    'citation': 'badge.color, badge.icon, number.color',
-    'memory': 'shortTerm.icon, longTerm.badge.color, memoryConflict.color',
-    'human-ai-teaming': 'requiredIndicator.color, alert.style, handoff.step.color',
-    'safety-boundary': 'softLimit.color, hardLimit.color, moderation.flag.color',
-    'model-behavior': 'type, color.reasoning, color.retrieval, color.action',
-    'multi-agent': 'lineColor, lineStyle, priority.color'
-  };
-  return placeholders[categoryId] || 'token.name';
-};
-
-const getCategoryButtonClass = (categoryId) => {
-  const isSelected = selectedCategory.value === categoryId;
-  if (isSelected) {
-    return isDarkMode.value 
-      ? 'bg-indigo-900/30 text-indigo-300 border-l-2 border-indigo-400' 
-      : 'bg-indigo-50 text-indigo-700 border-l-2 border-indigo-600';
+const loadDraft = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DRAFT_KEY) || '[]');
+    tokens.value = Array.isArray(stored) ? stored : [];
+  } catch {
+    tokens.value = [];
   }
-  return isDarkMode.value
-    ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-800' 
-    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50';
 };
 
-const getTokenValue = (token) => {
-  if (token.$value && token.$value.startsWith('{') && token.$value.endsWith('}')) {
-    return token.$value;
-  }
-  return token.$value || '';
-};
+const fullName = () => currentCategory.value.prefix + tokenForm.value.name.trim();
 
-const getTokenType = (token) => {
-  return token.$type || 'string';
-};
-
-const getTokenDescription = (token) => {
-  return token.$description || '';
-};
-
-const getTokenIcon = (type) => {
-  const icons = {
-    color: 'palette',
-    dimension: 'ruler',
-    fontFamily: 'type',
-    fontWeight: 'bold',
-    duration: 'clock',
-    cubicBezier: 'chart-gantt',
-    number: 'hash',
-    string: 'type'
-  };
-  return icons[type] || 'swatch-book';
-};
-
-const getValuePlaceholder = (type) => {
-  const placeholders = {
-    color: '#6366f1',
-    dimension: '16px',
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: '400',
-    duration: '200ms',
-    cubicBezier: '0.4, 0.0, 0.2, 1',
-    number: '1.5',
-    string: 'value'
-  };
-  return placeholders[type] || '';
-};
-
-const getValueHint = (type) => {
-  const hints = {
-    color: 'Hex, RGB, HSL, or reference another token with {token.name}',
-    dimension: 'Value with unit (px, rem, em, etc.)',
-    fontFamily: 'Font family name or stack',
-    fontWeight: 'Numeric weight (100-900)',
-    duration: 'Time value with unit (ms, s)',
-    cubicBezier: 'Four comma-separated values (0.4, 0.0, 0.2, 1)',
-    number: 'Numeric value',
-    string: 'Text value'
-  };
-  return hints[type] || '';
-};
-
-// Validation functions
 const validateTokenName = () => {
-  if (!tokenForm.value.name || tokenForm.value.name.trim() === '') {
-    tokenFormErrors.value.name = 'Token name is required';
-  } else if (!tokenForm.value.name.match(/^[a-zA-Z][a-zA-Z0-9._-]*$/)) {
-    tokenFormErrors.value.name = 'Token name must start with a letter and contain only letters, numbers, dots, underscores, or hyphens';
-  } else {
-    tokenFormErrors.value.name = '';
-  }
+  const name = tokenForm.value.name.trim();
+  if (!name) tokenFormErrors.value.name = 'Give the token a name';
+  else if (!/^[a-zA-Z][a-zA-Z0-9._-]*$/.test(name)) tokenFormErrors.value.name = 'Start with a letter; use only letters, numbers, dots, underscores and hyphens';
+  else if (tokens.value.some((t) => t.name === fullName() && t.id !== editingToken.value?.id)) tokenFormErrors.value.name = 'A token with this name already exists';
+  else tokenFormErrors.value.name = '';
 };
 
 const validateTokenValue = () => {
-  if (!tokenForm.value.$value || tokenForm.value.$value.trim() === '') {
-    tokenFormErrors.value.value = 'Token value is required';
-  } else {
-    tokenFormErrors.value.value = '';
-  }
+  const value = String(tokenForm.value.$value ?? '').trim();
+  if (!value) tokenFormErrors.value.value = 'Give the token a value';
+  else if (tokenForm.value.useAlias && !isAlias(value)) tokenFormErrors.value.value = 'An alias is another token\'s name in braces, e.g. {color.primary.500}';
+  else tokenFormErrors.value.value = '';
 };
 
-const validateSaveDictionaryName = () => {
-  if (!saveDictionaryName.value || saveDictionaryName.value.trim() === '') {
-    saveFormErrors.value.name = 'Dictionary name is required';
-  } else {
-    saveFormErrors.value.name = '';
-  }
+/** Opens the token form, empty or filled from a suggested token */
+const openNewToken = (template = null) => {
+  editingToken.value = null;
+  tokenForm.value = template
+    ? { name: template.name, $type: template.type, $value: '', $description: template.description, useAlias: false }
+    : blankForm();
+  tokenFormErrors.value = { name: '', value: '' };
+  showTokenDialog.value = true;
 };
 
 const editToken = (token) => {
+  const category = tokenCategory(token);
+  const prefix = aiCategories.find((c) => c.id === category)?.prefix ?? '';
+  selectedCategory.value = category;
   editingToken.value = token;
-  const fullName = token.name;
-  const prefix = getCategoryPrefix(token.aiCategory || getCategoryFromTokenName(fullName));
-  const nameWithoutPrefix = fullName.startsWith(prefix) ? fullName.slice(prefix.length) : fullName;
-  
   tokenForm.value = {
-    name: nameWithoutPrefix,
-    category: token.category || 'ai',
-    $type: token.$type,
-    $value: token.$value,
+    name: token.name.startsWith(prefix) ? token.name.slice(prefix.length) : token.name,
+    $type: token.$type || 'string',
+    $value: typeof token.$value === 'object' ? JSON.stringify(token.$value) : String(token.$value ?? ''),
     $description: token.$description || '',
-    useAlias: token.$value && token.$value.startsWith('{') && token.$value.endsWith('}')
+    useAlias: isAlias(token.$value),
   };
-  selectedCategory.value = token.aiCategory || getCategoryFromTokenName(fullName);
-  showAddTokenModal.value = true;
+  tokenFormErrors.value = { name: '', value: '' };
+  showTokenDialog.value = true;
 };
 
-const deleteToken = (tokenId) => {
-  if (confirm('Are you sure you want to delete this token?')) {
-    const index = tokens.value.findIndex(t => t.id === tokenId);
-    if (index > -1) {
-      tokens.value.splice(index, 1);
-      saveTokensToStorage();
-    }
-  }
+const deleteToken = (token) => {
+  if (!window.confirm(`Delete ${token.name}?`)) return;
+  tokens.value = tokens.value.filter((t) => t.id !== token.id);
+  saveDraft();
 };
 
 const saveToken = () => {
   validateTokenName();
   validateTokenValue();
-  
-  if (tokenFormErrors.value.name || tokenFormErrors.value.value || !tokenForm.value.name || !tokenForm.value.$type || !tokenForm.value.$value) {
-    return;
-  }
-
-  const prefix = getCategoryPrefix(selectedCategory.value);
-  const fullTokenName = prefix + tokenForm.value.name;
-
-  const tokenData = {
-    id: editingToken.value?.id || Date.now().toString(),
-    name: fullTokenName,
-    category: 'ai', // All AI tokens have category 'ai'
-    aiCategory: selectedCategory.value, // Specific AI category
+  if (tokenFormErrors.value.name || tokenFormErrors.value.value) return;
+  const token = {
+    id: editingToken.value?.id ?? `${Date.now()}-${tokens.value.length}`,
+    name: fullName(),
+    aiCategory: selectedCategory.value,
     $type: tokenForm.value.$type,
-    $value: tokenForm.value.$value,
-    $description: tokenForm.value.$description || undefined
+    $value: tokenForm.value.$value.trim(),
   };
-
-  if (editingToken.value) {
-    const index = tokens.value.findIndex(t => t.id === editingToken.value.id);
-    if (index > -1) {
-      tokens.value[index] = tokenData;
-    }
-  } else {
-    tokens.value.push(tokenData);
-  }
-
-  saveTokensToStorage();
-  closeTokenModal();
+  if (tokenForm.value.$description.trim()) token.$description = tokenForm.value.$description.trim();
+  tokens.value = editingToken.value ? tokens.value.map((t) => (t.id === editingToken.value.id ? token : t)) : [...tokens.value, token];
+  saveDraft();
+  showTokenDialog.value = false;
 };
 
-const createFromTemplate = (template) => {
-  const fullName = getCategoryPrefix(selectedCategory.value) + template.name;
-  if (existingTokenNames.value.includes(fullName)) {
-    return; // Token already exists
-  }
-  
-  tokenForm.value = {
-    name: template.name,
-    category: 'ai',
-    $type: template.type,
-    $value: getDefaultValueForType(template.type),
-    $description: template.description,
-    useAlias: false,
-    fromTemplate: true
-  };
-  
-  showAddTokenModal.value = true;
+const exportTokens = (format) => {
+  downloadText(exportTokenFile(tokensToDtcg(tokensForLibrary.value), format, loadedDictionary.value?.name?.replace(/\s+/g, '-') || 'ai-tokens'));
 };
 
-const getDefaultValueForType = (type) => {
-  const defaults = {
-    color: '#6366f1',
-    dimension: '16px',
-    fontFamily: 'Inter, sans-serif',
-    fontWeight: '400',
-    duration: '200ms',
-    cubicBezier: '0.4, 0.0, 0.2, 1',
-    number: '0',
-    string: ''
-  };
-  return defaults[type] || '';
-};
+const withAiCategory = (list) => list.map(({ category, ...token }) => ({ ...token, aiCategory: categoryFromName(token.name) }));
 
-const closeTokenModal = () => {
-  showAddTokenModal.value = false;
-  editingToken.value = null;
-  showColorPicker.value = false;
-  showTemplateSelector.value = false;
-  tokenFormErrors.value = { name: '', type: '', value: '' };
-  tokenForm.value = {
-    name: '',
-    category: '',
-    $type: 'color',
-    $value: '',
-    $description: '',
-    useAlias: false,
-    fromTemplate: false
-  };
-};
-
-const openColorPicker = (event) => {
-  if (event) {
-    event.stopPropagation();
-    const rect = event.target.getBoundingClientRect();
-    
-    const pickerWidth = 300;
-    const pickerHeight = 550;
-    const padding = 16;
-    
-    let left = rect.right + padding;
-    let top = rect.top;
-    
-    if (left + pickerWidth > window.innerWidth - padding) {
-      left = rect.left - pickerWidth - padding;
-    }
-    
-    if (left < padding) {
-      left = padding;
-    }
-    
-    if (top + pickerHeight > window.innerHeight - padding) {
-      const spaceAbove = rect.top - padding;
-      const spaceBelow = window.innerHeight - rect.bottom - padding;
-      
-      if (spaceAbove >= pickerHeight) {
-        top = rect.top - pickerHeight - padding;
-      } else if (spaceBelow >= pickerHeight) {
-        top = rect.bottom + padding;
-      } else {
-        top = Math.max(padding, (window.innerHeight - pickerHeight) / 2);
-      }
-    }
-    
-    if (top < padding) {
-      top = padding;
-    }
-    
-    left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding));
-    top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding));
-    
-    pickerPosition.value = { left, top };
-  }
-  pickerColor.value = tokenForm.value.$value || '#000000';
-  showColorPicker.value = true;
-};
-
-const handleColorPickerApply = (color) => {
-  tokenForm.value.$value = color;
-  showColorPicker.value = false;
-};
-
-const saveToLibrary = () => {
-  validateSaveDictionaryName();
-  if (saveFormErrors.value.name || !saveDictionaryName.value || tokens.value.length === 0) return;
-  
-  const dictionaries = JSON.parse(localStorage.getItem('styleDictionaries') || '[]');
-  
-  const dictionaryId = route.query.load;
-  let dictionary;
-  
-  if (dictionaryId) {
-    const index = dictionaries.findIndex(d => d.id === dictionaryId);
-    if (index > -1) {
-      dictionary = dictionaries[index];
-      dictionary.name = saveDictionaryName.value;
-      dictionary.description = saveDictionaryDescription.value || '';
-      dictionary.tokens = JSON.parse(JSON.stringify(tokens.value));
-      dictionary.updatedAt = new Date().toISOString();
-      dictionaries[index] = dictionary;
-    }
-  }
-  
-  if (!dictionary) {
-    dictionary = {
-      id: Date.now().toString(),
-      name: saveDictionaryName.value,
-      description: saveDictionaryDescription.value || '',
-      tokens: JSON.parse(JSON.stringify(tokens.value)),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      retired: false
-    };
-    dictionaries.push(dictionary);
-  }
-  
-  localStorage.setItem('styleDictionaries', JSON.stringify(dictionaries));
-  
-  saveDictionaryName.value = '';
-  saveDictionaryDescription.value = '';
-  showSaveModal.value = false;
-  
-  alert(dictionaryId ? 'Style dictionary updated!' : 'Style dictionary saved to library!');
-};
-
-const saveTokensToStorage = () => {
-  localStorage.setItem('aiDesignTokens', JSON.stringify(tokens.value));
-};
-
-const loadTokensFromStorage = () => {
-  const stored = localStorage.getItem('aiDesignTokens');
-  if (stored) {
-    try {
-      tokens.value = JSON.parse(stored);
-    } catch (e) {
-      console.error('Error loading AI tokens:', e);
-    }
-  }
-};
-
-const exportTokens = async (format) => {
-  const dtcgTokens = convertToDTCGFormat(tokens.value);
-  
-  if (format === 'json') {
-    downloadJSON(dtcgTokens, 'ai-tokens.json');
-    return;
-  }
-
+const importFile = async (event) => {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
   try {
-    let content = '';
-    
-    if (format === 'css') {
-      content = exportToCSS(dtcgTokens);
-    } else if (format === 'ios') {
-      content = exportToIOS(dtcgTokens);
-    } else if (format === 'android') {
-      content = exportToAndroid(dtcgTokens);
+    const imported = withAiCategory(dtcgToTokens(JSON.parse(await file.text())));
+    if (!imported.length) {
+      showNotice('No tokens found. Tokens need a "$value" (DTCG format).', 'error');
+      return;
     }
-    
-    downloadFile(content, `ai-tokens.${getFileExtension(format)}`, getMimeType(format));
-  } catch (error) {
-    console.error('Export error:', error);
-    alert('Error exporting tokens. Please check the console for details.');
+    const existing = new Set(tokens.value.map((t) => t.name));
+    const added = imported.filter((t) => !existing.has(t.name));
+    tokens.value = [...tokens.value, ...added];
+    saveDraft();
+    const skipped = imported.length - added.length;
+    showNotice(`Imported ${added.length} token${added.length === 1 ? '' : 's'}${skipped ? `; ${skipped} already existed` : ''}.`, 'success');
+  } catch (err) {
+    showNotice(`Could not import the file: ${err.message}`, 'error');
   }
 };
 
-const importTokens = () => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const importedData = JSON.parse(event.target.result);
-        const importedTokens = convertFromDTCGFormat(importedData);
-        
-        importedTokens.forEach(newToken => {
-          const exists = tokens.value.find(t => t.name === newToken.name);
-          if (!exists) {
-            tokens.value.push(newToken);
-          }
-        });
-        
-        saveTokensToStorage();
-        alert(`Imported ${importedTokens.length} token(s)`);
-      } catch (error) {
-        console.error('Import error:', error);
-        alert('Error importing tokens. Please check the file format.');
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-};
-
-const convertFromDTCGFormat = (dtcgData) => {
-  const tokens = [];
-  
-  const flatten = (obj, prefix = '') => {
-    for (const [key, value] of Object.entries(obj)) {
-      const fullKey = prefix ? `${prefix}.${key}` : key;
-      if (value.$value !== undefined) {
-        tokens.push({
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          name: fullKey,
-          category: 'ai',
-          aiCategory: getCategoryFromTokenName(fullKey),
-          $type: value.$type || 'string',
-          $value: value.$value,
-          $description: value.$description
-        });
-      } else if (typeof value === 'object' && value !== null) {
-        flatten(value, fullKey);
-      }
+const openDictionary = async (id) => {
+  openingDictionary.value = true;
+  try {
+    if (!library.loaded.value) await library.load();
+    if (library.error.value) {
+      showNotice(`Could not open the style dictionary: ${library.error.value}`, 'error');
+      return;
     }
-  };
-  
-  flatten(dtcgData);
-  return tokens;
-};
-
-const convertToDTCGFormat = (tokens) => {
-  const dtcg = {};
-  
-  tokens.forEach(token => {
-    const parts = token.name.split('.');
-    let current = dtcg;
-    
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (!current[parts[i]]) {
-        current[parts[i]] = {};
-      }
-      current = current[parts[i]];
+    const dictionary = library.items.value.find((item) => item.id === String(id));
+    if (!dictionary) {
+      showNotice('That style dictionary was not found, or you can\'t see it. Your draft is unchanged.', 'error');
+      return;
     }
-    
-    const tokenData = {
-      $value: token.$value,
-      $type: token.$type
-    };
-    
-    if (token.$description) {
-      tokenData.$description = token.$description;
-    }
-    
-    current[parts[parts.length - 1]] = tokenData;
-  });
-  
-  return dtcg;
-};
-
-const exportToCSS = (tokens) => {
-  let css = ':root {\n';
-  
-  const flattenTokens = (obj, prefix = '') => {
-    const result = [];
-    for (const [key, value] of Object.entries(obj)) {
-      const fullKey = prefix ? `${prefix}-${key}` : key;
-      if (value.$value !== undefined) {
-        const cssVar = `--${fullKey.replace(/\./g, '-')}`;
-        result.push(`  ${cssVar}: ${value.$value};`);
-      } else if (typeof value === 'object' && value !== null) {
-        result.push(...flattenTokens(value, fullKey));
-      }
-    }
-    return result;
-  };
-  
-  css += flattenTokens(tokens).join('\n');
-  css += '\n}';
-  
-  return css;
-};
-
-const exportToIOS = (tokens) => {
-  let plist = '<?xml version="1.0" encoding="UTF-8"?>\n';
-  plist += '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n';
-  plist += '<plist version="1.0">\n<dict>\n';
-  
-  const flattenTokens = (obj, prefix = '') => {
-    const result = [];
-    for (const [key, value] of Object.entries(obj)) {
-      const fullKey = prefix ? `${prefix}.${key}` : key;
-      if (value.$value !== undefined) {
-        const tokenKey = fullKey.replace(/\./g, '_');
-        let plistValue = value.$value;
-        if (value.$type === 'color') {
-          plistValue = convertHexToRGB(plistValue);
-        }
-        result.push(`  <key>${tokenKey}</key>\n  <string>${plistValue}</string>`);
-      } else if (typeof value === 'object' && value !== null) {
-        result.push(...flattenTokens(value, fullKey));
-      }
-    }
-    return result;
-  };
-  
-  plist += flattenTokens(tokens).join('\n');
-  plist += '\n</dict>\n</plist>';
-  
-  return plist;
-};
-
-const exportToAndroid = (tokens) => {
-  let xml = '<?xml version="1.0" encoding="utf-8"?>\n';
-  xml += '<resources>\n';
-  
-  const flattenTokens = (obj, prefix = '') => {
-    const result = [];
-    for (const [key, value] of Object.entries(obj)) {
-      const fullKey = prefix ? `${prefix}_${key}` : key;
-      if (value.$value !== undefined) {
-        const androidKey = fullKey.replace(/\./g, '_').replace(/-/g, '_');
-        let androidValue = value.$value;
-        if (value.$type === 'color') {
-          androidValue = convertHexToAndroidColor(androidValue);
-        } else if (value.$type === 'dimension') {
-          androidValue = androidValue.replace('px', 'dp');
-        }
-        result.push(`  <color name="${androidKey}">${androidValue}</color>`);
-      } else if (typeof value === 'object' && value !== null) {
-        result.push(...flattenTokens(value, fullKey));
-      }
-    }
-    return result;
-  };
-  
-  xml += flattenTokens(tokens).join('\n');
-  xml += '\n</resources>';
-  
-  return xml;
-};
-
-const convertHexToRGB = (hex) => {
-  if (!hex.startsWith('#')) return hex;
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  return `${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)}`;
-};
-
-const convertHexToAndroidColor = (hex) => {
-  if (!hex.startsWith('#')) return hex;
-  if (hex.length === 7) {
-    return `#FF${hex.slice(1)}`;
+    loadedDictionary.value = dictionary;
+    tokens.value = withAiCategory(dictionaryTokens(dictionary));
+    saveDraft();
+  } finally {
+    openingDictionary.value = false;
   }
-  return hex;
 };
 
-const getFileExtension = (format) => {
-  const extensions = {
-    css: 'css',
-    ios: 'plist',
-    android: 'xml',
-    json: 'json'
-  };
-  return extensions[format] || 'json';
+const onSaved = (saved, { created }) => {
+  loadedDictionary.value = saved;
+  showNotice(created ? `Saved ${saved.name} to the style library.` : `Saved changes to ${saved.name}.`, 'success');
+  if (route.query.load !== saved.id) router.replace({ query: { ...route.query, load: saved.id } });
 };
 
-const getMimeType = (format) => {
-  const mimeTypes = {
-    css: 'text/css',
-    ios: 'application/xml',
-    android: 'application/xml',
-    json: 'application/json'
-  };
-  return mimeTypes[format] || 'application/json';
-};
-
-const downloadJSON = (data, filename) => {
-  const json = JSON.stringify(data, null, 2);
-  downloadFile(json, filename, 'application/json');
-};
-
-const downloadFile = (content, filename, mimeType) => {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
-
-let darkModeObserver = null;
-let darkModeInterval = null;
+watch(
+  () => route.query.load,
+  (id) => {
+    if (id && id !== loadedDictionary.value?.id) openDictionary(id);
+  },
+);
 
 onMounted(() => {
-  loadTokensFromStorage();
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
+  loadDraft();
+  if (route.query.load) openDictionary(route.query.load);
+  // Workspaces for the save dialog
+  else library.load();
 });
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.category-button {
+  @apply flex w-full items-center justify-between gap-2 rounded-control px-3 py-2 text-left text-sm text-ink-secondary hover:bg-fill-hover;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.category-button-active {
+  @apply bg-accent-subtle text-accent-text;
+}
+.template-button {
+  @apply flex h-full w-full flex-col gap-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-left hover:border-accent-border hover:bg-fill-hover;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+  @apply disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-line disabled:hover:bg-surface-raised;
 }
 </style>
-

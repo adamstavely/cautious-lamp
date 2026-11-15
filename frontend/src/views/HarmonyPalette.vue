@@ -17,75 +17,7 @@
     </PageSection>
 
     <PageSection title="Color palette grid" description="Select a cell to copy its OKLCH value." divided>
-      <div class="mb-6 md:w-96">
-        <UiInput v-model="searchQuery" type="search" icon="search" label="Search color families" placeholder="Search color families..." />
-      </div>
-
-      <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
-
-      <UiPanel flush class="mb-8">
-        <UiTable caption="Harmony palette: color families by shade level, with APCA contrast and chroma per level" compact>
-          <thead>
-            <tr>
-              <th scope="col" class="sticky left-0 z-20 bg-surface-raised">Color</th>
-              <th v-for="shade in shadeLevels" :key="shade" scope="col" class="text-center min-w-32">
-                <div class="text-base font-bold text-ink-strong mb-1">Level {{ shade }}</div>
-                <div class="text-xs font-normal">Contrast: {{ getContrastForShade(shade) }}</div>
-                <div class="text-xs font-normal">Chroma: {{ getChromaForShade(shade) }}</div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(colors, familyName) in filteredColors" :key="familyName">
-              <th scope="row" class="sticky left-0 z-10 bg-surface-raised font-semibold capitalize whitespace-nowrap text-ink-strong">
-                {{ familyName }}
-              </th>
-              <td v-for="shade in shadeLevels" :key="`${familyName}-${shade}`" class="p-0">
-                <UiColorSample
-                  v-if="colors[shade]"
-                  tag="button"
-                  class="palette-cell group"
-                  :color="colors[shade]"
-                  :text-color="getTextColorForCell(colors[shade], `${familyName}-${shade}`)"
-                  :aria-label="`Copy ${familyName} ${shade}: ${colors[shade]}`"
-                  @click="copyToClipboard(colors[shade], `${familyName}-${shade}`)"
-                >
-                  <span class="text-3xl font-bold mb-2 leading-none">{{ getContrastForShade(shade) }}</span>
-                  <span class="text-xs font-code mb-1">{{ colorInfo[`${familyName}-${shade}`]?.hex || 'OKLCH' }}</span>
-                  <span class="absolute top-2 right-2 px-1 min-w-6 h-6 rounded-pill border border-current flex items-center justify-center text-xs font-bold" aria-hidden="true">
-                    {{ getUsageGuidelineIcon(shade) }}
-                  </span>
-                  <span class="palette-cell-copy" aria-hidden="true">
-                    <AppIcon :name="copiedColor === `${familyName}-${shade}` ? 'check' : 'copy'" class="text-xl" />
-                  </span>
-                </UiColorSample>
-                <div v-else class="palette-cell bg-surface-sunken">
-                  <span class="sr-only">No {{ familyName }} {{ shade }}</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </UiTable>
-      </UiPanel>
-
-      <UiPanel title="Usage guidelines" heading-tag="h3">
-        <ul class="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <li v-for="(guideline, index) in usageGuidelines" :key="index" class="flex items-center gap-2">
-            <UiColorSample
-              tag="span"
-              class="w-8 h-8 shrink-0 rounded-pill border flex items-center justify-center text-xs font-bold"
-              :color="guideline.color"
-              :text-color="guidelineTextColors[index]"
-            >
-              {{ guideline.icon }}
-            </UiColorSample>
-            <span>
-              <span class="block text-sm font-medium text-ink-strong">{{ guideline.label }}</span>
-              <span class="block text-xs text-ink-secondary">Contrast {{ guideline.contrast }}, {{ guideline.fontSize }}, {{ guideline.lineHeight }}</span>
-            </span>
-          </li>
-        </ul>
-      </UiPanel>
+      <HarmonyPaletteGrid :families="colorFamilyOrder" caption="Harmony palette: color families by shade level, with APCA contrast and chroma per level" />
     </PageSection>
 
     <PageSection title="Usage guidelines" divided>
@@ -179,70 +111,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue';
-import InlineNotice from '../components/InlineNotice.vue';
-import { PageHero, PageSection, PageShell, UiChip, UiCodeBlock, UiInput, UiPanel, UiTable } from '../components/ui';
+import { PageHero, PageSection, PageShell, UiChip, UiCodeBlock, UiPanel } from '../components/ui';
 import UiColorSample from '../components/ui/UiColorSample.vue';
-import { useNotice } from '../composables/useNotice.js';
+import HarmonyPaletteGrid from '../components/palettes/HarmonyPaletteGrid.vue';
 import harmonyPalette from '@evilmartians/harmony/base';
-
-// Note: much of this page (OKLCH grid, usage guidelines) duplicates
-// ColoredTextPalette.vue; a shared palette-grid component would remove that.
-
-const { notice, showNotice, clearNotice } = useNotice();
-const searchQuery = ref('');
-const copiedColor = ref(null);
-
-// Shade levels in Harmony palette
-const shadeLevels = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
-
-// Contrast values for each shade (APCA contrast, mirrored around 500)
-const contrastValues = {
-  '50': 105,
-  '100': 100,
-  '200': 90,
-  '300': 77,
-  '400': 65,
-  '500': 54,
-  '600': 65,
-  '700': 77,
-  '800': 90,
-  '900': 100,
-  '950': 105
-};
-
-// Chroma values for each shade
-const chromaValues = {
-  '50': 0.005,
-  '100': 0.02,
-  '200': 0.04,
-  '300': 0.08,
-  '400': 0.11,
-  '500': 0.15,
-  '600': 0.14,
-  '700': 0.12,
-  '800': 0.09,
-  '900': 0.07,
-  '950': 0.04
-};
-
-// Usage guidelines mapping
-const usageGuidelines = [
-  { label: 'Any Text', contrast: 105, fontSize: '16px', lineHeight: '24px', icon: 'P1', color: 'oklch(0.98 0.005 0)' },
-  { label: 'Any Text', contrast: 100, fontSize: '18px', lineHeight: '28px', icon: 'P2', color: 'oklch(0.95 0.02 0)' },
-  { label: 'Any Text', contrast: 90, fontSize: '20px', lineHeight: '32px', icon: 'P3', color: 'oklch(0.90 0.04 0)' },
-  { label: 'Body Text', contrast: 77, fontSize: '24px', lineHeight: '36px', icon: 'P4', color: 'oklch(0.80 0.08 0)' },
-  { label: 'Content Text', contrast: 65, fontSize: '32px', lineHeight: '40px', icon: 'P5', color: 'oklch(0.65 0.11 0)' },
-  { label: 'Headline', contrast: 54, fontSize: '48px', lineHeight: '56px', icon: 'P6', color: 'oklch(0.50 0.15 0)' },
-  { label: 'Content Text', contrast: 65, fontSize: '32px', lineHeight: '40px', icon: 'P7', color: 'oklch(0.35 0.14 0)' },
-  { label: 'Body Text', contrast: 77, fontSize: '24px', lineHeight: '36px', icon: 'P8', color: 'oklch(0.20 0.12 0)' },
-  { label: 'Any Text', contrast: 100, fontSize: '18px', lineHeight: '28px', icon: 'P9', color: 'oklch(0.10 0.07 0)' },
-  { label: 'Any Text', contrast: 105, fontSize: '16px', lineHeight: '24px', icon: 'P10', color: 'oklch(0.05 0.04 0)' }
-];
-
-
-
-
 
 // Color family order matching the Harmony palette documentation
 const colorFamilyOrder = [
@@ -250,157 +122,6 @@ const colorFamilyOrder = [
   'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose', 'slate', 'gray', 'zinc',
   'neutral', 'stone', 'sand', 'olive', 'mauve'
 ];
-
-// Process Harmony colors
-const harmonyColors = computed(() => {
-  const colors = {};
-  
-  // Process colors in the specified order
-  colorFamilyOrder.forEach(colorName => {
-    if (harmonyPalette[colorName] && typeof harmonyPalette[colorName] === 'object') {
-      colors[colorName] = {};
-      // Ensure shades are in correct order
-      shadeLevels.forEach(shade => {
-        const oklchValue = harmonyPalette[colorName][shade];
-        if (typeof oklchValue === 'string' && oklchValue.startsWith('oklch')) {
-          colors[colorName][shade] = oklchValue;
-        }
-      });
-    }
-  });
-  
-  return colors;
-});
-
-// Filter colors based on search query
-const filteredColors = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return harmonyColors.value;
-  }
-  
-  const query = searchQuery.value.toLowerCase();
-  const filtered = {};
-  
-  Object.keys(harmonyColors.value).forEach(familyName => {
-    if (familyName.toLowerCase().includes(query)) {
-      filtered[familyName] = harmonyColors.value[familyName];
-    } else {
-      // Check if any shade matches
-      const shades = Object.keys(harmonyColors.value[familyName]);
-      if (shades.some(shade => shade.includes(query))) {
-        filtered[familyName] = harmonyColors.value[familyName];
-      }
-    }
-  });
-  
-  return filtered;
-});
-
-// OKLCH -> sRGB, computed directly. (Reading back getComputedStyle() doesn't
-// work: current browsers report oklch colours as "oklch(...)", not rgb(), so
-// the old regex never matched and hex values never appeared. It also forced a
-// layout for every cell on every render.)
-const parseOklch = (value) => {
-  const match = /oklch\(\s*([\d.]+)(%?)\s+([\d.]+)(%?)\s+([\d.]+)(?:deg)?/i.exec(String(value || ''));
-  if (!match) return null;
-  const L = match[2] ? parseFloat(match[1]) / 100 : parseFloat(match[1]);
-  const C = match[4] ? (parseFloat(match[3]) / 100) * 0.4 : parseFloat(match[3]);
-  const H = parseFloat(match[5]);
-  return [L, C, H].every(Number.isFinite) ? { L, C, H } : null;
-};
-
-const oklchToRgb = (value) => {
-  const parsed = parseOklch(value);
-  if (!parsed) return null;
-  const { L, C, H } = parsed;
-  const hRad = (H * Math.PI) / 180;
-  const a = C * Math.cos(hRad);
-  const b = C * Math.sin(hRad);
-
-  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
-
-  const linear = [
-    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
-  ];
-
-  return linear.map((channel) => {
-    const c = Math.min(1, Math.max(0, channel));
-    const encoded = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
-    return Math.round(Math.min(1, Math.max(0, encoded)) * 255);
-  });
-};
-
-const toHex = ([r, g, b]) => '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('').toUpperCase();
-
-// Calculate relative luminance (WCAG standard)
-const calculateLuminance = (r, g, b) => {
-  const [rNorm, gNorm, bNorm] = [r / 255, g / 255, b / 255].map(val => {
-    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rNorm + 0.7152 * gNorm + 0.0722 * bNorm;
-};
-
-const isDarkColor = (value) => {
-  const rgb = oklchToRgb(value);
-  if (!rgb) return false;
-  return calculateLuminance(...rgb) < 0.5;
-};
-
-// Hex value and readable text colour (black or white) for every cell, computed once.
-const colorInfo = computed(() => {
-  const info = {};
-  Object.entries(harmonyColors.value).forEach(([familyName, shades]) => {
-    Object.entries(shades).forEach(([shade, oklchValue]) => {
-      const rgb = oklchToRgb(oklchValue);
-      const dark = rgb ? calculateLuminance(...rgb) < 0.5 : Number(shade) >= 600;
-      info[`${familyName}-${shade}`] = {
-        hex: rgb ? toHex(rgb) : null,
-        textColor: dark ? '#ffffff' : '#000000',
-      };
-    });
-  });
-  return info;
-});
-
-const guidelineTextColors = usageGuidelines.map((guideline) => (isDarkColor(guideline.color) ? '#ffffff' : '#000000'));
-
-// Get contrast value for shade
-const getContrastForShade = (shade) => {
-  return contrastValues[shade] || '';
-};
-
-// Get chroma value for shade
-const getChromaForShade = (shade) => {
-  return chromaValues[shade] || '';
-};
-
-// Get usage guideline icon for shade
-const getUsageGuidelineIcon = (shade) => {
-  const mapping = {
-    '50': 'P1',
-    '100': 'P2',
-    '200': 'P3',
-    '300': 'P4',
-    '400': 'P5',
-    '500': 'P6',
-    '600': 'P7',
-    '700': 'P8',
-    '800': 'P9',
-    '900': 'P10',
-    '950': 'P10'
-  };
-  return mapping[shade] || '';
-};
-
-// Get text color for cell (white or black based on background luminance)
-const getTextColorForCell = (oklchValue, cacheKey) => {
-  if (!oklchValue) return '';
-  return colorInfo.value[cacheKey]?.textColor || '#000000';
-};
 
 // Fixed demo colours for the usage examples (Harmony shades, shown as data)
 const demoColors = {
@@ -435,43 +156,9 @@ const exampleTags = [
 ];
 
 const features = ['OKLCH', 'APCA', 'Tailwind Compatible', 'P3 Support'];
-
-// Copy to clipboard
-let copiedTimer = null;
-const copyToClipboard = async (value, colorName) => {
-  if (!value) return;
-
-  try {
-    await navigator.clipboard.writeText(value);
-    copiedColor.value = colorName;
-    showNotice(`Copied ${colorName.replace('-', ' ')}: ${value}`, 'success');
-
-    clearTimeout(copiedTimer);
-    copiedTimer = setTimeout(() => {
-      copiedColor.value = null;
-    }, 2000);
-  } catch (error) {
-    console.error('Failed to copy:', error);
-    showNotice('Could not copy to the clipboard.', 'error');
-  }
-};
-
-onBeforeUnmount(() => {
-  clearTimeout(copiedTimer);
-});
 </script>
 
 <style scoped>
-.palette-cell {
-  @apply relative flex flex-col items-center justify-center w-full h-full min-h-28 p-3 text-center;
-}
-.palette-cell-copy {
-  @apply absolute bottom-2 right-2 flex items-center justify-center rounded-pill bg-surface-overlay text-ink shadow-control p-1 opacity-0 transition-opacity;
-}
-.group:hover .palette-cell-copy,
-.group:focus-visible .palette-cell-copy {
-  @apply opacity-100;
-}
 .demo-button {
   @apply inline-block px-4 py-2 rounded-pill text-sm font-medium;
 }
