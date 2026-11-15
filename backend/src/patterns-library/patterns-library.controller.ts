@@ -28,6 +28,7 @@ const isDeprecated = (pattern?: Pick<ComponentPattern, 'status' | 'tags'> | null
 
 const PATTERN_LINK = '/patterns';
 
+/** Mounted at /patterns-library, outside /api: the MCP server reads patterns from this path */
 @Controller('patterns-library')
 export class PatternsLibraryController {
   constructor(
@@ -36,7 +37,7 @@ export class PatternsLibraryController {
   ) {}
 
   @Get('patterns')
-  getAllPatterns(
+  async getAllPatterns(
     @Query('category') category?: string,
     @Query('tags') tags?: string,
     @Query('search') search?: string,
@@ -49,10 +50,10 @@ export class PatternsLibraryController {
   }
 
   @Get('patterns/:id')
-  getPattern(
+  async getPattern(
     @Param('id') patternId: string,
   ) {
-    const pattern = this.patternsService.getPattern(patternId);
+    const pattern = await this.patternsService.getPattern(patternId);
     if (!pattern) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
     }
@@ -60,14 +61,14 @@ export class PatternsLibraryController {
   }
 
   @Get('patterns/component/:componentId')
-  getPatternsByComponent(
+  async getPatternsByComponent(
     @Param('componentId') componentId: string,
   ) {
     return this.patternsService.getPatternsByComponent(componentId);
   }
 
   @Get('patterns/:id/related')
-  getRelatedPatterns(
+  async getRelatedPatterns(
     @Param('id') patternId: string,
   ) {
     return this.patternsService.getRelatedPatterns(patternId);
@@ -92,7 +93,7 @@ export class PatternsLibraryController {
     },
   ) {
     assertPatternFields(data, true);
-    const pattern = this.patternsService.createPattern(data);
+    const pattern = await this.patternsService.createPattern(data);
     await this.changes.record(
       { type: 'pattern', entityId: pattern.id, entityName: pattern.name, action: 'created', changes: [{ description: pattern.description }], link: PATTERN_LINK },
       principal,
@@ -108,10 +109,10 @@ export class PatternsLibraryController {
     @Body() updates: Partial<Omit<ComponentPattern, 'id' | 'createdAt'>>,
   ) {
     assertPatternFields(updates, false);
-    const before = this.patternsService.getPattern(patternId);
+    const before = await this.patternsService.getPattern(patternId);
     const wasDeprecated = isDeprecated(before);
     const previousStatus = before?.status;
-    const pattern = this.patternsService.updatePattern(patternId, updates);
+    const pattern = await this.patternsService.updatePattern(patternId, updates);
     if (!pattern) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
     }
@@ -137,8 +138,8 @@ export class PatternsLibraryController {
     @Principal() principal: AuthPrincipal,
     @Param('id') patternId: string,
   ) {
-    const pattern = this.patternsService.getPattern(patternId);
-    const deleted = this.patternsService.deletePattern(patternId);
+    const pattern = await this.patternsService.getPattern(patternId);
+    const deleted = await this.patternsService.deletePattern(patternId);
     if (!deleted || !pattern) {
       throw new BadRequestException(`Pattern '${patternId}' not found`);
     }

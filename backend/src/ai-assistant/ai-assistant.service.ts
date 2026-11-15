@@ -223,7 +223,7 @@ export class AiAssistantService {
     const summary = summarizeDesignSystem({
       components,
       tokens,
-      patterns: this.patterns.getAllPatterns(),
+      patterns: await this.patterns.getAllPatterns(),
       rules: BUILTIN_RULES,
     });
     const docs = guidelineDocs();

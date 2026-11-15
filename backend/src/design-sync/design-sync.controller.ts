@@ -13,28 +13,28 @@ export class DesignSyncController {
   constructor(private readonly designSyncService: DesignSyncService) {}
 
   @Get('connections')
-  getConnections(@Principal() principal: AuthPrincipal): DesignSyncConnectionView[] {
+  getConnections(@Principal() principal: AuthPrincipal): Promise<DesignSyncConnectionView[]> {
     return this.designSyncService.getAllConnections(principal);
   }
 
   @Get('connections/:id')
-  getConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string): DesignSyncConnectionView {
+  getConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<DesignSyncConnectionView> {
     return this.designSyncService.getConnection(principal, id);
   }
 
   @Post('connections')
-  createConnection(@Principal() principal: AuthPrincipal, @Body() body: unknown): DesignSyncConnectionView {
+  createConnection(@Principal() principal: AuthPrincipal, @Body() body: unknown): Promise<DesignSyncConnectionView> {
     return this.designSyncService.createConnection(principal, body);
   }
 
   @Put('connections/:id')
-  updateConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() body: unknown): DesignSyncConnectionView {
+  updateConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() body: unknown): Promise<DesignSyncConnectionView> {
     return this.designSyncService.updateConnection(principal, id, body);
   }
 
   @Delete('connections/:id')
-  deleteConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string): { success: boolean } {
-    this.designSyncService.deleteConnection(principal, id);
+  async deleteConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<{ success: boolean }> {
+    await this.designSyncService.deleteConnection(principal, id);
     return { success: true };
   }
 
@@ -57,7 +57,7 @@ export class DesignSyncController {
   }
 
   @Get('connections/:id/versions')
-  getFileVersions(@Principal() principal: AuthPrincipal, @Param('id') id: string): string[] {
+  getFileVersions(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<string[]> {
     return this.designSyncService.getFileVersions(principal, id);
   }
 
@@ -68,8 +68,8 @@ export class DesignSyncController {
   }
 
   @Delete('connections/:id/auto-sync')
-  disableAutoSync(@Principal() principal: AuthPrincipal, @Param('id') id: string): { success: boolean } {
-    this.designSyncService.disableAutoSync(principal, id);
+  async disableAutoSync(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<{ success: boolean }> {
+    await this.designSyncService.disableAutoSync(principal, id);
     return { success: true };
   }
 }

@@ -1,6 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { DefaultsSeeder, SeedMarker } from '../common/elasticsearch/seed-defaults';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { ScansService } from '../governance/scans.service';
+import { DocumentStore } from '../reviews/document-store';
+import { isSafeId } from '../workspaces/workspace-access.service';
+import { DEFAULT_CHECKS, DEFAULT_GUIDELINES, DEFAULT_TEMPLATES } from './contribution-defaults';
 import {
   CheckFinding,
   CheckOutcome,
@@ -26,8 +31,8 @@ export interface ContributionGuideline {
     good?: string;
     bad?: string;
   };
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ContributionTemplate {
@@ -64,6 +69,57 @@ export interface ContributionCheckResult {
   findings: CheckFinding[];
 }
 
+export type GuidelineInput = Omit<ContributionGuideline, 'id' | 'createdAt' | 'updatedAt'>;
+export type TemplateInput = Omit<ContributionTemplate, 'id'>;
+export type CheckInput = Omit<ContributionCheck, 'id' | 'runner'>;
+
+export const GUIDELINES_INDEX = 'design-system-contribution-guidelines';
+export const TEMPLATES_INDEX = 'design-system-contribution-templates';
+export const CHECKS_INDEX = 'design-system-contribution-checks';
+export const CONTRIBUTION_META_INDEX = 'design-system-contribution-meta';
+
+/** Injection tokens for the contribution-process stores */
+export const GUIDELINE_STORE = Symbol('CONTRIBUTION_GUIDELINE_STORE');
+export const TEMPLATE_STORE = Symbol('CONTRIBUTION_TEMPLATE_STORE');
+export const CHECK_STORE = Symbol('CONTRIBUTION_CHECK_STORE');
+export const CONTRIBUTION_META_STORE = Symbol('CONTRIBUTION_META_STORE');
+
+const keyword = { type: 'keyword' };
+
+export const GUIDELINE_PROPERTIES = {
+  id: keyword,
+  title: keyword,
+  category: keyword,
+  createdAt: { type: 'date' },
+  updatedAt: { type: 'date' },
+};
+
+export const TEMPLATE_PROPERTIES = {
+  id: keyword,
+  name: keyword,
+  category: keyword,
+};
+
+export const CHECK_PROPERTIES = {
+  id: keyword,
+  name: keyword,
+  category: keyword,
+  runner: keyword,
+  enabled: { type: 'boolean' },
+};
+
+/** What `generate-pr` returns: the text for a pull request, which the contributor opens themselves */
+export interface GeneratedPullRequestText {
+  /** Markdown for the pull request description */
+  prTemplate: string;
+  /** Always false: nothing is opened on a code host */
+  pullRequestOpened: false;
+  message: string;
+}
+
+export const PR_TEXT_ONLY =
+  'This is the text for your pull request. No pull request was opened: paste it into a new pull request in your repository.';
+
 /** Governance rule categories each governance-run check category uses */
 const GOVERNANCE_CATEGORIES: Partial<Record<ContributionCheck['category'], string[]>> = {
   accessibility: ['accessibility'],
@@ -85,250 +141,55 @@ export function runnerFor(category: ContributionCheck['category'], command?: str
   return 'manual';
 }
 
+/**
+ * The contribution process: guidelines, PR templates and automated check
+ * definitions, stored in Elasticsearch. The defaults (contribution-defaults.ts)
+ * are seeded once; a deleted default stays deleted.
+ */
 @Injectable()
-export class ContributionWorkflowService {
-  private guidelines: Map<string, ContributionGuideline> = new Map();
-  private templates: Map<string, ContributionTemplate> = new Map();
-  private checks: Map<string, ContributionCheck> = new Map();
+export class ContributionWorkflowService implements OnModuleInit {
+  private readonly seeders: Array<DefaultsSeeder<{ id: string }>>;
 
   constructor(
     private readonly designSystemService: DesignSystemService,
     private readonly scans: ScansService,
+    @Inject(GUIDELINE_STORE) private readonly guidelines: DocumentStore<ContributionGuideline>,
+    @Inject(TEMPLATE_STORE) private readonly templates: DocumentStore<ContributionTemplate>,
+    @Inject(CHECK_STORE) private readonly checks: DocumentStore<ContributionCheck>,
+    @Inject(CONTRIBUTION_META_STORE) meta: DocumentStore<SeedMarker>,
   ) {
-    this.initializeDefaultGuidelines();
-    this.initializeDefaultTemplates();
-    this.initializeDefaultChecks();
+    const now = () => new Date().toISOString();
+    this.seeders = [
+      new DefaultsSeeder(guidelines, meta, 'default-guidelines-seeded-v1', () => DEFAULT_GUIDELINES.map(({ id, ...data }) => this.buildGuideline(data, id, now()))),
+      new DefaultsSeeder(templates, meta, 'default-templates-seeded-v1', () => DEFAULT_TEMPLATES.map(({ id, ...data }) => ({ ...data, id }))),
+      new DefaultsSeeder(checks, meta, 'default-checks-seeded-v1', () => DEFAULT_CHECKS.map(({ id, ...data }) => this.buildCheck(data, id))),
+    ] as Array<DefaultsSeeder<{ id: string }>>;
   }
 
-  /**
-   * Initialize default contribution guidelines
-   */
-  private initializeDefaultGuidelines(): void {
-    this.createGuideline({
-      title: 'Component Contribution Guidelines',
-      description: 'Guidelines for contributing new components to the design system',
-      category: 'component',
-      content: `
-# Component Contribution Guidelines
-
-## Before You Start
-- Check if a similar component already exists
-- Review existing component patterns
-- Discuss your component idea with the design system team
-
-## Requirements
-- Follow the component naming convention
-- Include all required props with proper types
-- Provide accessibility attributes (ARIA labels, keyboard navigation)
-- Include unit tests with >80% coverage
-- Document all props and usage examples
-- Follow the design token system (no hardcoded values)
-
-## Code Quality
-- Use TypeScript for type safety
-- Follow ESLint rules
-- Format code with Prettier
-- Keep components focused and composable
-      `.trim(),
-      checklist: [
-        'Component follows naming convention',
-        'All props are typed correctly',
-        'Accessibility attributes included',
-        'Unit tests written (>80% coverage)',
-        'Documentation complete',
-        'Uses design tokens (no hardcoded values)',
-        'ESLint passes',
-        'Code formatted with Prettier',
-      ],
-    });
-
-    this.createGuideline({
-      title: 'Token Contribution Guidelines',
-      description: 'Guidelines for contributing design tokens',
-      category: 'token',
-      content: `
-# Token Contribution Guidelines
-
-## Token Structure
-- Use semantic naming (e.g., color.primary, spacing.md)
-- Follow the token hierarchy
-- Include descriptions for all tokens
-- Use appropriate value types
-
-## Validation
-- Tokens must be valid CSS values
-- Color tokens must pass WCAG contrast requirements
-- Spacing tokens should follow the scale
-- Typography tokens must include all required properties
-      `.trim(),
-      checklist: [
-        'Token follows naming convention',
-        'Semantic naming used',
-        'Valid CSS value',
-        'WCAG contrast requirements met (for colors)',
-        'Follows design scale',
-        'Description included',
-      ],
-    });
+  onModuleInit(): void {
+    for (const seeder of this.seeders) seeder.seedInBackground();
   }
 
-  /**
-   * Initialize default contribution templates
-   */
-  private initializeDefaultTemplates(): void {
-    this.createTemplate({
-      name: 'New Component',
-      description: 'Template for contributing a new component',
-      category: 'component',
-      template: {
-        title: '[Component Name] - New Component',
-        description: 'Brief description of the component and its purpose',
-        checklist: [
-          'Component follows design system patterns',
-          'All props documented',
-          'Accessibility requirements met',
-          'Tests written',
-          'Examples provided',
-        ],
-        codeExample: `// Component structure example
-export interface ComponentProps {
-  // Define props here
-}
-
-export const Component: React.FC<ComponentProps> = (props) => {
-  // Component implementation
-};`,
-      },
-    });
-
-    this.createTemplate({
-      name: 'Component Enhancement',
-      description: 'Template for enhancing an existing component',
-      category: 'enhancement',
-      template: {
-        title: '[Component Name] - Enhancement',
-        description: 'Description of the enhancement and why it\'s needed',
-        checklist: [
-          'Backward compatibility maintained',
-          'New props are optional',
-          'Existing tests still pass',
-          'New functionality tested',
-          'Documentation updated',
-        ],
-      },
-    });
-
-    this.createTemplate({
-      name: 'Bug Fix',
-      description: 'Template for fixing a bug',
-      category: 'bug-fix',
-      template: {
-        title: '[Component/Feature] - Bug Fix',
-        description: 'Description of the bug and how it was fixed',
-        checklist: [
-          'Root cause identified',
-          'Fix implemented',
-          'Tests added to prevent regression',
-          'Documentation updated if needed',
-        ],
-      },
-    });
-  }
-
-  /**
-   * Initialize default automated checks
-   */
-  private initializeDefaultChecks(): void {
-    this.createCheck({
-      name: 'Component structure',
-      description: 'The component has the parts its kind needs and a PascalCase name',
-      category: 'structure',
-      enabled: true,
-    });
-
-    this.createCheck({
-      name: 'Accessibility audit',
-      description: 'axe and the accessibility governance rules, run on the submitted markup',
-      category: 'accessibility',
-      enabled: true,
-    });
-
-    this.createCheck({
-      name: 'Design system rules',
-      description: 'Design-system and UX governance rules: tokens instead of hard-coded values, naming, no inline styles',
-      category: 'design-system',
-      enabled: true,
-    });
-
-    this.createCheck({
-      name: 'Documentation check',
-      description: 'A description, usage docs with an example, and every prop documented',
-      category: 'documentation',
-      enabled: true,
-    });
-
-    this.createCheck({
-      name: 'Unit tests',
-      description: 'A test file with test cases and assertions; a reviewer confirms it passes in CI',
-      category: 'testing',
-      enabled: true,
-    });
-
-    this.createCheck({
-      name: 'ESLint',
-      description: 'Run ESLint to check code quality',
-      category: 'linting',
-      enabled: true,
-      command: 'npm run lint',
-      config: {
-        extends: ['@design-system/eslint-config'],
-      },
-    });
-
-    this.createCheck({
-      name: 'Prettier',
-      description: 'Format code with Prettier',
-      category: 'formatting',
-      enabled: true,
-      command: 'npm run format:check',
-    });
-
-    this.createCheck({
-      name: 'TypeScript',
-      description: 'Type check with TypeScript',
-      category: 'linting',
-      enabled: true,
-      command: 'npm run type-check',
-    });
+  private async ensureSeeded(): Promise<void> {
+    await Promise.all(this.seeders.map((seeder) => seeder.ensureSeeded()));
   }
 
   /**
    * Create a contribution guideline
    */
-  createGuideline(data: {
-    title: string;
-    description: string;
-    category: ContributionGuideline['category'];
-    content: string;
-    checklist: string[];
-    codeExamples?: ContributionGuideline['codeExamples'];
-  }): ContributionGuideline {
-    const id = `guideline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const guideline: ContributionGuideline = {
-      id,
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.guidelines.set(id, guideline);
+  async createGuideline(data: GuidelineInput): Promise<ContributionGuideline> {
+    await this.ensureSeeded();
+    const guideline = this.buildGuideline(data, `guideline-${randomUUID()}`, new Date().toISOString());
+    await this.guidelines.create(guideline);
     return guideline;
   }
 
   /**
    * Get all guidelines
    */
-  getAllGuidelines(category?: ContributionGuideline['category']): ContributionGuideline[] {
-    let guidelines = Array.from(this.guidelines.values());
+  async getAllGuidelines(category?: ContributionGuideline['category']): Promise<ContributionGuideline[]> {
+    await this.ensureSeeded();
+    let guidelines = await this.guidelines.list();
     if (category) {
       guidelines = guidelines.filter(g => g.category === category);
     }
@@ -338,33 +199,28 @@ export const Component: React.FC<ComponentProps> = (props) => {
   /**
    * Get guideline by ID
    */
-  getGuideline(id: string): ContributionGuideline | null {
-    return this.guidelines.get(id) || null;
+  async getGuideline(id: string): Promise<ContributionGuideline | null> {
+    if (!isSafeId(id)) return null;
+    await this.ensureSeeded();
+    return (await this.guidelines.get(id))?.doc ?? null;
   }
 
   /**
    * Create a contribution template
    */
-  createTemplate(data: {
-    name: string;
-    description: string;
-    category: ContributionTemplate['category'];
-    template: ContributionTemplate['template'];
-  }): ContributionTemplate {
-    const id = `template-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const contributionTemplate: ContributionTemplate = {
-      id,
-      ...data,
-    };
-    this.templates.set(id, contributionTemplate);
+  async createTemplate(data: TemplateInput): Promise<ContributionTemplate> {
+    await this.ensureSeeded();
+    const contributionTemplate: ContributionTemplate = { ...data, id: `template-${randomUUID()}` };
+    await this.templates.create(contributionTemplate);
     return contributionTemplate;
   }
 
   /**
    * Get all templates
    */
-  getAllTemplates(category?: ContributionTemplate['category']): ContributionTemplate[] {
-    let templates = Array.from(this.templates.values());
+  async getAllTemplates(category?: ContributionTemplate['category']): Promise<ContributionTemplate[]> {
+    await this.ensureSeeded();
+    let templates = await this.templates.list();
     if (category) {
       templates = templates.filter(t => t.category === category);
     }
@@ -374,36 +230,28 @@ export const Component: React.FC<ComponentProps> = (props) => {
   /**
    * Get template by ID
    */
-  getTemplate(id: string): ContributionTemplate | null {
-    return this.templates.get(id) || null;
+  async getTemplate(id: string): Promise<ContributionTemplate | null> {
+    if (!isSafeId(id)) return null;
+    await this.ensureSeeded();
+    return (await this.templates.get(id))?.doc ?? null;
   }
 
   /**
    * Create an automated check
    */
-  createCheck(data: {
-    name: string;
-    description: string;
-    category: ContributionCheck['category'];
-    enabled: boolean;
-    command?: string;
-    config?: Record<string, any>;
-  }): ContributionCheck {
-    const id = `check-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const check: ContributionCheck = {
-      id,
-      ...data,
-      runner: runnerFor(data.category, data.command),
-    };
-    this.checks.set(id, check);
+  async createCheck(data: CheckInput): Promise<ContributionCheck> {
+    await this.ensureSeeded();
+    const check = this.buildCheck(data, `check-${randomUUID()}`);
+    await this.checks.create(check);
     return check;
   }
 
   /**
    * Get all checks
    */
-  getAllChecks(category?: ContributionCheck['category'], enabledOnly?: boolean): ContributionCheck[] {
-    let checks = Array.from(this.checks.values());
+  async getAllChecks(category?: ContributionCheck['category'], enabledOnly?: boolean): Promise<ContributionCheck[]> {
+    await this.ensureSeeded();
+    let checks = await this.checks.list();
     if (category) {
       checks = checks.filter(c => c.category === category);
     }
@@ -416,19 +264,22 @@ export const Component: React.FC<ComponentProps> = (props) => {
   /**
    * Get check by ID
    */
-  getCheck(id: string): ContributionCheck | null {
-    return this.checks.get(id) || null;
+  async getCheck(id: string): Promise<ContributionCheck | null> {
+    if (!isSafeId(id)) return null;
+    await this.ensureSeeded();
+    return (await this.checks.get(id))?.doc ?? null;
   }
 
   /**
-   * Generate PR template from contribution template
+   * The markdown for a pull request, from a contribution template. Only the
+   * text: it opens no pull request anywhere.
    */
-  generatePRTemplate(templateId: string, data: {
+  async generatePRTemplate(templateId: string, data: {
     title?: string;
     description?: string;
     checklistItems?: string[];
-  }): string {
-    const template = this.templates.get(templateId);
+  }): Promise<GeneratedPullRequestText> {
+    const template = await this.getTemplate(templateId);
     if (!template) {
       throw new Error(`Template ${templateId} not found`);
     }
@@ -436,8 +287,9 @@ export const Component: React.FC<ComponentProps> = (props) => {
     const title = data.title || template.template.title;
     const description = data.description || template.template.description;
     const checklist = data.checklistItems || template.template.checklist;
+    const enabledChecks = await this.getAllChecks(undefined, true);
 
-    return `## ${title}
+    const prTemplate = `## ${title}
 
 ### Description
 ${description}
@@ -452,9 +304,18 @@ ${template.template.codeExample}
 ` : ''}
 
 ### Automated Checks
-The following checks will run automatically:
-${this.getAllChecks(undefined, true).map(check => `- [ ] ${check.name}: ${check.description}`).join('\n')}
+Run these checks on the contribution before review:
+${enabledChecks.map(check => `- [ ] ${check.name}: ${check.description}`).join('\n')}
 `;
+    return { prTemplate, pullRequestOpened: false, message: PR_TEXT_ONLY };
+  }
+
+  private buildGuideline(data: GuidelineInput, id: string, now: string): ContributionGuideline {
+    return { ...data, id, createdAt: now, updatedAt: now };
+  }
+
+  private buildCheck(data: CheckInput, id: string): ContributionCheck {
+    return { ...data, id, runner: runnerFor(data.category, data.command) };
   }
 
   /**
@@ -468,11 +329,12 @@ ${this.getAllChecks(undefined, true).map(check => `- [ ] ${check.name}: ${check.
     results: ContributionCheckResult[];
     summary: { passed: number; failed: number; needsReview: number; total: number };
   }> {
-    let checks = this.getAllChecks(undefined, true);
+    let checks = await this.getAllChecks(undefined, true);
     if (checkIds?.length) {
-      const unknown = checkIds.filter((id) => !this.checks.has(id));
+      const found = await Promise.all(checkIds.map((id) => this.getCheck(id)));
+      const unknown = checkIds.filter((_, i) => !found[i]);
       if (unknown.length) throw new BadRequestException(`Unknown check ids: ${unknown.join(', ')}`);
-      checks = checkIds.map((id) => this.checks.get(id)!);
+      checks = found as ContributionCheck[];
     }
 
     const input = submissionToInput(submission);

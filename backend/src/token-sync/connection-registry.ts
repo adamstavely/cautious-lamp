@@ -1,8 +1,10 @@
-import { BadRequestException, NotFoundException, NotImplementedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException, NotImplementedException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { AuthPrincipal, hasPermission } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
 import { Permission } from '../rbac/rbac.service';
+import { DocVersion, DocumentStore, VersionConflictError } from '../reviews/document-store';
+import { isSafeId } from '../workspaces/workspace-access.service';
 
 /** Who created a connection; only they (and admin:users holders) can see or change it */
 export interface ConnectionOwner {
@@ -33,16 +35,27 @@ const SERVER_FIELDS = ['id', 'owner', 'ownerId', 'createdAt', 'updatedAt', 'last
 export const AUTO_SYNC_UNSUPPORTED =
   'Automatic sync is not supported: there is no scheduler or design tool integration on this server yet.';
 
+const keyword = { type: 'keyword' };
+
+/** Mapping for a connection index; everything else stays in `_source` */
+export const CONNECTION_PROPERTIES = {
+  id: keyword,
+  name: keyword,
+  tool: keyword,
+  owner: { properties: { type: keyword, id: keyword } },
+  createdAt: { type: 'date' },
+  updatedAt: { type: 'date' },
+};
+
 /**
- * Design-tool connections (design sync and token sync) for one feature.
- * Kept in memory. Credentials are encrypted with EncryptionService and only
- * `hasApiKey` is returned. Each connection belongs to its creator; admin:users
- * holders see all of them.
+ * Design-tool connections (design sync and token sync) for one feature,
+ * stored in Elasticsearch. Credentials are encrypted with EncryptionService
+ * before they are stored, and only `hasApiKey` is returned. Each connection
+ * belongs to its creator; admin:users holders see all of them.
  */
 export class ConnectionRegistry<T extends StoredConnection> {
-  private readonly connections = new Map<string, T>();
-
   constructor(
+    private readonly store: DocumentStore<T>,
     private readonly encryption: EncryptionService,
     private readonly idPrefix: string,
     private readonly fields: Record<string, FieldParser>,
@@ -50,22 +63,21 @@ export class ConnectionRegistry<T extends StoredConnection> {
     private readonly defaults: () => Partial<T>,
   ) {}
 
-  list(principal: AuthPrincipal): Array<PublicConnection<T>> {
-    return [...this.connections.values()].filter((c) => this.canSee(principal, c)).map((c) => this.toPublic(c));
+  async list(principal: AuthPrincipal): Promise<Array<PublicConnection<T>>> {
+    const connections = await this.store.list();
+    return connections.filter((c) => this.canSee(principal, c)).map((c) => this.toPublic(c));
   }
 
-  get(principal: AuthPrincipal, id: string): PublicConnection<T> {
-    return this.toPublic(this.require(principal, id));
+  async get(principal: AuthPrincipal, id: string): Promise<PublicConnection<T>> {
+    return this.toPublic(await this.require(principal, id));
   }
 
   /** The stored connection (credential still encrypted), after the access check */
-  require(principal: AuthPrincipal, id: string): T {
-    const connection = typeof id === 'string' ? this.connections.get(id) : undefined;
-    if (!connection || !this.canSee(principal, connection)) throw new NotFoundException('Connection not found');
-    return connection;
+  async require(principal: AuthPrincipal, id: string): Promise<T> {
+    return (await this.load(principal, id)).doc;
   }
 
-  create(principal: AuthPrincipal, body: unknown): PublicConnection<T> {
+  async create(principal: AuthPrincipal, body: unknown): Promise<PublicConnection<T>> {
     const input = this.parse(body);
     for (const field of this.required) {
       if (input[field] === undefined) throw new BadRequestException(`${field} is required`);
@@ -81,29 +93,31 @@ export class ConnectionRegistry<T extends StoredConnection> {
       updatedAt: now,
     } as unknown as T;
     this.setApiKey(connection, body);
-    this.connections.set(connection.id, connection);
+    await this.store.create(connection);
     return this.toPublic(connection);
   }
 
-  update(principal: AuthPrincipal, id: string, body: unknown): PublicConnection<T> {
-    const connection = this.require(principal, id);
+  async update(principal: AuthPrincipal, id: string, body: unknown): Promise<PublicConnection<T>> {
+    const { doc: connection, version } = await this.load(principal, id);
     const input = this.parse(body);
     Object.assign(connection, input, { updatedAt: new Date().toISOString() });
     this.setApiKey(connection, body);
+    await this.save(connection, version);
     return this.toPublic(connection);
   }
 
-  delete(principal: AuthPrincipal, id: string): void {
-    this.require(principal, id);
-    this.connections.delete(id);
+  async delete(principal: AuthPrincipal, id: string): Promise<void> {
+    await this.require(principal, id);
+    await this.store.delete(id);
   }
 
   /** Turns automatic sync off (it can't be turned on; see AUTO_SYNC_UNSUPPORTED) */
-  disableAutoSync(principal: AuthPrincipal, id: string): PublicConnection<T> {
-    const connection = this.require(principal, id);
+  async disableAutoSync(principal: AuthPrincipal, id: string): Promise<PublicConnection<T>> {
+    const { doc: connection, version } = await this.load(principal, id);
     connection.autoSync = false;
     delete (connection as { syncInterval?: number }).syncInterval;
     connection.updatedAt = new Date().toISOString();
+    await this.save(connection, version);
     return this.toPublic(connection);
   }
 
@@ -115,6 +129,22 @@ export class ConnectionRegistry<T extends StoredConnection> {
   toPublic(connection: T): PublicConnection<T> {
     const { apiKey, ...rest } = connection;
     return { ...rest, hasApiKey: !!apiKey } as PublicConnection<T>;
+  }
+
+  /** The stored connection and its version; someone else's is "not found" */
+  private async load(principal: AuthPrincipal, id: string): Promise<{ doc: T; version: DocVersion }> {
+    const stored = isSafeId(id) ? await this.store.get(id) : null;
+    if (!stored || !this.canSee(principal, stored.doc)) throw new NotFoundException('Connection not found');
+    return stored;
+  }
+
+  private async save(connection: T, version: DocVersion): Promise<void> {
+    try {
+      await this.store.replace(connection, version);
+    } catch (error) {
+      if (error instanceof VersionConflictError) throw new ConflictException('The connection was changed by someone else, please reload and try again');
+      throw error;
+    }
   }
 
   private canSee(principal: AuthPrincipal, connection: T): boolean {

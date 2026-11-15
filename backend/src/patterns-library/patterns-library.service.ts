@@ -1,8 +1,36 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { DefaultsSeeder, SeedMarker } from '../common/elasticsearch/seed-defaults';
+import { DocumentStore, VersionConflictError } from '../reviews/document-store';
+import { isSafeId } from '../workspaces/workspace-access.service';
+import { DEFAULT_PATTERNS } from './default-patterns';
 
 /** A pattern's lifecycle stage; the same stages as components */
 export const PATTERN_STATUSES = ['production', 'in-progress', 'planned', 'deprecated'] as const;
 export type PatternStatus = (typeof PATTERN_STATUSES)[number];
+
+export const PATTERNS_INDEX = 'design-system-patterns';
+export const PATTERNS_META_INDEX = 'design-system-patterns-meta';
+/** Injection tokens for the pattern store and its seed markers */
+export const PATTERN_STORE = Symbol('PATTERN_STORE');
+export const PATTERN_META_STORE = Symbol('PATTERN_META_STORE');
+
+/** Written once every default pattern has been seeded */
+const SEED_MARKER = 'default-patterns-seeded-v1';
+
+const keyword = { type: 'keyword' };
+const date = { type: 'date' };
+
+export const PATTERN_PROPERTIES = {
+  id: keyword,
+  name: { type: 'keyword', fields: { text: { type: 'text' } } },
+  category: keyword,
+  status: keyword,
+  componentIds: keyword,
+  tags: keyword,
+  createdAt: date,
+  updatedAt: date,
+};
 
 export interface ComponentPattern {
   id: string;
@@ -21,198 +49,72 @@ export interface ComponentPattern {
   whenNotToUse?: string;
   relatedPatterns?: string[]; // Pattern IDs
   tags?: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
-@Injectable()
-export class PatternsLibraryService {
-  private patterns: Map<string, ComponentPattern> = new Map();
+/** What a caller supplies for a new pattern */
+export interface PatternInput {
+  name: string;
+  description: string;
+  category: ComponentPattern['category'];
+  status?: PatternStatus;
+  componentIds?: string[];
+  codeExample?: ComponentPattern['codeExample'];
+  useCases?: string[];
+  whenToUse?: string;
+  whenNotToUse?: string;
+  relatedPatterns?: string[];
+  tags?: string[];
+}
 
-  constructor() {
-    this.initializeDefaultPatterns();
+/** A built-in pattern (default-patterns.ts), with the stable id it is seeded under */
+export type DefaultPattern = PatternInput & { id: string };
+
+/** Fields the server owns; an update never changes them */
+const SERVER_FIELDS = ['id', 'createdAt', 'updatedAt'] as const;
+
+/**
+ * The patterns library, stored in Elasticsearch. The default patterns are
+ * seeded once; a deleted default stays deleted.
+ */
+@Injectable()
+export class PatternsLibraryService implements OnModuleInit {
+  private readonly seeder: DefaultsSeeder<ComponentPattern>;
+
+  constructor(
+    @Inject(PATTERN_STORE) private readonly store: DocumentStore<ComponentPattern>,
+    @Inject(PATTERN_META_STORE) meta: DocumentStore<SeedMarker>,
+  ) {
+    this.seeder = new DefaultsSeeder(store, meta, SEED_MARKER, () => {
+      const now = new Date().toISOString();
+      return DEFAULT_PATTERNS.map((pattern) => this.build(pattern, pattern.id, now));
+    });
   }
 
-  /**
-   * Initialize default patterns
-   */
-  private initializeDefaultPatterns(): void {
-    // Common Patterns
-    this.createPattern({
-      name: 'Button with Icon',
-      description: 'Common pattern for buttons with leading or trailing icons',
-      category: 'common',
-      codeExample: {
-        good: `<button class="flex items-center gap-2">
-  <Icon name="plus" />
-  Add Item
-</button>`,
-        bad: `<button>
-  <span>+</span> Add Item
-</button>`,
-        description: 'Use icon components instead of text symbols for better accessibility and consistency',
-      },
-      useCases: ['Primary actions', 'Secondary actions', 'Icon buttons'],
-      whenToUse: 'When you need a button with a visual icon indicator',
-      tags: ['button', 'icon', 'ui'],
-    });
-
-    this.createPattern({
-      name: 'Form Validation',
-      description: 'Proper form validation pattern with error states',
-      category: 'best-practice',
-      codeExample: {
-        good: `<div class="form-group">
-  <label for="email">Email</label>
-  <input id="email" type="email" aria-invalid="false" aria-describedby="email-error" />
-  <span id="email-error" class="error-message" role="alert"></span>
-</div>`,
-        bad: `<div>
-  <input type="email" />
-  <span class="error"></span>
-</div>`,
-        description: 'Always include proper labels, ARIA attributes, and error messaging',
-      },
-      useCases: ['Form inputs', 'Validation', 'Error handling'],
-      whenToUse: 'For all form inputs requiring validation',
-      tags: ['form', 'validation', 'accessibility'],
-    });
-
-    // Anti-patterns
-    this.createPattern({
-      name: 'Inline Styles',
-      description: 'Anti-pattern: Using inline styles instead of design tokens',
-      category: 'anti-pattern',
-      codeExample: {
-        good: `<div class="bg-indigo-600 text-white p-4">Content</div>`,
-        bad: `<div style="background-color: #4f46e5; color: white; padding: 1rem;">Content</div>`,
-        description: 'Inline styles break design system consistency and make maintenance difficult',
-      },
-      whenNotToUse: 'Never use inline styles for design system components',
-      tags: ['anti-pattern', 'styling', 'tokens'],
-    });
-
-    this.createPattern({
-      name: 'Missing Loading States',
-      description: 'Anti-pattern: Not providing loading feedback for async operations',
-      category: 'anti-pattern',
-      codeExample: {
-        good: `<button :disabled="loading">
-  <Spinner v-if="loading" />
-  <span v-else>Submit</span>
-</button>`,
-        bad: `<button @click="submit">Submit</button>`,
-        description: 'Always provide visual feedback during async operations',
-      },
-      whenNotToUse: 'Never skip loading states for user-initiated async actions',
-      tags: ['anti-pattern', 'loading', 'ux'],
-    });
-
-    // Best Practices
-    this.createPattern({
-      name: 'Accessible Modal',
-      description: 'Best practice for creating accessible modal dialogs',
-      category: 'accessibility',
-      codeExample: {
-        good: `<div role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <h2 id="modal-title">Modal Title</h2>
-  <button aria-label="Close modal">×</button>
-  <!-- Content -->
-</div>`,
-        bad: `<div class="modal">
-  <h2>Modal Title</h2>
-  <button>×</button>
-</div>`,
-        description: 'Use proper ARIA roles and labels for modal dialogs',
-      },
-      useCases: ['Dialogs', 'Confirmations', 'Forms'],
-      whenToUse: 'For any modal or dialog component',
-      tags: ['modal', 'accessibility', 'aria'],
-    });
-
-    this.createPattern({
-      name: 'Component Composition',
-      description: 'Best practice for composing complex components from primitives',
-      category: 'composition',
-      codeExample: {
-        good: `<Card>
-  <CardHeader>
-    <CardTitle>Title</CardTitle>
-  </CardHeader>
-  <CardBody>
-    <CardContent>Content</CardContent>
-  </CardBody>
-</Card>`,
-        bad: `<div class="card">
-  <div class="card-header">
-    <h3>Title</h3>
-  </div>
-  <div class="card-body">
-    <p>Content</p>
-  </div>
-</div>`,
-        description: 'Compose complex components from smaller, reusable primitives',
-      },
-      useCases: ['Complex layouts', 'Reusable structures'],
-      whenToUse: 'When building complex components that can be broken into parts',
-      tags: ['composition', 'components', 'architecture'],
-    });
-
-    // Performance Patterns
-    this.createPattern({
-      name: 'Lazy Loading Images',
-      description: 'Best practice for loading images efficiently',
-      category: 'performance',
-      codeExample: {
-        good: `<img src="image.jpg" loading="lazy" alt="Description" />`,
-        bad: `<img src="image.jpg" alt="Description" />`,
-        description: 'Use lazy loading for images below the fold to improve initial page load',
-      },
-      useCases: ['Image galleries', 'Long content pages', 'Lists with images'],
-      whenToUse: 'For images that are not immediately visible',
-      tags: ['performance', 'images', 'optimization'],
-    });
+  onModuleInit(): void {
+    this.seeder.seedInBackground();
   }
 
   /**
    * Create a new pattern
    */
-  createPattern(data: {
-    name: string;
-    description: string;
-    category: ComponentPattern['category'];
-    status?: PatternStatus;
-    componentIds?: string[];
-    codeExample?: ComponentPattern['codeExample'];
-    useCases?: string[];
-    whenToUse?: string;
-    whenNotToUse?: string;
-    relatedPatterns?: string[];
-    tags?: string[];
-  }): ComponentPattern {
-    const id = `pattern-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const pattern: ComponentPattern = {
-      id,
-      ...data,
-      // The built-in patterns are published; new ones say where they are
-      status: data.status ?? 'production',
-      tags: data.tags || [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this.patterns.set(id, pattern);
+  async createPattern(data: PatternInput): Promise<ComponentPattern> {
+    await this.seeder.ensureSeeded();
+    const pattern = this.build(data, `pattern-${randomUUID()}`, new Date().toISOString());
+    await this.store.create(pattern);
     return pattern;
   }
 
   /**
    * Get all patterns
    */
-  getAllPatterns(filters?: {
+  async getAllPatterns(filters?: {
     category?: ComponentPattern['category'];
     tags?: string[];
     search?: string;
-  }): ComponentPattern[] {
-    let patterns = Array.from(this.patterns.values());
+  }): Promise<ComponentPattern[]> {
+    let patterns = await this.list();
 
     if (filters) {
       if (filters.category) {
@@ -239,51 +141,76 @@ export class PatternsLibraryService {
   /**
    * Get pattern by ID
    */
-  getPattern(patternId: string): ComponentPattern | null {
-    return this.patterns.get(patternId) || null;
+  async getPattern(patternId: string): Promise<ComponentPattern | null> {
+    if (!isSafeId(patternId)) return null;
+    await this.seeder.ensureSeeded();
+    return (await this.store.get(patternId))?.doc ?? null;
   }
 
   /**
    * Get patterns by component ID
    */
-  getPatternsByComponent(componentId: string): ComponentPattern[] {
-    return Array.from(this.patterns.values()).filter(p =>
+  async getPatternsByComponent(componentId: string): Promise<ComponentPattern[]> {
+    return (await this.list()).filter(p =>
       p.componentIds && p.componentIds.includes(componentId)
     );
   }
 
   /**
-   * Update pattern
+   * Update pattern. Returns null when there is no such pattern; throws
+   * ConflictException when someone else changed it at the same time.
    */
-  updatePattern(patternId: string, updates: Partial<Omit<ComponentPattern, 'id' | 'createdAt'>>): ComponentPattern | null {
-    const pattern = this.patterns.get(patternId);
-    if (!pattern) return null;
-    Object.assign(pattern, updates, { updatedAt: new Date() });
-    this.patterns.set(patternId, pattern);
+  async updatePattern(patternId: string, updates: Partial<Omit<ComponentPattern, 'id' | 'createdAt'>>): Promise<ComponentPattern | null> {
+    if (!isSafeId(patternId)) return null;
+    await this.seeder.ensureSeeded();
+    const stored = await this.store.get(patternId);
+    if (!stored) return null;
+    const changes: Record<string, unknown> = { ...updates };
+    for (const field of SERVER_FIELDS) delete changes[field];
+    const pattern: ComponentPattern = { ...stored.doc, ...changes, updatedAt: new Date().toISOString() };
+    try {
+      await this.store.replace(pattern, stored.version);
+    } catch (error) {
+      if (error instanceof VersionConflictError) throw new ConflictException('The pattern was changed by someone else, please reload and try again');
+      throw error;
+    }
     return pattern;
   }
 
   /**
    * Delete pattern
    */
-  deletePattern(patternId: string): boolean {
-    return this.patterns.delete(patternId);
+  async deletePattern(patternId: string): Promise<boolean> {
+    if (!isSafeId(patternId)) return false;
+    await this.seeder.ensureSeeded();
+    return this.store.delete(patternId);
   }
 
   /**
    * Get related patterns
    */
-  getRelatedPatterns(patternId: string): ComponentPattern[] {
-    const pattern = this.patterns.get(patternId);
+  async getRelatedPatterns(patternId: string): Promise<ComponentPattern[]> {
+    const pattern = await this.getPattern(patternId);
     if (!pattern || !pattern.relatedPatterns) return [];
 
-    return pattern.relatedPatterns
-      .map(id => this.patterns.get(id))
-      .filter((p): p is ComponentPattern => p !== undefined);
+    const related = await Promise.all(pattern.relatedPatterns.map((id) => this.getPattern(id)));
+    return related.filter((p): p is ComponentPattern => p !== null);
+  }
+
+  private async list(): Promise<ComponentPattern[]> {
+    await this.seeder.ensureSeeded();
+    return this.store.list();
+  }
+
+  private build(data: PatternInput, id: string, now: string): ComponentPattern {
+    return {
+      ...data,
+      id,
+      // The built-in patterns are published; new ones say where they are
+      status: data.status ?? 'production',
+      tags: data.tags || [],
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 }
-
-
-
-
-

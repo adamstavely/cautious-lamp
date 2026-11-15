@@ -6,13 +6,20 @@ import { AuthService } from '../auth/auth.service';
 import { AuthPrincipal } from '../auth/principal';
 import { SecurityAuditService } from '../common/security/security-audit.service';
 import { ContributionWorkflowController } from '../contribution-workflow/contribution-workflow.controller';
-import { ContributionWorkflowService } from '../contribution-workflow/contribution-workflow.service';
+import {
+  CHECK_STORE,
+  CONTRIBUTION_META_STORE,
+  ContributionWorkflowService,
+  GUIDELINE_STORE,
+  TEMPLATE_STORE,
+} from '../contribution-workflow/contribution-workflow.service';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { CHANGE_RECORDER, ChangeInput } from '../notifications/notification.types';
 import { ScansService } from '../governance/scans.service';
 import { Permission } from '../rbac/rbac.service';
 import { PatternsLibraryController } from './patterns-library.controller';
-import { PatternsLibraryService } from './patterns-library.service';
+import { InMemoryStore } from '../reviews/testing/in-memory-store';
+import { PATTERN_META_STORE, PATTERN_STORE, PatternsLibraryService } from './patterns-library.service';
 
 const PEOPLE: Record<string, string[]> = {
   viewer: [Permission.COMPONENT_VIEW, Permission.PATTERN_VIEW],
@@ -49,6 +56,7 @@ describe('Pattern library and contribution workflow permissions', () => {
       providers: [
         PatternsLibraryService,
         ContributionWorkflowService,
+        ...[PATTERN_STORE, PATTERN_META_STORE, GUIDELINE_STORE, TEMPLATE_STORE, CHECK_STORE, CONTRIBUTION_META_STORE].map((provide) => ({ provide, useValue: new InMemoryStore() })),
         { provide: DesignSystemService, useValue: { getAllComponents: async () => [] } },
         { provide: CHANGE_RECORDER, useValue: { record: async (change: ChangeInput) => void recorded.push(change) } },
         { provide: ScansService, useValue: {} },

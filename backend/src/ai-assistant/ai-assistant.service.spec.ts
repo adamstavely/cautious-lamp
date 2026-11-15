@@ -13,6 +13,7 @@ import { AuthPrincipal } from '../auth/principal';
 import { ComponentAccessService } from '../design-system/component-access.service';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { PatternsLibraryService } from '../patterns-library/patterns-library.service';
+import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { AI_MODEL, AiAssistantService, conversation } from './ai-assistant.service';
 
 const principal = { type: 'user', id: 'usr_ann', email: 'ann@example.com', name: 'Ann', roles: [], permissions: new Set(), mustChangePassword: false } as AuthPrincipal;
@@ -33,7 +34,7 @@ describe('AiAssistantService', () => {
   const access = {
     list: jest.fn(async () => designSystem.getAllComponents().filter((c) => !c.workspaceId)),
   } as unknown as ComponentAccessService;
-  const service = () => new AiAssistantService(designSystem, access, new PatternsLibraryService());
+  const service = () => new AiAssistantService(designSystem, access, new PatternsLibraryService(new InMemoryStore(), new InMemoryStore()));
 
   beforeEach(() => {
     create.mockReset();
