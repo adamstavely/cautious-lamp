@@ -1,5 +1,5 @@
 <template>
-  <div class="md-viewer">
+  <div class="md-viewer" :class="{ 'md-viewer-embedded': embedded }">
     <div class="md-main">
       <!-- VitePress iframe for VitePress pages -->
       <div v-if="isVitePressPage" class="relative w-full h-full">
@@ -64,6 +64,11 @@ const props = defineProps({
   docPath: {
     type: String,
     required: true
+  },
+  /** Part of a page that has its own hero and scrolls as a whole (GuidanceDocPage), rather than the whole view */
+  embedded: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -750,6 +755,18 @@ onBeforeUnmount(() => {
 }
 .md-page {
   @apply max-w-4xl mx-auto px-6 md:px-10 pt-8 pb-16;
+}
+/* Embedded: the page around it scrolls and already has a hero and side padding */
+.md-viewer-embedded,
+.md-viewer-embedded .md-main,
+.md-viewer-embedded .md-scroll {
+  @apply h-auto overflow-visible;
+}
+.md-viewer-embedded .md-page {
+  @apply max-w-3xl mx-0 px-0 pt-10 pb-0;
+}
+.md-viewer-embedded .md-prose :deep(h2:first-child) {
+  @apply mt-0 pt-0 border-t-0;
 }
 .md-overlay {
   @apply absolute inset-0 z-10 flex items-center justify-center p-6 bg-surface;

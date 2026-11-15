@@ -1231,7 +1231,7 @@ const gettingStartedResources = [
 const researchArtifacts = [
   { text: 'Journey Maps', link: '/research/journey-maps', icon: 'map' },
   { text: 'HCD Reports', link: '/research/hcd-reports', icon: 'file-text' },
-  { text: 'User Personas', link: '/research/user-studies', icon: 'users-round' },
+  { text: 'User Studies', link: '/research/user-studies', icon: 'users-round' },
   { text: 'Insights & Findings', link: '/research/insights', icon: 'lightbulb' }
 ];
 

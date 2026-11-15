@@ -52,43 +52,7 @@
     </ul>
 
     <!-- Add / edit -->
-    <WorkspaceModal :open="form.open" :title="form.item ? `Edit ${spec.singular}` : `Add ${spec.singular}`" :busy="form.saving" size="md" @close="form.open = false">
-      <form :id="formId" class="flex flex-col gap-5" @submit.prevent="saveForm">
-        <InlineNotice :notice="form.error ? { type: 'error', message: form.error } : null" @dismiss="form.error = null" />
-        <template v-for="field in spec.fields" :key="field.key">
-          <UiSelect
-            v-if="field.type === 'select'"
-            v-model="form.values[field.key]"
-            :label="field.label"
-            :required="field.required"
-            :options="field.required ? field.options : [{ value: '', label: '—' }, ...field.options]"
-          />
-          <UiTextarea
-            v-else-if="['textarea', 'json', 'svg', 'markdown', 'stages'].includes(field.type)"
-            v-model="form.values[field.key]"
-            :label="field.label"
-            :required="field.required"
-            :rows="field.type === 'textarea' ? 3 : 6"
-            :placeholder="field.placeholder"
-            :mono="field.type === 'json' || field.type === 'svg'"
-          />
-          <UiInput
-            v-else
-            v-model="form.values[field.key]"
-            :label="field.label"
-            :type="field.type === 'url' ? 'url' : field.type === 'number' ? 'number' : 'text'"
-            :required="field.required"
-            :placeholder="field.placeholder"
-          />
-        </template>
-      </form>
-      <template #footer>
-        <UiButton :disabled="form.saving" @click="form.open = false">Cancel</UiButton>
-        <UiButton variant="primary" type="submit" :form="formId" :loading="form.saving">
-          {{ form.saving ? 'Saving…' : form.item ? 'Save' : `Add ${spec.singular}` }}
-        </UiButton>
-      </template>
-    </WorkspaceModal>
+    <ResourceFormDialog :open="form.open" :spec="spec" :item="form.item" :save="saveForm" @close="form.open = false" @saved="onSaved" />
 
     <ShareDialog
       :open="share.open"
@@ -109,16 +73,16 @@
 </template>
 
 <script setup>
-import { computed, reactive, toRef, useId, watch } from 'vue';
+import { computed, reactive, toRef, watch } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
-import { UiButton, UiCallout, UiChip, UiInput, UiLink, UiPanel, UiSelect, UiSpinner, UiTextarea } from '../ui';
+import { UiButton, UiCallout, UiChip, UiLink, UiPanel, UiSpinner } from '../ui';
 import { useConfirmDialog } from '../../composables/useConfirmDialog.js';
 import { useNotice } from '../../composables/useNotice.js';
 import { useWorkspaceResource } from '../../composables/useWorkspaceResource.js';
 import ConfirmDialog from './ConfirmDialog.vue';
+import ResourceFormDialog from './ResourceFormDialog.vue';
 import ShareDialog from './ShareDialog.vue';
-import WorkspaceModal from './WorkspaceModal.vue';
-import { bodyFromForm, formValuesFor, resourceKind } from './resourceKinds.js';
+import { resourceKind } from './resourceKinds.js';
 import { renderMarkdown, safeHttpUrl, svgDataUri } from './safeContent.js';
 
 /**
@@ -135,7 +99,6 @@ const props = defineProps({
   canAdmin: { type: Boolean, default: false },
 });
 
-const formId = `resource-form-${useId()}`;
 const spec = computed(() => resourceKind(props.kind));
 const resource = useWorkspaceResource(computed(() => props.workspace.id), toRef(props, 'kind'));
 const { notice, showNotice, clearNotice } = useNotice();
@@ -167,36 +130,15 @@ const svgSrc = (item) => svgDataUri(item[spec.value.svg]);
 const markdownHtml = (item) => renderMarkdown(item[spec.value.markdown]);
 
 // ---------- Add / edit ----------
-const form = reactive({ open: false, item: null, values: {}, saving: false, error: null });
+const form = reactive({ open: false, item: null });
 
-const openForm = (item = null) => {
-  Object.assign(form, { open: true, item, values: formValuesFor(spec.value, item), saving: false, error: null });
-};
+const openForm = (item = null) => Object.assign(form, { open: true, item });
 
-const saveForm = async () => {
-  let body;
-  try {
-    body = bodyFromForm(spec.value, form.values, form.item);
-  } catch (err) {
-    form.error = err.message;
-    return;
-  }
-  if (form.item && Object.keys(body).length === 0) {
-    form.open = false;
-    return;
-  }
-  form.saving = true;
-  form.error = null;
-  try {
-    if (form.item) await resource.update(form.item.id, body);
-    else await resource.create(body);
-    form.open = false;
-    showNotice(`${spec.value.singular} ${form.item ? 'saved' : 'added'}.`, 'success');
-  } catch (err) {
-    form.error = err.message;
-  } finally {
-    form.saving = false;
-  }
+const saveForm = (body) => (form.item ? resource.update(form.item.id, body) : resource.create(body));
+
+const onSaved = () => {
+  showNotice(`${spec.value.singular} ${form.item ? 'saved' : 'added'}.`, 'success');
+  form.open = false;
 };
 
 // ---------- Delete ----------

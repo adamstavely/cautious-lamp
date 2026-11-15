@@ -345,6 +345,70 @@ describe('Workspaces HTTP API', () => {
     });
   });
 
+  describe('GET /resources/:kind (the library across workspaces)', () => {
+    let a: string;
+    let b: string;
+    let inA: string;
+    let inB: string;
+    let globalInB: string;
+    const flag = (name: string, region: string) => ({ name, region, url: `https://cdn.example.com/flags/${name}.svg` });
+
+    beforeAll(async () => {
+      a = await team('Library A');
+      b = (await h.call('other', 'POST', '/workspaces', { name: 'Library B' })).body.id;
+      inA = (await h.call('editor', 'POST', `/workspaces/${a}/resources/country-flags`, flag('Chad', 'Africa'))).body.id;
+      inB = (await h.call('other', 'POST', `/workspaces/${b}/resources/country-flags`, flag('Peru', 'Americas'))).body.id;
+      globalInB = (await h.call('other', 'POST', `/workspaces/${b}/resources/country-flags`, flag('Japan', 'Asia'))).body.id;
+      expect((await h.call('other', 'PUT', `/workspaces/${b}/resources/country-flags/${globalInB}/sharing`, { workspaceIds: [], isGlobal: true })).status).toBe(200);
+    });
+
+    const ids = (res: { body: any }) => res.body.map((r: any) => r.id);
+
+    it("returns the caller's workspaces' items plus global ones, never another workspace's private items", async () => {
+      const viewer = await h.call('viewer', 'GET', '/resources/country-flags');
+      expect(viewer.status).toBe(200);
+      expect(ids(viewer)).toEqual(expect.arrayContaining([inA, globalInB]));
+      expect(ids(viewer)).not.toContain(inB);
+      expect(viewer.body.find((r: any) => r.id === inA)).toMatchObject({ workspaceId: a, kind: 'country-flags', name: 'Chad' });
+
+      const outsider = await h.call('outsider', 'GET', '/resources/country-flags');
+      expect(ids(outsider)).toContain(globalInB);
+      expect(ids(outsider)).not.toContain(inA);
+      expect(ids(outsider)).not.toContain(inB);
+    });
+
+    it('includes items shared with one of the caller\'s workspaces', async () => {
+      const shared = (await h.call('other', 'POST', `/workspaces/${b}/resources/country-flags`, flag('Fiji', 'Oceania'))).body.id;
+      expect((await h.call('other', 'PUT', `/workspaces/${b}/resources/country-flags/${shared}/sharing`, { workspaceIds: [a] })).status).toBe(200);
+      expect(ids(await h.call('viewer', 'GET', '/resources/country-flags'))).toContain(shared);
+    });
+
+    it('lets admin:users holders read every workspace, and API keys only global items', async () => {
+      expect(ids(await h.call('superuser', 'GET', '/resources/country-flags'))).toEqual(expect.arrayContaining([inA, inB, globalInB]));
+      const key = await h.call({ credential: API_KEY }, 'GET', '/resources/country-flags');
+      expect(key.status).toBe(200);
+      expect(ids(key)).toContain(globalInB);
+      expect(ids(key)).not.toContain(inA);
+    });
+
+    it("filters on the kind's filter field, returns only that kind and rejects unknown kinds", async () => {
+      const africa = await h.call('superuser', 'GET', '/resources/country-flags?filter=Africa');
+      expect(ids(africa)).toContain(inA);
+      expect(africa.body.every((r: any) => r.region === 'Africa')).toBe(true);
+      expect((await h.call('viewer', 'GET', '/resources/usg-seals')).body.map((r: any) => r.kind)).not.toContain('country-flags');
+      expect((await h.call('viewer', 'GET', '/resources/components')).status).toBe(404);
+      expect((await h.call({}, 'GET', '/resources/country-flags')).status).toBe(401);
+    });
+  });
+
+  it('validates country codes on flags', async () => {
+    const id = await team('Flags');
+    const base = { name: 'Chad', url: 'https://cdn.example.com/td.svg' };
+    expect((await h.call('editor', 'POST', `/workspaces/${id}/resources/country-flags`, { ...base, countryCode: 'td' })).status).toBe(400);
+    expect((await h.call('editor', 'POST', `/workspaces/${id}/resources/country-flags`, { ...base, countryCode: 'TCDX' })).status).toBe(400);
+    expect((await h.call('editor', 'POST', `/workspaces/${id}/resources/country-flags`, { ...base, countryCode: 'TD' })).status).toBe(201);
+  });
+
   describe('components', () => {
     it('lists visible components and shares only the workspace\'s own', async () => {
       const a = await team('Comp A');
