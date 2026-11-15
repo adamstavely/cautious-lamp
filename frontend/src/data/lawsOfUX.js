@@ -1,4 +1,5 @@
-// Laws of UX detailed content
+// Laws of UX detailed content, with the Trench Coat spot illustration for
+// each law (src/assets/illustrations/spot/laws/).
 // Based on content from https://lawsofux.com/
 
 export const lawsOfUXData = {
@@ -6,7 +7,7 @@ export const lawsOfUXData = {
     id: 'aesthetic-usability',
     name: 'Aesthetic-Usability Effect',
     description: 'Users often perceive aesthetically pleasing design as design that\'s more usable.',
-    icon: 'aesthetic',
+    spot: 'laws/aesthetic-usability-effect',
     content: {
       overview: 'The aesthetic-usability effect is a phenomenon where users perceive more aesthetically pleasing designs as easier to use than less aesthetically pleasing designs, regardless of their actual usability.',
       explanation: 'This effect demonstrates that aesthetic design has a significant impact on user perception. When users encounter a visually appealing interface, they tend to be more tolerant of minor usability issues and are more likely to believe the system works better than it actually does.',
@@ -32,7 +33,7 @@ export const lawsOfUXData = {
     id: 'choice-overload',
     name: 'Choice Overload',
     description: 'The tendency for people to get overwhelmed when they are presented with a large number of options, often used interchangeably with the term paradox of choice.',
-    icon: 'choice',
+    spot: 'laws/choice-overload',
     content: {
       overview: 'Choice overload occurs when users are presented with too many options, leading to decision paralysis, decreased satisfaction, and reduced likelihood of making any choice at all.',
       explanation: 'While having options is generally good, too many choices can be counterproductive. Users may experience anxiety, spend excessive time deciding, or avoid making a decision entirely. This is particularly problematic in e-commerce, forms, and navigation menus.',
@@ -59,7 +60,7 @@ export const lawsOfUXData = {
     id: 'chunking',
     name: 'Chunking',
     description: 'A process by which individual pieces of an information set are broken down and then grouped together in a meaningful whole.',
-    icon: 'chunking',
+    spot: 'laws/chunking',
     content: {
       overview: 'Chunking is a cognitive strategy that breaks down information into smaller, manageable pieces and groups them into meaningful units, making information easier to process and remember.',
       explanation: 'The human brain can only hold a limited amount of information in working memory. By organizing information into chunks, we can effectively increase the amount of information we can process. This principle is fundamental to effective information design.',
@@ -86,7 +87,7 @@ export const lawsOfUXData = {
     id: 'cognitive-bias',
     name: 'Cognitive Bias',
     description: 'A systematic error of thinking or rationality in judgment that influence our perception of the world and our decision-making ability.',
-    icon: 'bias',
+    spot: 'laws/cognitive-bias',
     content: {
       overview: 'Cognitive biases are systematic patterns of deviation from norm or rationality in judgment, where individuals create their own subjective reality from their perception of the input.',
       explanation: 'These biases affect how users perceive and interact with interfaces. Understanding common biases helps designers create interfaces that work with, rather than against, natural human tendencies.',
@@ -113,7 +114,7 @@ export const lawsOfUXData = {
     id: 'cognitive-load',
     name: 'Cognitive Load',
     description: 'The amount of mental resources needed to understand and interact with an interface.',
-    icon: 'load',
+    spot: 'laws/cognitive-load',
     content: {
       overview: 'Cognitive load refers to the total amount of mental effort being used in working memory. Interfaces should minimize unnecessary cognitive load to help users focus on their primary tasks.',
       explanation: 'There are three types of cognitive load: intrinsic (complexity of the task), extraneous (how information is presented), and germane (effort to create schemas). Designers should minimize extraneous load and optimize for germane load.',
@@ -141,7 +142,7 @@ export const lawsOfUXData = {
     id: 'doherty-threshold',
     name: 'Doherty Threshold',
     description: 'Productivity soars when a computer and its users interact at a pace (<400ms) that ensures that neither has to wait on the other.',
-    icon: 'doherty',
+    spot: 'laws/doherty-threshold',
     content: {
       overview: 'The Doherty Threshold states that productivity increases dramatically when computer response time is under 400ms, creating a seamless interaction where users feel they are directly manipulating the interface.',
       explanation: 'When system response time exceeds 400ms, users notice the delay and their flow is interrupted. Below this threshold, interactions feel instantaneous and users remain engaged and productive.',
@@ -168,7 +169,7 @@ export const lawsOfUXData = {
     id: 'fitts-law',
     name: 'Fitts\'s Law',
     description: 'The time to acquire a target is a function of the distance to and size of the target.',
-    icon: 'fitts',
+    spot: 'laws/fitts-law',
     content: {
       overview: 'Fitts\'s Law predicts that the time required to move to a target area is a function of the distance to the target and the size of the target. Larger, closer targets are easier to acquire.',
       explanation: 'This law has profound implications for interface design. Buttons and interactive elements should be appropriately sized, and frequently used controls should be positioned where they\'re easy to reach.',
@@ -195,7 +196,7 @@ export const lawsOfUXData = {
     id: 'flow',
     name: 'Flow',
     description: 'The mental state in which a person performing some activity is fully immersed in a feeling of energized focus, full involvement, and enjoyment in the process of the activity.',
-    icon: 'flow',
+    spot: 'laws/flow',
     content: {
       overview: 'Flow is a state of complete absorption in an activity where users lose track of time and experience deep enjoyment. Designing for flow creates more engaging and productive user experiences.',
       explanation: 'Flow occurs when there\'s a balance between challenge and skill level, clear goals, immediate feedback, and a sense of control. Interfaces that facilitate flow keep users engaged and productive.',
@@ -223,7 +224,7 @@ export const lawsOfUXData = {
     id: 'goal-gradient',
     name: 'Goal-Gradient Effect',
     description: 'The tendency to approach a goal increases with proximity to the goal.',
-    icon: 'goal',
+    spot: 'laws/goal-gradient-effect',
     content: {
       overview: 'The goal-gradient effect describes how motivation and effort increase as users get closer to completing a goal. Users accelerate their behavior as they approach the finish line.',
       explanation: 'This psychological principle shows that people are more motivated when they can see progress toward a goal. The closer they get, the more effort they\'re willing to expend.',
@@ -251,7 +252,7 @@ export const lawsOfUXData = {
     id: 'hick-law',
     name: 'Hick\'s Law',
     description: 'The time it takes to make a decision increases with the number and complexity of choices.',
-    icon: 'hick',
+    spot: 'laws/hicks-law',
     content: {
       overview: 'Hick\'s Law states that the time required to make a decision increases logarithmically with the number of choices available. More options mean longer decision times.',
       explanation: 'This law emphasizes the importance of reducing choices to speed up decision-making. While it doesn\'t mean we should always minimize options, it highlights the need to organize and prioritize choices effectively.',
@@ -280,7 +281,7 @@ export const lawsOfUXData = {
     id: 'jakob-law',
     name: 'Jakob\'s Law',
     description: 'Users spend most of their time on other sites. This means that users prefer your site to work the same way as all the other sites they already know.',
-    icon: 'jakob',
+    spot: 'laws/jakobs-law',
     content: {
       overview: 'Jakob\'s Law emphasizes that users prefer familiar interfaces. Since users spend most of their time on other websites, they expect your site to follow established conventions.',
       explanation: 'Users bring expectations from other sites they\'ve used. Deviating from these conventions creates cognitive load and frustration. Following established patterns makes interfaces more intuitive.',
@@ -309,7 +310,7 @@ export const lawsOfUXData = {
     id: 'common-region',
     name: 'Law of Common Region',
     description: 'Elements tend to be perceived into groups if they are sharing an area with a clearly defined boundary.',
-    icon: 'region',
+    spot: 'laws/law-of-common-region',
     content: {
       overview: 'The Law of Common Region states that elements within the same bounded region are perceived as grouped together. This is one of the Gestalt principles of visual perception.',
       explanation: 'Visual boundaries create strong grouping cues. Elements contained within borders, backgrounds, or other visual containers are perceived as related, regardless of their proximity or similarity.',
@@ -337,7 +338,7 @@ export const lawsOfUXData = {
     id: 'proximity',
     name: 'Law of Proximity',
     description: 'Objects that are near, or proximate to each other, tend to be grouped together.',
-    icon: 'proximity',
+    spot: 'laws/law-of-proximity',
     content: {
       overview: 'The Law of Proximity is a Gestalt principle stating that objects placed close together are perceived as grouped or related, while objects farther apart are perceived as separate.',
       explanation: 'Spatial relationships are powerful grouping cues. Designers can use proximity to create visual hierarchy, organize information, and guide user attention.',
@@ -365,7 +366,7 @@ export const lawsOfUXData = {
     id: 'pragnanz',
     name: 'Law of Prägnanz',
     description: 'People will perceive and interpret ambiguous or complex images as the simplest form possible, because it is the interpretation that requires the least cognitive effort of us.',
-    icon: 'pragnanz',
+    spot: 'laws/law-of-pragnanz',
     content: {
       overview: 'The Law of Prägnanz (also known as the Law of Good Figure or Simplicity) states that people naturally perceive things in the simplest way possible. We interpret ambiguous or complex images as simple, regular forms.',
       explanation: 'This principle emphasizes the importance of simplicity in design. Users will interpret complex interfaces in the simplest way possible, which may not always match the designer\'s intent.',
@@ -394,7 +395,7 @@ export const lawsOfUXData = {
     id: 'similarity',
     name: 'Law of Similarity',
     description: 'The human eye tends to perceive similar elements as a complete picture, shape, or group, even if those elements are separated.',
-    icon: 'similarity',
+    spot: 'laws/law-of-similarity',
     content: {
       overview: 'The Law of Similarity states that elements that share visual characteristics (color, shape, size, orientation) are perceived as grouped together, even if they\'re not adjacent.',
       explanation: 'Similarity is a powerful grouping principle. Elements with shared visual properties are automatically perceived as related, creating visual organization without explicit boundaries.',
@@ -422,7 +423,7 @@ export const lawsOfUXData = {
     id: 'uniform-connectedness',
     name: 'Law of Uniform Connectedness',
     description: 'Elements that are visually connected are perceived as more related than elements with no connection.',
-    icon: 'connected',
+    spot: 'laws/law-of-uniform-connectedness',
     content: {
       overview: 'The Law of Uniform Connectedness states that elements connected by visual properties (lines, colors, shapes) are perceived as more related than elements without such connections.',
       explanation: 'Visual connections create stronger grouping cues than proximity or similarity alone. Connected elements are seen as a single unit or system.',
@@ -451,7 +452,7 @@ export const lawsOfUXData = {
     id: 'mental-model',
     name: 'Mental Model',
     description: 'A compressed model based on what we think we know about a system and how it works.',
-    icon: 'mental',
+    spot: 'laws/mental-model',
     content: {
       overview: 'A mental model is a user\'s internal representation of how a system works. It\'s based on their prior experiences, assumptions, and understanding of similar systems.',
       explanation: 'Users develop mental models to predict system behavior. When interfaces match users\' mental models, they\'re intuitive. When they don\'t, users become confused and frustrated.',
@@ -480,7 +481,7 @@ export const lawsOfUXData = {
     id: 'miller-law',
     name: 'Miller\'s Law',
     description: 'The average person can only keep 7 (plus or minus 2) items in their working memory.',
-    icon: 'miller',
+    spot: 'laws/millers-law',
     content: {
       overview: 'Miller\'s Law states that the average person can hold 7±2 items in their working memory at once. This has important implications for information architecture and interface design.',
       explanation: 'While the exact number has been debated, the principle remains: humans have limited working memory capacity. Interfaces should be designed to respect these limitations.',
@@ -509,7 +510,7 @@ export const lawsOfUXData = {
     id: 'occam-razor',
     name: 'Occam\'s Razor',
     description: 'Among competing hypotheses that predict equally well, the one with the fewest assumptions should be selected.',
-    icon: 'occam',
+    spot: 'laws/occams-razor',
     content: {
       overview: 'Occam\'s Razor (also known as the Law of Parsimony) states that when multiple solutions work equally well, the simplest one is usually the best. In design, this means favoring simplicity over complexity.',
       explanation: 'Simpler solutions are easier to understand, maintain, and use. They require fewer assumptions and are less likely to have hidden problems. This principle guides designers to remove unnecessary complexity.',
@@ -539,7 +540,7 @@ export const lawsOfUXData = {
     id: 'paradox-active-user',
     name: 'Paradox of the Active User',
     description: 'Users never read manuals but start using the software immediately.',
-    icon: 'paradox',
+    spot: 'laws/paradox-of-the-active-user',
     content: {
       overview: 'The Paradox of the Active User describes how users prefer to learn by doing rather than reading documentation. They jump into using software immediately, often skipping tutorials and help text.',
       explanation: 'Users want to be productive immediately and are reluctant to invest time in learning. Interfaces must be discoverable and self-explanatory, allowing users to learn through interaction.',
@@ -568,7 +569,7 @@ export const lawsOfUXData = {
     id: 'pareto',
     name: 'Pareto Principle',
     description: 'The Pareto principle states that, for many events, roughly 80% of the effects come from 20% of the causes.',
-    icon: 'pareto',
+    spot: 'laws/pareto-principle',
     content: {
       overview: 'The Pareto Principle (80/20 rule) suggests that a small number of causes often produce most of the effects. In design, this means focusing on the features and content that provide the most value.',
       explanation: 'Not all features are equally important. A small subset of functionality typically accounts for most user needs. Designers should prioritize these high-impact elements.',
@@ -597,7 +598,7 @@ export const lawsOfUXData = {
     id: 'parkinson',
     name: 'Parkinson\'s Law',
     description: 'Any task will inflate until all of the available time is spent.',
-    icon: 'parkinson',
+    spot: 'laws/parkinsons-law',
     content: {
       overview: 'Parkinson\'s Law states that work expands to fill the time available for its completion. In design, this relates to how users perceive and use available space and time.',
       explanation: 'This principle suggests that users will use whatever time or space is available, whether they need it or not. Designers should provide appropriate constraints to guide efficient use.',
@@ -626,7 +627,7 @@ export const lawsOfUXData = {
     id: 'peak-end',
     name: 'Peak-End Rule',
     description: 'People judge an experience largely based on how they felt at its peak and at its end, rather than the total sum or average of every moment of the experience.',
-    icon: 'peak',
+    spot: 'laws/peak-end-rule',
     content: {
       overview: 'The Peak-End Rule states that people evaluate experiences based on the most intense point (peak) and the final moment (end), rather than the overall average of the experience.',
       explanation: 'This means that a few standout moments can define the entire experience. Designers should focus on creating positive peaks and ensuring strong endings.',
@@ -656,7 +657,7 @@ export const lawsOfUXData = {
     id: 'postel',
     name: 'Postel\'s Law',
     description: 'Be liberal in what you accept, and conservative in what you send.',
-    icon: 'postel',
+    spot: 'laws/postels-law',
     content: {
       overview: 'Postel\'s Law (also known as the Robustness Principle) suggests that systems should be flexible in accepting input while being strict and consistent in output.',
       explanation: 'This principle, originally from network protocol design, applies to interface design: accept various input formats from users, but provide consistent, predictable output.',
@@ -686,7 +687,7 @@ export const lawsOfUXData = {
     id: 'selective-attention',
     name: 'Selective Attention',
     description: 'The process of focusing our attention only to a subset of stimuli in an environment — usually those related to our goals.',
-    icon: 'attention',
+    spot: 'laws/selective-attention',
     content: {
       overview: 'Selective attention is the cognitive process of focusing on specific information while ignoring other stimuli. Users naturally filter information based on their goals and expectations.',
       explanation: 'Users can\'t process all information simultaneously. They focus on what\'s relevant to their current task. Designers should make important information stand out and reduce distractions.',
@@ -715,7 +716,7 @@ export const lawsOfUXData = {
     id: 'serial-position',
     name: 'Serial Position Effect',
     description: 'Users have a propensity to best remember the first and last items in a series.',
-    icon: 'serial',
+    spot: 'laws/serial-position-effect',
     content: {
       overview: 'The Serial Position Effect describes how people best remember items at the beginning (primacy effect) and end (recency effect) of a list, while items in the middle are less memorable.',
       explanation: 'This effect has important implications for information architecture. Important items should be placed at the beginning or end of lists, menus, and sequences.',
@@ -745,7 +746,7 @@ export const lawsOfUXData = {
     id: 'tesler',
     name: 'Tesler\'s Law',
     description: 'Tesler\'s Law, also known as The Law of Conservation of Complexity, states that for any system there is a certain amount of complexity which cannot be reduced.',
-    icon: 'tesler',
+    spot: 'laws/teslers-law',
     content: {
       overview: 'Tesler\'s Law states that every system has inherent complexity that cannot be eliminated. The question is where that complexity lives: in the system itself or in the user interface.',
       explanation: 'Complexity must be managed, not eliminated. Designers can simplify interfaces by moving complexity to the system (automation, smart defaults) rather than burdening users.',
@@ -775,7 +776,7 @@ export const lawsOfUXData = {
     id: 'von-restorff',
     name: 'Von Restorff Effect',
     description: 'The Von Restorff effect, also known as The Isolation Effect, predicts that when multiple similar objects are present, the one that differs from the rest is most likely to be remembered.',
-    icon: 'restorff',
+    spot: 'laws/von-restorff-effect',
     content: {
       overview: 'The Von Restorff Effect (Isolation Effect) states that items that stand out from their surroundings are more likely to be remembered. Distinctive elements capture attention and are better recalled.',
       explanation: 'When items are similar, the one that differs stands out and is more memorable. Designers can use this to highlight important information, calls-to-action, or key features.',
@@ -805,7 +806,7 @@ export const lawsOfUXData = {
     id: 'working-memory',
     name: 'Working Memory',
     description: 'A cognitive system that temporarily holds and manipulates information needed to complete tasks.',
-    icon: 'memory',
+    spot: 'laws/working-memory',
     content: {
       overview: 'Working memory is the cognitive system responsible for temporarily holding and manipulating information during complex tasks. It has limited capacity and is easily overloaded.',
       explanation: 'Understanding working memory limitations is crucial for design. Interfaces should minimize the amount of information users need to hold in memory, provide external memory aids, and reduce cognitive load.',
@@ -836,7 +837,7 @@ export const lawsOfUXData = {
     id: 'zeigarnik',
     name: 'Zeigarnik Effect',
     description: 'People remember uncompleted or interrupted tasks better than completed tasks.',
-    icon: 'zeigarnik',
+    spot: 'laws/zeigarnik-effect',
     content: {
       overview: 'The Zeigarnik Effect states that people remember incomplete or interrupted tasks better than completed ones. Unfinished tasks create psychological tension that keeps them in memory.',
       explanation: 'This effect explains why users remember incomplete forms, unfinished purchases, or interrupted workflows. Designers can leverage this to encourage task completion.',
@@ -865,3 +866,5 @@ export const lawsOfUXData = {
   }
 };
 
+/** Every law, in the order the Laws of UX page lists them */
+export const lawsOfUX = Object.values(lawsOfUXData);
