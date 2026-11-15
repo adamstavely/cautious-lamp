@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Logger, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { AuthPrincipal, hasPermission } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
@@ -22,10 +22,38 @@ export interface StoredConnection {
   autoSync: boolean;
   /** Hours between scheduled pulls (default 24) */
   syncIntervalHours?: number;
-  /** When the next scheduled pull is due; set while autoSync is on */
+  /** When the next scheduled pull is due (or, while one is claimed, when its claim lapses); set while autoSync is on */
   nextAutoSyncAt?: string;
+  /** The scheduled pull being run: the claim, when the occurrence was first claimed, until when, and which try this is */
+  autoSyncLease?: AutoSyncLease;
+  /** How the last scheduled occurrence ended */
+  lastAutoSync?: { at: string; outcome: 'ran' | 'failed' | 'gave-up'; attempts: number; error?: string };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AutoSyncLease {
+  token: string;
+  claimedAt: string;
+  until: string;
+  attempt: number;
+}
+
+/**
+ * How long a claimed scheduled pull may run before another instance may take
+ * it over (the claiming server is presumed stopped). The scheduler checks
+ * every few minutes, so a lost occurrence is retried within about this long.
+ */
+export const AUTO_SYNC_LEASE_MS = 10 * 60_000;
+/** Tries of one occurrence that stop without finishing before it is recorded as given up */
+export const MAX_AUTO_SYNC_ATTEMPTS = 3;
+
+/** One claimed scheduled occurrence; `exhausted` when earlier tries all stopped without finishing */
+export interface AutoSyncClaim<T> {
+  connection: T;
+  token: string;
+  attempt: number;
+  exhausted: boolean;
 }
 
 /** A connection as returned by the API: no credential, only whether one is set */
@@ -47,6 +75,9 @@ const SERVER_FIELDS = [
   'syncHistory',
   'hasApiKey',
   'nextAutoSyncAt',
+  'autoSyncLease',
+  'lastAutoSync',
+  'lastRunStartedAt',
   'baseline',
   'designMatches',
   'componentLinks',
@@ -164,23 +195,94 @@ export class ConnectionRegistry<T extends StoredConnection> {
   }
 
   /**
-   * Claims a due scheduled pull by moving its next due time on with a
-   * compare-and-swap write, so only one instance runs it. Null when it
-   * isn't due any more or another instance claimed it first.
+   * Runs every due scheduled pull this instance can claim, and returns how
+   * many it ran. Each occurrence is claimed with a lease before any network
+   * work and only rescheduled once `run` has recorded an outcome; a server
+   * that stops mid-pull leaves the lease to lapse, and the next instance to
+   * look retries it. After MAX_AUTO_SYNC_ATTEMPTS tries that never finished,
+   * `gaveUp` records why and the occurrence is rescheduled.
    */
-  async claimAutoSync(id: string, now: Date): Promise<T | null> {
+  async runDueAutoSyncs(
+    now: Date,
+    logger: Logger,
+    run: (connection: T) => Promise<{ error?: string }>,
+    gaveUp: (connection: T, message: string) => Promise<void>,
+  ): Promise<number> {
+    let ran = 0;
+    for (const due of await this.dueForAutoSync(now)) {
+      const claim = await this.claimAutoSync(due.id, now);
+      if (!claim) continue;
+      ran++;
+      try {
+        if (claim.exhausted) {
+          const message = `Gave up after ${claim.attempt - 1} scheduled tries that stopped before finishing`;
+          await gaveUp(claim.connection, message);
+          await this.completeAutoSync(claim, { outcome: 'gave-up', error: message });
+        } else {
+          const { error } = await run(claim.connection);
+          await this.completeAutoSync(claim, { outcome: error ? 'failed' : 'ran', error });
+        }
+      } catch (error) {
+        // No outcome was recorded: leave the claim to lapse so the occurrence is tried again
+        logger.warn(`Scheduled pull of ${claim.connection.id} stopped (try ${claim.attempt}): ${(error as Error).message}`);
+      }
+    }
+    return ran;
+  }
+
+  /**
+   * Claims a due scheduled occurrence with a compare-and-swap write, so only
+   * one instance runs it: the lease, and a due time pushed to when the lease
+   * lapses. A lease still on the connection means an earlier try never
+   * finished, so this is the next try of the same occurrence. Null when it
+   * isn't due or another instance claimed it first.
+   */
+  async claimAutoSync(id: string, now: Date): Promise<AutoSyncClaim<T> | null> {
     const stored = await this.store.get(id);
     if (!stored) return null;
     const connection = stored.doc;
     if (!connection.autoSync || !connection.nextAutoSyncAt || new Date(connection.nextAutoSyncAt) > now) return null;
-    connection.nextAutoSyncAt = new Date(now.getTime() + (connection.syncIntervalHours ?? DEFAULT_SYNC_INTERVAL_HOURS) * HOUR_MS).toISOString();
+    const previous = connection.autoSyncLease;
+    const until = new Date(now.getTime() + AUTO_SYNC_LEASE_MS).toISOString();
+    const lease: AutoSyncLease = { token: randomBytes(9).toString('hex'), claimedAt: previous?.claimedAt ?? now.toISOString(), until, attempt: (previous?.attempt ?? 0) + 1 };
+    connection.autoSyncLease = lease;
+    connection.nextAutoSyncAt = until;
     try {
       await this.store.replace(connection, stored.version);
-      return connection;
+      return { connection, token: lease.token, attempt: lease.attempt, exhausted: lease.attempt > MAX_AUTO_SYNC_ATTEMPTS };
     } catch (error) {
       if (error instanceof VersionConflictError) return null;
       throw error;
     }
+  }
+
+  /**
+   * Ends a claimed occurrence: records how it went and schedules the next one
+   * an interval after the occurrence was first claimed. False when the claim
+   * was lost (another instance took the occurrence over).
+   */
+  async completeAutoSync(claim: AutoSyncClaim<T>, result: { outcome: 'ran' | 'failed' | 'gave-up'; error?: string }): Promise<boolean> {
+    for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
+      const stored = await this.store.get(claim.connection.id);
+      const lease = stored?.doc.autoSyncLease;
+      if (!stored || lease?.token !== claim.token) return false;
+      const connection = stored.doc;
+      delete connection.autoSyncLease;
+      connection.lastAutoSync = { at: new Date().toISOString(), outcome: result.outcome, attempts: lease.attempt, ...(result.error ? { error: result.error } : {}) };
+      if (connection.autoSync) {
+        const interval = (connection.syncIntervalHours ?? DEFAULT_SYNC_INTERVAL_HOURS) * HOUR_MS;
+        connection.nextAutoSyncAt = new Date(Date.parse(lease.claimedAt) + interval).toISOString();
+      } else {
+        delete connection.nextAutoSyncAt;
+      }
+      try {
+        await this.store.replace(connection, stored.version);
+        return true;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
+      }
+    }
+    return false;
   }
 
   /**
@@ -232,8 +334,11 @@ export class ConnectionRegistry<T extends StoredConnection> {
 
   /** Due now when automatic sync is (still) on and nothing is scheduled; cleared when it is off */
   private scheduleAutoSync(connection: T, now: Date): void {
-    if (!connection.autoSync) delete connection.nextAutoSyncAt;
-    else if (!connection.nextAutoSyncAt) connection.nextAutoSyncAt = now.toISOString();
+    if (!connection.autoSync) {
+      delete connection.nextAutoSyncAt;
+      // A pull running now still finishes, but no longer reschedules
+      delete connection.autoSyncLease;
+    } else if (!connection.nextAutoSyncAt) connection.nextAutoSyncAt = now.toISOString();
   }
 
   private canSee(principal: AuthPrincipal, connection: T): boolean {

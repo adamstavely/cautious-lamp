@@ -210,17 +210,37 @@ export class DesignSyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Compares every connection whose scheduled compare is due; returns how many this instance ran */
-  async runDueAutoSyncs(now: Date = new Date()): Promise<number> {
-    let ran = 0;
-    for (const due of await this.registry.dueForAutoSync(now)) {
-      const connection = await this.registry.claimAutoSync(due.id, now);
-      if (!connection) continue;
-      ran++;
-      await this.compare(connection, SCHEDULER, 'scheduled').catch((error) =>
-        this.logger.warn(`Scheduled design compare of ${connection.id} failed: ${(error as Error).message}`),
-      );
-    }
-    return ran;
+  runDueAutoSyncs(now: Date = new Date()): Promise<number> {
+    return this.registry.runDueAutoSyncs(
+      now,
+      this.logger,
+      async (connection) => {
+        const run = await this.compare(connection, SCHEDULER, 'scheduled');
+        return { error: run.status === 'failed' ? run.error : undefined };
+      },
+      async (connection, message) => {
+        const failed: SyncRun = { ...this.startRun(connection, SCHEDULER, 'scheduled'), finishedAt: new Date().toISOString(), status: 'failed', counts: {}, warnings: [], error: message };
+        await this.runs.record(failed);
+        await this.registry.patch(connection.id, (c) => {
+          c.lastRunId = failed.id;
+        });
+      },
+    );
+  }
+
+  private startRun(connection: DesignSyncConnection, actor: SyncActor, trigger: SyncRun['trigger']) {
+    // One clock reading for both, so a run's id and start time order runs the same way
+    const startedMs = Date.now();
+    return {
+      id: newRunId(startedMs),
+      kind: 'components' as const,
+      connectionId: connection.id,
+      tool: connection.tool,
+      fileId: connection.fileId,
+      trigger,
+      startedBy: actor,
+      startedAt: new Date(startedMs).toISOString(),
+    };
   }
 
   /** Library components only: workspace components aren't compared against a shared design file */
@@ -232,18 +252,7 @@ export class DesignSyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async compare(connection: DesignSyncConnection, actor: SyncActor, trigger: SyncRun['trigger']): Promise<SyncRun> {
-    // One clock reading for both, so a run's id and start time order runs the same way
-    const startedMs = Date.now();
-    const started = {
-      id: newRunId(startedMs),
-      kind: 'components' as const,
-      connectionId: connection.id,
-      tool: connection.tool,
-      fileId: connection.fileId,
-      trigger,
-      startedBy: actor,
-      startedAt: new Date(startedMs).toISOString(),
-    };
+    const started = this.startRun(connection, actor, trigger);
     let run: SyncRun;
     let matches: Record<string, PreviousMatch> | undefined;
     try {

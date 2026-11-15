@@ -30,6 +30,9 @@ function fixedLookup(address: string, family: number): LookupFunction {
  * The URL is checked with assertPublicHttpUrl, then the host is resolved once
  * more and the connection made to exactly that checked address (DNS
  * rebinding can't slip an internal address in). Redirects aren't followed.
+ * `timeoutMs` bounds the whole exchange up to the status line, and the
+ * connection is closed as soon as the status arrives: the body is never
+ * read, so a target that trickles one can't hold the socket open.
  * Throws DeliveryRefusedError for private targets and DeliveryHttpError
  * otherwise; 5xx, 408, 429, timeouts and network errors are retryable.
  */
@@ -50,12 +53,18 @@ export async function postJson(
 
   const client = url.protocol === 'https:' ? https : http;
   return new Promise<number>((resolve, reject) => {
+    let settled = false;
+    const settle = (outcome: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      outcome();
+    };
     const req = client.request(
       url,
       {
         method: 'POST',
         lookup: fixedLookup(target.address, target.family),
-        timeout: options.timeoutMs,
         agent: false,
         headers: {
           'Content-Type': 'application/json',
@@ -65,17 +74,20 @@ export async function postJson(
         },
       },
       (res) => {
-        // Only the status matters; drain the body without keeping it
-        res.resume();
         const status = res.statusCode ?? 0;
-        if (status >= 200 && status < 300) return resolve(status);
-        if (status >= 300 && status < 400) return reject(new DeliveryHttpError(`HTTP ${status}: redirects aren't followed`, false, status));
-        const retryable = status >= 500 || status === 408 || status === 429;
-        reject(new DeliveryHttpError(`HTTP ${status}`, retryable, status));
+        // Only the status matters: close the connection rather than read the body
+        res.destroy();
+        req.destroy();
+        settle(() => {
+          if (status >= 200 && status < 300) return resolve(status);
+          if (status >= 300 && status < 400) return reject(new DeliveryHttpError(`HTTP ${status}: redirects aren't followed`, false, status));
+          const retryable = status >= 500 || status === 408 || status === 429;
+          reject(new DeliveryHttpError(`HTTP ${status}`, retryable, status));
+        });
       },
     );
-    req.on('timeout', () => req.destroy(new Error(`Timed out after ${options.timeoutMs}ms`)));
-    req.on('error', (error) => reject(error instanceof DeliveryHttpError ? error : new DeliveryHttpError(error.message, true)));
+    const deadline = setTimeout(() => req.destroy(new Error(`Timed out after ${options.timeoutMs}ms`)), options.timeoutMs);
+    req.on('error', (error) => settle(() => reject(error instanceof DeliveryHttpError ? error : new DeliveryHttpError(error.message, true))));
     req.end(body);
   });
 }

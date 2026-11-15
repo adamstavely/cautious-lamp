@@ -9,6 +9,7 @@ import { SyncRun, SyncRunLog } from '../design-tools/sync-runs';
 import { FIGMA_KEY, FIGMA_PLAN_ERROR, PENPOT_FILE, figmaFixture } from '../design-tools/testing/fake-design-tools';
 import { Permission } from '../rbac/rbac.service';
 import { InMemoryStore } from '../reviews/testing/in-memory-store';
+import { AUTO_SYNC_LEASE_MS, MAX_AUTO_SYNC_ATTEMPTS } from './connection-registry';
 import { TokenSyncConnection, TokenSyncService } from './token-sync.service';
 
 const person = (id: string, permissions: Permission[] = []): AuthPrincipal => ({
@@ -33,7 +34,9 @@ describe('Token sync', () => {
   let connections: InMemoryStore<TokenSyncConnection>;
   let service: TokenSyncService;
 
-  const build = (http: DesignToolHttp = fixture.http) => new TokenSyncService(designSystem, new EncryptionService(), connections, new DesignToolReader(http), new SyncRunLog(runStore));
+  // One key for every instance, as servers sharing the indices share ENCRYPTION_KEY
+  const encryption = new EncryptionService();
+  const build = (http: DesignToolHttp = fixture.http) => new TokenSyncService(designSystem, encryption, connections, new DesignToolReader(http), new SyncRunLog(runStore));
 
   beforeEach(async () => {
     designSystem = await createDesignSystemService();
@@ -237,6 +240,61 @@ describe('Token sync', () => {
       expect(await service.getConnection(alice, conn.id)).toMatchObject({ autoSync: true, syncIntervalHours: 6 });
       await service.disableAutoSync(alice, conn.id);
       expect(await service.runDueAutoSyncs(new Date(later.getTime() + 7 * 60 * 60 * 1000))).toBe(0);
+    });
+
+    it('retries an occurrence whose server stopped after claiming it, once the claim lapses (U08)', async () => {
+      const conn = await connect();
+      await service.enableAutoSync(alice, conn.id, { intervalHours: 24 });
+      const due = new Date(Date.now() + 1000);
+      // The server stops after claiming: the run is never recorded
+      jest.spyOn(runStore, 'create').mockRejectedValueOnce(new Error('server stopped'));
+      expect(await service.runDueAutoSyncs(due)).toBe(1);
+      expect(await service.listRuns(alice, conn.id)).toEqual([]);
+
+      // Another instance five minutes later: the claim still holds
+      const other = build();
+      expect(await other.runDueAutoSyncs(new Date(due.getTime() + 5 * 60_000))).toBe(0);
+      // Once it lapses, the occurrence runs and is recorded once
+      const recovered = new Date(due.getTime() + AUTO_SYNC_LEASE_MS + 1);
+      expect(await other.runDueAutoSyncs(recovered)).toBe(1);
+      const runs = await service.listRuns(alice, conn.id);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]).toMatchObject({ trigger: 'scheduled', status: 'review' });
+
+      // The next occurrence is an interval after the first claim, not the recovery
+      const stored = (await connections.get(conn.id))!.doc;
+      expect(stored.autoSyncLease).toBeUndefined();
+      expect(stored.lastAutoSync).toMatchObject({ outcome: 'ran', attempts: 2 });
+      expect(stored.nextAutoSyncAt).toBe(new Date(due.getTime() + 24 * 60 * 60 * 1000).toISOString());
+      expect(await other.runDueAutoSyncs(new Date(recovered.getTime() + AUTO_SYNC_LEASE_MS + 1))).toBe(0);
+    });
+
+    it('records an occurrence as given up after repeated tries that never finish, and moves on (U08)', async () => {
+      const conn = await connect();
+      await service.enableAutoSync(alice, conn.id, { intervalHours: 24 });
+      let now = Date.now() + 1000;
+      const first = now;
+      const create = jest.spyOn(runStore, 'create');
+      for (let i = 0; i < MAX_AUTO_SYNC_ATTEMPTS; i++) {
+        create.mockRejectedValueOnce(new Error('server stopped'));
+        expect(await service.runDueAutoSyncs(new Date(now))).toBe(1);
+        now += AUTO_SYNC_LEASE_MS + 1;
+      }
+      expect(await service.runDueAutoSyncs(new Date(now))).toBe(1);
+      const [run] = await service.listRuns(alice, conn.id);
+      expect(run).toMatchObject({ status: 'failed', trigger: 'scheduled', error: expect.stringMatching(/Gave up after 3 scheduled tries/) });
+      const stored = (await connections.get(conn.id))!.doc;
+      expect(stored.lastAutoSync).toMatchObject({ outcome: 'gave-up', attempts: MAX_AUTO_SYNC_ATTEMPTS + 1 });
+      expect(stored.nextAutoSyncAt).toBe(new Date(first + 24 * 60 * 60 * 1000).toISOString());
+    });
+
+    it('records a file that cannot be read as the occurrence\'s outcome, without retrying it', async () => {
+      const conn = await connect(alice, { apiKey: 'figd_wrong' });
+      await service.enableAutoSync(alice, conn.id, { intervalHours: 24 });
+      const due = new Date(Date.now() + 1000);
+      expect(await service.runDueAutoSyncs(due)).toBe(1);
+      expect((await connections.get(conn.id))!.doc.lastAutoSync).toMatchObject({ outcome: 'failed', attempts: 1, error: expect.any(String) });
+      expect(await service.runDueAutoSyncs(new Date(due.getTime() + AUTO_SYNC_LEASE_MS + 1))).toBe(0);
     });
 
     it('skips disabled connections', async () => {
