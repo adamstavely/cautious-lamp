@@ -377,7 +377,7 @@ export class ApplicationsService {
     if (!parseVersion(version)) throw new BadRequestException('version must be a semantic version like 3.0.0');
     const target = version.replace(/^v/, '');
     const applications = (await this.listFor(principal)).filter((app) => compareVersions(app.designSystemVersion, target) < 0);
-    const { breakingChanges, source } = this.breakingChangesFor(target);
+    const { breakingChanges, source } = await this.breakingChangesFor(principal, target);
     return { applications, affectedCount: applications.length, breakingChanges, breakingChangesSource: source };
   }
 
@@ -771,12 +771,22 @@ export class ApplicationsService {
   }
 
   /**
-   * Breaking changes recorded for a version in the changelog module, when it
-   * is loaded. Looked up lazily so this module doesn't import it (it depends
-   * on DesignSystemModule, which will depend on this one).
+   * Breaking changes recorded for a version in the changelog, as the caller
+   * may see them, when the changelog is loaded. Looked up lazily so this
+   * module doesn't import NotificationsCoreModule.
    */
-  private breakingChangesFor(version: string): { breakingChanges: string[]; source: 'changelog' | 'unavailable' } {
-    let changelog: { getAggregatedChangelog(filters: { version: string; breakingOnly: boolean }): { entries: Array<{ entityName: string; changes: Array<{ description?: string }> }> } } | undefined;
+  private async breakingChangesFor(
+    principal: AuthPrincipal,
+    version: string,
+  ): Promise<{ breakingChanges: string[]; source: 'changelog' | 'unavailable' }> {
+    let changelog:
+      | {
+          getAggregatedChangelog(
+            principal: AuthPrincipal,
+            filters: { version: string; breakingOnly: boolean },
+          ): Promise<{ entries: Array<{ entityName: string; changes: Array<{ description?: string }> }> }>;
+        }
+      | undefined;
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { ChangelogAggregationService } = require('../changelog-aggregation/changelog-aggregation.service');
@@ -785,7 +795,7 @@ export class ApplicationsService {
       changelog = undefined;
     }
     if (!changelog) return { breakingChanges: [], source: 'unavailable' };
-    const entries = changelog.getAggregatedChangelog({ version, breakingOnly: true }).entries;
+    const entries = (await changelog.getAggregatedChangelog(principal, { version, breakingOnly: true })).entries;
     const breakingChanges = entries.map((entry) => {
       const details = entry.changes.map((c) => c.description).filter(Boolean).join('; ');
       return details ? `${entry.entityName}: ${details}` : entry.entityName;

@@ -2,22 +2,22 @@ import { Module, forwardRef } from '@nestjs/common';
 import { DesignSystemController } from './design-system.controller';
 import { DesignSystemService } from './design-system.service';
 import { ComponentRequestService } from './component-request.service';
-import { NotificationService } from './notification.service';
+import { NotificationService } from '../notifications/notification.service';
+import { NotificationsCoreModule } from '../notifications/notifications-core.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { SecurityModule } from '../common/security/security.module';
 import { WorkspaceCoreModule } from '../workspaces/workspace-core.module';
 import { ComponentAccessService } from './component-access.service';
 
 @Module({
-  imports: [forwardRef(() => AnalyticsModule), SecurityModule, WorkspaceCoreModule],
+  imports: [forwardRef(() => AnalyticsModule), SecurityModule, WorkspaceCoreModule, NotificationsCoreModule],
   controllers: [DesignSystemController],
   providers: [
     DesignSystemService,
     ComponentRequestService,
-    NotificationService,
     ComponentAccessService,
   ],
-  exports: [DesignSystemService, ComponentRequestService, NotificationService, ComponentAccessService],
+  exports: [DesignSystemService, ComponentRequestService, ComponentAccessService],
 })
 export class DesignSystemModule {
   constructor(

@@ -1,17 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ChangelogAggregationService } from './changelog-aggregation.service';
+import { NotificationsCoreModule } from '../notifications/notifications-core.module';
 import { ChangelogAggregationController } from './changelog-aggregation.controller';
-import { DesignSystemModule } from '../design-system/design-system.module';
 
+/** The changelog routes; ChangelogAggregationService itself lives in NotificationsCoreModule */
 @Module({
-  imports: [DesignSystemModule],
+  imports: [NotificationsCoreModule],
   controllers: [ChangelogAggregationController],
-  providers: [ChangelogAggregationService],
-  exports: [ChangelogAggregationService],
 })
 export class ChangelogAggregationModule {}
-
-
-
-
-

@@ -8,6 +8,7 @@ import { SecurityAuditService } from '../common/security/security-audit.service'
 import { ContributionWorkflowController } from '../contribution-workflow/contribution-workflow.controller';
 import { ContributionWorkflowService } from '../contribution-workflow/contribution-workflow.service';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { CHANGE_RECORDER, ChangeInput } from '../notifications/notification.types';
 import { Permission } from '../rbac/rbac.service';
 import { PatternsLibraryController } from './patterns-library.controller';
 import { PatternsLibraryService } from './patterns-library.service';
@@ -29,6 +30,8 @@ const authStub = {
 describe('Pattern library and contribution workflow permissions', () => {
   let app: INestApplication;
   let base: string;
+  /** Changes the pattern routes reported to the changelog */
+  const recorded: ChangeInput[] = [];
 
   const call = async (method: string, route: string, as: string, body: unknown = {}) => {
     const res = await fetch(`${base}${route}`, {
@@ -46,6 +49,7 @@ describe('Pattern library and contribution workflow permissions', () => {
         PatternsLibraryService,
         ContributionWorkflowService,
         { provide: DesignSystemService, useValue: { getAllComponents: async () => [] } },
+        { provide: CHANGE_RECORDER, useValue: { record: async (change: ChangeInput) => void recorded.push(change) } },
         { provide: AuthService, useValue: authStub },
         { provide: SecurityAuditService, useValue: { logPermissionDenied: jest.fn(async () => undefined) } },
         { provide: APP_GUARD, useClass: AuthGuard },
@@ -81,6 +85,26 @@ describe('Pattern library and contribution workflow permissions', () => {
     expect(await call('POST', '/patterns-library/patterns', 'author', { name: 'x', description: 'y', category: 'nope' })).toBe(400);
     expect(await call('POST', '/patterns-library/patterns', 'author', { name: ' ', description: 'y', category: 'common' })).toBe(400);
     expect(await call('POST', '/patterns-library/patterns', 'author', { name: 'Card grid', description: 'Cards in a grid', category: 'common' })).toBe(201);
+  });
+
+  it('reports created, changed, deprecated and deleted patterns to the changelog', async () => {
+    recorded.length = 0;
+    const res = await fetch(`${base}/patterns-library/patterns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer tok-author' },
+      body: JSON.stringify({ name: 'Stacked list', description: 'Rows of items', category: 'common' }),
+    });
+    const id = (await res.json()).id;
+    await call('PUT', `/patterns-library/patterns/${id}`, 'author', { description: 'Rows' });
+    await call('PUT', `/patterns-library/patterns/${id}`, 'author', { tags: ['deprecated'] });
+    await call('DELETE', `/patterns-library/patterns/${id}`, 'author');
+    await call('DELETE', `/patterns-library/patterns/${id}`, 'author'); // already gone: nothing recorded
+    expect(recorded.map((c) => [c.type, c.entityId, c.action, c.breaking ?? false])).toEqual([
+      ['pattern', id, 'created', false],
+      ['pattern', id, 'updated', false],
+      ['pattern', id, 'deprecated', false],
+      ['pattern', id, 'deleted', true],
+    ]);
   });
 
   it('keeps reads open to anyone signed in', async () => {

@@ -6,6 +6,7 @@ import { ApplicationsModule } from '../applications/applications.module';
 import { EsIndexService } from '../common/elasticsearch/es-index.service';
 import { DesignSystemModule } from '../design-system/design-system.module';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { NotificationsCoreModule } from '../notifications/notifications-core.module';
 import { WORKSPACE_COMPONENT_SOURCE, WorkspaceComponent, WorkspaceComponentSource } from './component-source';
 import { EsQueryableStore } from './queryable-store';
 import { WorkspaceCoreModule } from './workspace-core.module';
@@ -35,7 +36,7 @@ export function designSystemComponentSource(
 
 /** Team workspaces, their members, items, components and analytics (docs/WORKSPACES.md) */
 @Module({
-  imports: [WorkspaceCoreModule, ApplicationsModule, DesignSystemModule, AnalyticsModule],
+  imports: [WorkspaceCoreModule, ApplicationsModule, DesignSystemModule, AnalyticsModule, NotificationsCoreModule],
   controllers: [WorkspacesController],
   providers: [
     WorkspacesService,

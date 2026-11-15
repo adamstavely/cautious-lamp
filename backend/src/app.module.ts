@@ -18,6 +18,7 @@ import { ComponentScaffoldingModule } from './component-scaffolding/component-sc
 import { ComponentRequestsModule } from './component-requests/component-requests.module';
 import { PatternsLibraryModule } from './patterns-library/patterns-library.module';
 import { ChangelogAggregationModule } from './changelog-aggregation/changelog-aggregation.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { ContributionWorkflowModule } from './contribution-workflow/contribution-workflow.module';
 import { ApiVersioningModule } from './api-versioning/api-versioning.module';
 import { SearchModule } from './search/search.module';
@@ -60,6 +61,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     ComponentRequestsModule,
     PatternsLibraryModule,
     ChangelogAggregationModule,
+    NotificationsModule,
     ContributionWorkflowModule,
     ApiVersioningModule,
     SearchModule,

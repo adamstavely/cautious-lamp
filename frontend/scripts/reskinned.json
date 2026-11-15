@@ -85,6 +85,7 @@
     "src/views/BuildingTrust.vue",
     "src/views/BundleSizeAnalysis.vue",
     "src/views/CSSAnimationGenerator.vue",
+    "src/views/ChangeNotifications.vue",
     "src/views/ChangePassword.vue",
     "src/views/ChartBuilder.vue",
     "src/views/ColorContrastChecker.vue",
