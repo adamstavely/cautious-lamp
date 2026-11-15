@@ -145,12 +145,25 @@ const SEED_DONE = 'starting-content-seeded-v1';
 const MAX_WRITE_ATTEMPTS = 5;
 
 /**
- * Meta document whose stamp changes on every component write, so another
- * server sharing the indices notices and reloads its copy
+ * Meta document whose stamp changes on every component and token write, so
+ * another server sharing the indices notices and reloads its copy
  */
 export const CONTENT_VERSION = 'content-version';
 /** How long a loaded copy is trusted before the content version is checked again */
 export const CONTENT_CHECK_INTERVAL_MS = 3000;
+/**
+ * A copy this old is reloaded even when the stamp hasn't changed, so a write
+ * whose stamp change was lost (the server stopped in between) still reaches
+ * every server within this bound
+ */
+export const MAX_COPY_AGE_MS = 60_000;
+
+/** A conditional token write found a different value stored than the one it was made against */
+export class TokenChangedError extends ConflictException {
+  constructor(name: string) {
+    super(`Token '${name}' was changed since this was read; pull again`);
+  }
+}
 
 /** The stored document without its storage fields */
 function toComponent(doc: StoredComponent): Component {
@@ -213,6 +226,7 @@ export class DesignSystemService implements OnModuleInit {
   private loading: Promise<void> | null = null;
   /** The content-version stamp the copy was loaded at, and when it was last compared */
   private loadedStamp: string | undefined;
+  private loadedAt = 0;
   private checkedAt = 0;
   private checking: Promise<void> | null = null;
 
@@ -261,7 +275,7 @@ export class DesignSystemService implements OnModuleInit {
       tokens: tokens.sort((a, b) => byPosition(a, b) || byCreatedAt(a, b)),
     };
     this.loadedStamp = stamp;
-    this.checkedAt = Date.now();
+    this.loadedAt = this.checkedAt = Date.now();
   }
 
   private isDue(): boolean {
@@ -274,14 +288,14 @@ export class DesignSystemService implements OnModuleInit {
 
   /**
    * Reloads the copy when the content-version stamp differs from the one it
-   * was loaded at. When storage can't be read, the copy is kept and checked again later.
+   * was loaded at, or when the copy is older than MAX_COPY_AGE_MS. When storage can't be read, the copy is kept and checked again later.
    */
   private checkForChanges(): Promise<void> {
     if (!this.checking) {
       this.checking = (async () => {
         try {
           const stamp = await this.readStamp();
-          if (stamp !== this.loadedStamp) await this.load();
+          if (stamp !== this.loadedStamp || Date.now() - this.loadedAt >= MAX_COPY_AGE_MS) await this.load();
           else this.checkedAt = Date.now();
         } catch (error) {
           this.checkedAt = Date.now();
@@ -458,19 +472,36 @@ export class DesignSystemService implements OnModuleInit {
       throw error;
     }
     this.cacheToken(doc);
+    await this.bumpContentVersion();
     return structuredClone(toToken(doc));
+  }
+
+  /** The stored token, read from storage rather than this server's copy */
+  async readStoredToken(name: string): Promise<Token | undefined> {
+    const stored = await this.tokenStore.get(name);
+    return stored ? toToken(stored.doc) : undefined;
   }
 
   /**
    * Changes a token's value (and optionally type, category or description),
-   * compare-and-swap like component writes. Callers check token:edit.
+   * compare-and-swap like component writes. With `expectedValue`, the write
+   * happens only if the stored value is still that one (checked in the same
+   * compare-and-swap), else TokenChangedError. Callers check token:edit.
    */
-  async updateToken(name: string, change: Partial<Pick<Token, 'value' | 'type' | 'category' | 'description'>>): Promise<Token> {
+  async updateToken(
+    name: string,
+    change: Partial<Pick<Token, 'value' | 'type' | 'category' | 'description'>>,
+    { expectedValue }: { expectedValue?: string } = {},
+  ): Promise<Token> {
     await this.ready();
     for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
       const stored = await this.tokenStore.get(name);
-      if (!stored) throw new NotFoundException(`Token '${name}' not found`);
+      if (!stored) {
+        if (expectedValue !== undefined) throw new TokenChangedError(name);
+        throw new NotFoundException(`Token '${name}' not found`);
+      }
       const doc = stored.doc;
+      if (expectedValue !== undefined && doc.value !== expectedValue) throw new TokenChangedError(name);
       assignDefined(doc, change, ['value', 'type', 'category', 'description']);
       try {
         await this.tokenStore.replace(doc, stored.version);
@@ -479,18 +510,39 @@ export class DesignSystemService implements OnModuleInit {
         throw error;
       }
       this.cacheToken(doc);
+      await this.bumpContentVersion();
       return structuredClone(toToken(doc));
     }
     throw new ConflictException('The token was changed by someone else at the same time, please try again');
   }
 
-  /** Deletes a token; false when there was none. Callers check token:delete. */
-  async deleteToken(name: string): Promise<boolean> {
+  /**
+   * Deletes a token; false when there was none. With `expectedValue`, deletes
+   * only if the stored value is still that one, else TokenChangedError.
+   * Callers check token:delete.
+   */
+  async deleteToken(name: string, { expectedValue }: { expectedValue?: string } = {}): Promise<boolean> {
     await this.ready();
-    const deleted = await this.tokenStore.delete(name);
+    let deleted = false;
+    if (expectedValue === undefined) {
+      deleted = await this.tokenStore.delete(name);
+    } else {
+      for (let attempt = 0; ; attempt++) {
+        const stored = await this.tokenStore.get(name);
+        if (!stored || stored.doc.value !== expectedValue) throw new TokenChangedError(name);
+        try {
+          deleted = await this.tokenStore.delete(name, stored.version);
+          break;
+        } catch (error) {
+          if (!(error instanceof VersionConflictError)) throw error;
+          if (attempt + 1 >= MAX_WRITE_ATTEMPTS) throw new ConflictException('The token was changed by someone else at the same time, please try again');
+        }
+      }
+    }
     const tokens = this.loaded.tokens;
     const index = tokens.findIndex((t) => t.id === name);
     if (index >= 0) tokens.splice(index, 1);
+    if (deleted) await this.bumpContentVersion();
     return deleted;
   }
 

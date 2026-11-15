@@ -44,8 +44,11 @@ export interface DocumentStore<T extends { id: string }> {
   create(doc: T): Promise<void>;
   /** Writes only if the stored copy is still at `version`, else throws VersionConflictError */
   replace(doc: T, version: DocVersion): Promise<void>;
-  /** Returns false when there was nothing to delete */
-  delete(id: string): Promise<boolean>;
+  /**
+   * Returns false when there was nothing to delete. With `version`, deletes
+   * only if the stored copy is still at it, else throws VersionConflictError.
+   */
+  delete(id: string, version?: DocVersion): Promise<boolean>;
   /** Every matching document, newest first, however many there are */
   list(options?: ListOptions): Promise<T[]>;
 }
@@ -146,11 +149,17 @@ export class EsDocumentStore<T extends { id: string }> implements DocumentStore<
     }
   }
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, version?: DocVersion): Promise<boolean> {
     try {
-      await this.es.delete({ index: this.index, id, refresh: 'wait_for' });
+      await this.es.delete({
+        index: this.index,
+        id,
+        ...(version ? { if_seq_no: version.seqNo, if_primary_term: version.primaryTerm } : {}),
+        refresh: 'wait_for',
+      });
       return true;
     } catch (error) {
+      if (version && esStatusCode(error) === 409) throw new VersionConflictError(id);
       if (isEsNotFound(error)) return false;
       throw this.mapError(error, 'delete');
     }

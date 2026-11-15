@@ -232,15 +232,17 @@ export class DesignSyncService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async compare(connection: DesignSyncConnection, actor: SyncActor, trigger: SyncRun['trigger']): Promise<SyncRun> {
+    // One clock reading for both, so a run's id and start time order runs the same way
+    const startedMs = Date.now();
     const started = {
-      id: newRunId(),
+      id: newRunId(startedMs),
       kind: 'components' as const,
       connectionId: connection.id,
       tool: connection.tool,
       fileId: connection.fileId,
       trigger,
       startedBy: actor,
-      startedAt: new Date().toISOString(),
+      startedAt: new Date(startedMs).toISOString(),
     };
     let run: SyncRun;
     let matches: Record<string, PreviousMatch> | undefined;

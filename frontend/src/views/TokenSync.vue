@@ -159,6 +159,14 @@
           <p class="text-sm text-ink-secondary">{{ choiceSummary }}</p>
           <UiButton variant="primary" icon="check" :loading="applying" :disabled="applying" @click="apply">Apply choices</UiButton>
         </div>
+        <UiCallout v-else-if="run.status === 'applying'" :tone="interrupted ? 'warning' : 'info'" :title="interrupted ? 'This apply stopped part-way' : 'Being applied'" role="status" class="mt-4">
+          {{ interrupted
+            ? `${run.claim?.by?.name ?? 'Someone'} started applying these changes, but it didn't finish. Finishing applies the remaining changes with the same choices; changes already written aren't written again.`
+            : `${run.claim?.by?.name ?? 'Someone'} is applying these changes. Outcomes appear below as each is written.` }}
+          <template v-if="interrupted" #actions>
+            <UiButton variant="primary" size="sm" icon="check" :loading="applying" :disabled="applying" @click="apply">Finish applying</UiButton>
+          </template>
+        </UiCallout>
       </template>
     </PageSection>
 
@@ -364,7 +372,9 @@ const choiceSummary = computed(() => {
   const writes = items.filter((i) => choices[i.id] === 'take-design').length;
   return `${writes} of ${items.length} change${items.length === 1 ? '' : 's'} will be written. Removals and conflicts are skipped unless you choose otherwise.`;
 });
-const outcomeFor = (item) => run.value?.applied?.results?.find((r) => r.id === item.id);
+const outcomeFor = (item) => (run.value?.applied?.results ?? run.value?.progress)?.find((r) => r.id === item.id);
+// An apply whose claim lapsed (the server stopped mid-apply) can be finished by applying again
+const interrupted = computed(() => run.value?.status === 'applying' && Date.parse(run.value.claim?.expiresAt ?? 0) <= Date.now());
 const countsLabel = (entry) => {
   const c = entry.counts ?? {};
   if (entry.status === 'failed') return '';
@@ -426,7 +436,8 @@ const openRun = async (runId) => {
 const apply = async () => {
   applying.value = true;
   try {
-    const response = await apiClient.post(`${API}/runs/${run.value.id}/apply`, { choices: { ...choices } });
+    const body = run.value.status === 'applying' ? {} : { choices: { ...choices } };
+    const response = await apiClient.post(`${API}/runs/${run.value.id}/apply`, body);
     run.value = { ...run.value, ...response.data };
     const failed = response.data.applied?.counts?.failed ?? 0;
     showNotice(failed ? `Applied, but ${failed} change(s) failed: see the outcomes below.` : 'Your choices were applied.', failed ? 'warning' : 'success');

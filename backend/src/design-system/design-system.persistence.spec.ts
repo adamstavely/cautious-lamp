@@ -3,7 +3,7 @@ import { designSystemComponentSource } from '../workspaces/workspaces.module';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { ComponentIssueService } from './component-issue.service';
 import { SEED_COMPONENTS, SEED_TOKENS } from './design-system-seed';
-import { CONTENT_CHECK_INTERVAL_MS, DesignSystemService } from './design-system.service';
+import { CONTENT_CHECK_INTERVAL_MS, DesignSystemService, MAX_COPY_AGE_MS, TokenChangedError } from './design-system.service';
 import { DesignSystemStores, createDesignSystemService, createDesignSystemStores } from './testing/in-memory-stores';
 
 /**
@@ -184,6 +184,61 @@ describe('DesignSystemService storage', () => {
       now += CONTENT_CHECK_INTERVAL_MS;
       await first.ready();
       expect(first.getComponentById('card')!.status).toBe('planned');
+    });
+
+    it("sees another server's token creates, updates and deletes once its copy is due a check", async () => {
+      const other = await restart();
+      const before = other.getTokenByName('color.primary')!.value;
+      await first.updateToken('color.primary', { value: '#123456' });
+      await first.createToken({ name: 'color.new', value: '#abcdef', type: 'color', category: 'colors' });
+      await first.deleteToken('spacing.md');
+      await other.ready();
+      expect(other.getTokenByName('color.primary')!.value).toBe(before);
+
+      now += CONTENT_CHECK_INTERVAL_MS;
+      await other.ready();
+      expect(other.getTokenByName('color.primary')!.value).toBe('#123456');
+      expect(other.getTokenByName('color.new')).toMatchObject({ value: '#abcdef' });
+      expect(other.getTokenByName('spacing.md')).toBeUndefined();
+    });
+
+    it('reloads a copy older than MAX_COPY_AGE_MS even when a write never changed the stamp', async () => {
+      const other = await restart();
+      // As if the writing server stopped between the write and the stamp change
+      const stored = (await stores.tokens.get('color.primary'))!.doc;
+      stores.tokens.forceWrite({ ...stored, value: '#00ff00' });
+      now += CONTENT_CHECK_INTERVAL_MS;
+      await other.ready();
+      expect(other.getTokenByName('color.primary')!.value).not.toBe('#00ff00');
+      now += MAX_COPY_AGE_MS;
+      await other.ready();
+      expect(other.getTokenByName('color.primary')!.value).toBe('#00ff00');
+    });
+  });
+
+  describe('conditional token writes', () => {
+    it('writes only when the stored value is still the expected one, whatever this copy holds', async () => {
+      const other = await restart();
+      await other.updateToken('border.radius.sm', { value: '19px' });
+      // `first` still holds the old value in its copy; the stored one decides
+      await expect(first.updateToken('border.radius.sm', { value: '6px' }, { expectedValue: '0.25rem' })).rejects.toBeInstanceOf(TokenChangedError);
+      await expect(first.deleteToken('border.radius.sm', { expectedValue: '0.25rem' })).rejects.toBeInstanceOf(TokenChangedError);
+      expect((await stores.tokens.get('border.radius.sm'))!.doc.value).toBe('19px');
+
+      await first.updateToken('border.radius.sm', { value: '6px' }, { expectedValue: '19px' });
+      expect((await stores.tokens.get('border.radius.sm'))!.doc.value).toBe('6px');
+      expect(await first.deleteToken('border.radius.sm', { expectedValue: '6px' })).toBe(true);
+    });
+
+    it('refuses when another write lands between the read and the compare-and-swap', async () => {
+      let raced = false;
+      stores.tokens.beforeReplace = (doc) => {
+        if (raced || doc.id !== 'border.radius.sm') return;
+        raced = true;
+        stores.tokens.forceWrite({ ...doc, value: '19px' });
+      };
+      await expect(first.updateToken('border.radius.sm', { value: '6px' }, { expectedValue: '0.25rem' })).rejects.toBeInstanceOf(TokenChangedError);
+      expect((await stores.tokens.get('border.radius.sm'))!.doc.value).toBe('19px');
     });
   });
 

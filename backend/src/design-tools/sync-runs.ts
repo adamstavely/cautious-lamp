@@ -27,7 +27,7 @@ export const MAX_RUNS_PER_CONNECTION = 50;
 export type SyncRunStatus =
   /** Token diff waiting for someone to choose and apply */
   | 'review'
-  /** Being applied right now */
+  /** Being applied: `claim` says by whom and until when; an expired claim can be finished by anyone allowed to apply */
   | 'applying'
   /** Every chosen change was written */
   | 'applied'
@@ -72,19 +72,53 @@ export interface SyncRun {
   matched?: Record<string, BaselineEntry>;
   /** Component runs: the report */
   componentItems?: ComponentReportItem[];
+  /** Token runs being applied: who claimed the run, until when, and the choices being applied */
+  claim?: ApplyClaim;
+  /** Token runs being applied: each item's outcome as it is written, so an interrupted apply can finish */
+  progress?: ItemResult[];
   applied?: {
     by: SyncActor;
     at: string;
     counts: Record<ItemOutcome, number>;
-    results: Array<{ id: string; choice: SyncChoice; outcome: ItemOutcome; error?: string }>;
+    results: ItemResult[];
   };
+}
+
+export interface ItemResult {
+  id: string;
+  choice: SyncChoice;
+  outcome: ItemOutcome;
+  error?: string;
+}
+
+/** Held by the one caller applying a run; renewed as items are written */
+export interface ApplyClaim {
+  token: string;
+  by: SyncActor;
+  at: string;
+  expiresAt: string;
+  choices: Record<string, SyncChoice>;
+}
+
+/** Whether `a` is a later pull than `b`: started later, or at the same moment with a greater id (newRunId sorts in creation order) */
+export function isNewerRun(a: Pick<SyncRun, 'startedAt' | 'id'>, b: Pick<SyncRun, 'startedAt' | 'id'>): boolean {
+  return a.startedAt > b.startedAt || (a.startedAt === b.startedAt && a.id > b.id);
 }
 
 /** A run without its item lists, for history views */
 export type SyncRunSummary = Omit<SyncRun, 'tokenItems' | 'componentItems' | 'matched'>;
 
-export function newRunId(): string {
-  return `run-${randomBytes(9).toString('hex')}`;
+let lastIdMs = 0;
+let idSequence = 0;
+
+/**
+ * A run id that sorts in creation order within this server (milliseconds,
+ * then a sequence for runs started in the same millisecond), then random
+ */
+export function newRunId(now = Date.now()): string {
+  idSequence = now === lastIdMs ? idSequence + 1 : 0;
+  lastIdMs = now;
+  return `run-${now.toString(16).padStart(12, '0')}${idSequence.toString(16).padStart(4, '0')}-${randomBytes(6).toString('hex')}`;
 }
 
 export function summarize(run: SyncRun): SyncRunSummary {
@@ -99,19 +133,24 @@ export class SyncRunLog {
   constructor(private readonly store: DocumentStore<SyncRun>) {}
 
   /**
-   * Records a run. A new token diff supersedes the connection's older ones
-   * still waiting for review, so only the latest pull can be applied.
+   * Records a run. Of the connection's diffs waiting for review, only the
+   * latest pull (isNewerRun) stays reviewable; the rest are superseded. Every
+   * caller picks the same latest one, so pulls recorded at the same time
+   * agree, and one that started earlier but finished later never replaces it.
    */
   async record(run: SyncRun): Promise<void> {
     await this.store.create(run);
     const runs = await this.forConnection(run.connectionId);
     if (run.status === 'review') {
-      for (const older of runs) {
-        if (older.id !== run.id && older.kind === run.kind && older.status === 'review') {
-          await this.update(older.id, (r) => {
-            if (r.status === 'review') r.status = 'superseded';
-          }).catch(() => undefined);
-        }
+      const waiting = runs.filter((r) => r.kind === run.kind && r.status === 'review');
+      if (!waiting.some((r) => r.id === run.id)) waiting.push(run);
+      const latest = waiting.reduce((best, r) => (isNewerRun(r, best) ? r : best));
+      for (const older of waiting) {
+        if (older.id === latest.id) continue;
+        await this.update(older.id, (r) => {
+          if (r.status !== 'review') return false;
+          r.status = 'superseded';
+        }).catch(() => undefined);
       }
     }
     for (const old of runs.slice(MAX_RUNS_PER_CONNECTION)) await this.store.delete(old.id).catch(() => undefined);
@@ -120,18 +159,22 @@ export class SyncRunLog {
   /** Newest first */
   async forConnection(connectionId: string): Promise<SyncRun[]> {
     const runs = await this.store.list({ where: { connectionId } });
-    return runs.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    return runs.sort((a, b) => (isNewerRun(a, b) ? -1 : isNewerRun(b, a) ? 1 : 0));
   }
 
   async get(id: string): Promise<SyncRun | null> {
     return (await this.store.get(id))?.doc ?? null;
   }
 
-  /** Applies `change` to the stored run, compare-and-swap; returns false if someone else wrote first */
-  async update(id: string, change: (run: SyncRun) => void): Promise<boolean> {
+  /**
+   * Applies `change` to the stored run, compare-and-swap. Returns true only
+   * when this write landed: false if the run is gone, `change` returned false
+   * (nothing is written), or someone else wrote first.
+   */
+  async update(id: string, change: (run: SyncRun) => boolean | void): Promise<boolean> {
     const stored = await this.store.get(id);
     if (!stored) return false;
-    change(stored.doc);
+    if (change(stored.doc) === false) return false;
     try {
       await this.store.replace(stored.doc, stored.version);
       return true;

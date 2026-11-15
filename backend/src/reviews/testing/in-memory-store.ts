@@ -33,7 +33,11 @@ export class InMemoryStore<T extends { id: string }> implements DocumentStore<T>
     this.docs.set(doc.id, { doc: structuredClone(doc), seqNo: ++this.seq });
   }
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, version?: DocVersion): Promise<boolean> {
+    if (version) {
+      const entry = this.docs.get(id);
+      if (!entry || entry.seqNo !== version.seqNo) throw new VersionConflictError(id);
+    }
     return this.docs.delete(id);
   }
 
