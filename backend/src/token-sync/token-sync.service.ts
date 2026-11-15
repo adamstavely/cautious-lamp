@@ -349,15 +349,17 @@ export class TokenSyncService implements OnModuleInit, OnModuleDestroy {
 
   /** Reads the file, diffs it and records the run (a failed one when the file can't be read) */
   private async pull(connection: TokenSyncConnection, actor: SyncActor, trigger: SyncRun['trigger']): Promise<SyncRun> {
+    // One clock reading for both, so a run's id and start time order runs the same way
+    const startedMs = Date.now();
     const started = {
-      id: newRunId(),
+      id: newRunId(startedMs),
       kind: 'tokens' as const,
       connectionId: connection.id,
       tool: connection.tool,
       ...(connection.fileId ? { fileId: connection.fileId } : {}),
       trigger,
       startedBy: actor,
-      startedAt: new Date().toISOString(),
+      startedAt: new Date(startedMs).toISOString(),
     };
     let run: SyncRun;
     try {

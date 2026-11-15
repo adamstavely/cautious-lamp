@@ -166,6 +166,18 @@ describe('Token sync: races and recovery', () => {
     expect((await runOf('run-a')).status).toBe('superseded');
   });
 
+  it('orders pulls started in the same millisecond by when they started', async () => {
+    const conn = await connect();
+    const frozen = Date.now();
+    jest.spyOn(Date, 'now').mockReturnValue(frozen);
+    const older = await service.syncTokens(alice, conn.id);
+    const newer = await service.syncTokens(alice, conn.id);
+    expect(older.startedAt).toBe(newer.startedAt);
+    expect((await runOf(older.id)).status).toBe('superseded');
+    expect((await runOf(newer.id)).status).toBe('review');
+    expect((await connections.get(conn.id))!.doc.lastRunId).toBe(newer.id);
+  });
+
   it('keeps the connection pointing at the latest pull when pulls race (U07)', async () => {
     const conn = await connect();
     const [a, b] = await Promise.all([service.syncTokens(alice, conn.id), service.syncTokens(bob, conn.id)]);

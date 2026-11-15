@@ -100,7 +100,7 @@ export interface ApplyClaim {
   choices: Record<string, SyncChoice>;
 }
 
-/** Whether `a` is a later pull than `b`: started later, or at the same moment with a greater id */
+/** Whether `a` is a later pull than `b`: started later, or at the same moment with a greater id (newRunId sorts in creation order) */
 export function isNewerRun(a: Pick<SyncRun, 'startedAt' | 'id'>, b: Pick<SyncRun, 'startedAt' | 'id'>): boolean {
   return a.startedAt > b.startedAt || (a.startedAt === b.startedAt && a.id > b.id);
 }
@@ -108,8 +108,17 @@ export function isNewerRun(a: Pick<SyncRun, 'startedAt' | 'id'>, b: Pick<SyncRun
 /** A run without its item lists, for history views */
 export type SyncRunSummary = Omit<SyncRun, 'tokenItems' | 'componentItems' | 'matched'>;
 
-export function newRunId(): string {
-  return `run-${randomBytes(9).toString('hex')}`;
+let lastIdMs = 0;
+let idSequence = 0;
+
+/**
+ * A run id that sorts in creation order within this server (milliseconds,
+ * then a sequence for runs started in the same millisecond), then random
+ */
+export function newRunId(now = Date.now()): string {
+  idSequence = now === lastIdMs ? idSequence + 1 : 0;
+  lastIdMs = now;
+  return `run-${now.toString(16).padStart(12, '0')}${idSequence.toString(16).padStart(4, '0')}-${randomBytes(6).toString('hex')}`;
 }
 
 export function summarize(run: SyncRun): SyncRunSummary {
