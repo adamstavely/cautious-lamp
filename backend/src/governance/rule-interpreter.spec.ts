@@ -119,6 +119,20 @@ describe('rule interpreter', () => {
     expect((globalThis as any).__ran).toBeUndefined();
   }, 30000);
 
+  it('builtin axe judges a component fragment on its own markup, not as a page', async () => {
+    const axe = rule({ type: 'builtin', builtin: 'axe', severity: 'error' });
+    const fragment = await evaluateRule(axe, input({ html: '<img src="x.png"><button></button>' }), ctx);
+    const ids = fragment.violations.map((v) => v.message).join('\n');
+    expect(ids).toMatch(/image-alt/);
+    expect(ids).toMatch(/button-name/);
+    expect(ids).not.toMatch(/document-title|html-has-lang|landmark-one-main|region/);
+    // A clean fragment passes
+    expect((await evaluateRule(axe, input({ html: '<button>Save</button>' }), ctx)).outcome).toBe('pass');
+    // A whole document still gets the page checks
+    const page = await evaluateRule(axe, input({ html: '<!doctype html><html><body><p>Hi</p></body></html>' }), ctx);
+    expect(page.violations.map((v) => v.message).join('\n')).toMatch(/document-title|html-has-lang/);
+  }, 30000);
+
   it('a regex that runs too long becomes an error result, not a pass', async () => {
     const slow = new RegexRunner(50);
     try {

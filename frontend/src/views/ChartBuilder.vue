@@ -640,7 +640,7 @@ import { useChartTheme, rgbToHex } from '../composables/useChartTheme.js';
 import { useNotice } from '../composables/useNotice.js';
 import { calculateContrast } from '../composables/useContrast.js';
 import axe from 'axe-core';
-import { AXE_SCAN_OPTIONS } from '../utils/axeScan.js';
+import { AXE_SCAN_OPTIONS, axeCategoryState } from '../utils/axeScan.js';
 import { scriptSafeJson } from '../utils/scriptSafeJson.js';
 import {
   Chart as ChartJS,
@@ -1459,14 +1459,15 @@ const accessibilityChecks = computed(() => [
   { label: 'Alt text', state: chartConfig.value.title && chartConfig.value.summary && chartConfig.value.keyInsight ? 'ok' : 'fail' },
   { label: 'Color independence', state: !colorOnlyEncoding.value ? 'ok' : 'fail' },
   { label: 'Contrast', state: contrastIssues.value.length === 0 ? 'ok' : 'fail' },
-  { label: 'Keyboard navigation', state: 'ok' },
-  { label: 'Screen reader', state: 'ok' },
+  // From the last axe scan of the preview: unchecked until "Run accessibility check"
+  { label: 'Keyboard navigation', state: axeCategoryState(axeScanResults.value, 'keyboard') },
+  { label: 'Screen reader', state: axeCategoryState(axeScanResults.value, 'screenReader') },
   { label: 'Motion safety', state: chartConfig.value.reduceMotion || chartConfig.value.pauseAnimation ? 'ok' : 'warn' },
   { label: 'Zoom integrity', state: zoomIssues.value.length === 0 ? 'ok' : 'warn' }
 ]);
-const checkTone = { ok: 'text-success', warn: 'text-warning', fail: 'text-danger' };
-const checkIcon = { ok: 'circle-check', warn: 'triangle-alert', fail: 'circle-alert' };
-const checkText = { ok: 'Passes', warn: 'Worth checking', fail: 'Needs work' };
+const checkTone = { ok: 'text-success', warn: 'text-warning', fail: 'text-danger', unchecked: 'text-ink-muted' };
+const checkIcon = { ok: 'circle-check', warn: 'triangle-alert', fail: 'circle-alert', unchecked: 'circle-help' };
+const checkText = { ok: 'Passes', warn: 'Worth checking', fail: 'Needs work', unchecked: 'Not checked yet: run the accessibility check' };
 
 const canExport = computed(() => {
   // Allow export regardless of accessibility status

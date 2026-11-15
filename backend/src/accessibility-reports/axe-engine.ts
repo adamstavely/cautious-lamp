@@ -75,7 +75,17 @@ const urlSlots = new Semaphore(Number(process.env.A11Y_URL_SCAN_CONCURRENCY) || 
  * resources are fetched. jsdom has no layout, so checks that need rendering
  * (colour contrast, for one) come back as `incomplete`.
  */
-export function runAxeOnHtml(html: string): Promise<AxeOutcome> {
+/**
+ * Checks about the whole page (title, language, landmarks). Off for a
+ * fragment such as a component's markup, which has no page around it: jsdom
+ * wraps it in an empty document, so they would always fail.
+ */
+export const PAGE_LEVEL_RULES = ['document-title', 'html-has-lang', 'html-lang-valid', 'page-has-heading-one', 'landmark-one-main', 'region', 'bypass'];
+
+/** Whether the markup is a whole document rather than a fragment */
+export const isWholeDocument = (html: string): boolean => /<!doctype\s|<html[\s>]/i.test(html);
+
+export function runAxeOnHtml(html: string, options: { fragment?: boolean } = {}): Promise<AxeOutcome> {
   return htmlSlots.run(async () => {
     const dom = new JSDOM(html, {
       runScripts: 'outside-only',
@@ -88,6 +98,7 @@ export function runAxeOnHtml(html: string): Promise<AxeOutcome> {
       const results = await (dom.window as any).axe.run(dom.window.document, {
         runOnly: { type: 'tag', values: WCAG_TAGS },
         resultTypes: ['violations', 'incomplete'],
+        ...(options.fragment ? { rules: Object.fromEntries(PAGE_LEVEL_RULES.map((id) => [id, { enabled: false }])) } : {}),
       });
       return {
         engine: 'jsdom' as const,

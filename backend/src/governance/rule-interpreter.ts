@@ -1,5 +1,5 @@
 import { JSDOM, VirtualConsole } from 'jsdom';
-import { runAxeOnHtml } from '../accessibility-reports/axe-engine';
+import { isWholeDocument, runAxeOnHtml } from '../accessibility-reports/axe-engine';
 import {
   CheckImpact,
   CheckStatus,
@@ -194,7 +194,8 @@ const AXE_IMPACT: Record<string, CheckImpact> = { critical: 'CRITICAL', serious:
 async function evaluateBuiltin(rule: GovernanceRule, input: ScanInput, parsed: ParsedInput): Promise<RuleEvaluation> {
   switch (rule.builtin) {
     case 'axe': {
-      const outcome = await runAxeOnHtml(input.html);
+      // Component markup is a fragment: page-level checks (title, language, landmarks) don't apply to it
+      const outcome = await runAxeOnHtml(input.html, { fragment: !isWholeDocument(input.html) });
       const violations: Violation[] = [];
       for (const result of outcome.violations) {
         for (const node of result.nodes) {

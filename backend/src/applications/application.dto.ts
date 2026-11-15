@@ -149,7 +149,11 @@ class ApplicationFieldsDto {
   @MaxLength(50)
   version?: string;
 
-  /** Only displayed and linked to; never fetched by this service */
+  /**
+   * The live app. Accessibility reports and their schedules scan it (in a
+   * browser, through the egress checks in common/security), so it must be a
+   * public http(s) address; this service only stores it.
+   */
   @IsOptional()
   @HttpUrl()
   applicationUrl?: string;

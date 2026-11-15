@@ -112,7 +112,8 @@ export class AccessibilityReportsService implements OnModuleInit {
       if (existing) return withConformance(existing.doc);
     }
     const application = await this.requireApplication(applicationId);
-    const html = request.html?.trim() ? request.html : undefined;
+    if (request.html !== undefined && !request.html.trim()) throw new BadRequestException('The html to scan is empty');
+    const html = request.html;
     if (html && request.url) throw new BadRequestException('Send either url or html, not both');
     const url = html ? undefined : request.url || application.applicationUrl;
     if (!html && !url) {
@@ -127,7 +128,11 @@ export class AccessibilityReportsService implements OnModuleInit {
       throw new UnprocessableEntityException(`Could not scan the page: ${(error as Error).message.split('\n')[0]}`);
     }
 
-    const previousSummary = (await this.allReports(applicationId))[0];
+    // The trend compares like with like: a URL scan with the last scan of that same URL, pasted
+    // HTML with the last pasted HTML (fix it, paste it again). A URL scan never follows an HTML one.
+    const previousSummary = (await this.allReports(applicationId)).find((report) =>
+      html ? report.source === 'html' : report.source === 'url' && report.url === outcome.url,
+    );
     const previous = previousSummary ? (await this.reports.get(previousSummary.id))?.doc ?? null : null;
     const report = buildReport(
       outcome,
@@ -206,7 +211,9 @@ export class AccessibilityReportsService implements OnModuleInit {
     const visible = new Set(
       this.cache.applications.filter((app) => canReadApplicationEvidence(principal, scope, { workspaceId: app.workspaceId ?? null })).map((app) => app.id),
     );
-    return this.getMultiApplicationComplianceSummary(visible);
+    // A report keeps the workspace it was generated in, so after an application moves the
+    // viewer may see the application but not its latest report: don't hand out a link that 404s
+    return this.getMultiApplicationComplianceSummary(visible, (report) => canReadApplicationEvidence(principal, scope, report.access));
   }
 
   /**
@@ -214,7 +221,10 @@ export class AccessibilityReportsService implements OnModuleInit {
    * (SystemHealthService). The cache is refreshed on start, after every
    * report/SLA change and on every GET /summary. `only` limits it to those applications.
    */
-  getMultiApplicationComplianceSummary(only?: ReadonlySet<string>): MultiApplicationComplianceSummary {
+  getMultiApplicationComplianceSummary(
+    only?: ReadonlySet<string>,
+    canOpenReport: (report: ReportSummary) => boolean = () => true,
+  ): MultiApplicationComplianceSummary {
     const slaByApp = new Map(this.cache.slas.map((sla) => [sla.applicationId, sla]));
     const included = this.cache.applications.filter((app) => !only || only.has(app.id));
     const applications: ApplicationComplianceSummary[] = included.map((app) => {
@@ -222,7 +232,7 @@ export class AccessibilityReportsService implements OnModuleInit {
       return {
         applicationId: app.id,
         applicationName: app.name,
-        latestReportId: latest?.id,
+        latestReportId: latest && canOpenReport(latest) ? latest.id : undefined,
         complianceScore: latest ? latest.complianceScore : null,
         wcagLevel: latest ? latest.wcagLevel : null,
         conformanceStatus: latest ? latest.conformance.status : null,
@@ -371,6 +381,7 @@ export class AccessibilityReportsService implements OnModuleInit {
     let ran = 0;
     for (const schedule of await this.schedules.list()) {
       if (!schedule.enabled || !this.attemptDue(schedule, clock())) continue;
+      if (await this.retireOrphan(schedule)) continue;
       const claim = await this.claimAttempt(schedule.id, clock());
       if (!claim) continue;
       ran++;
@@ -392,6 +403,28 @@ export class AccessibilityReportsService implements OnModuleInit {
       }
     }
     return ran;
+  }
+
+  /**
+   * A schedule whose application was deleted would fail and dead-letter every
+   * period forever, so it is removed instead (with the application's SLAs).
+   * Its reports stay: they are evidence of what was scanned. A lookup that
+   * fails (storage trouble) leaves the schedule for the next tick.
+   */
+  private async retireOrphan(schedule: ReportSchedule): Promise<boolean> {
+    let application: GovernanceApplication | null;
+    try {
+      application = await this.applications.get(schedule.applicationId);
+    } catch {
+      return true;
+    }
+    if (application) return false;
+    await this.schedules.delete(schedule.id).catch(() => false);
+    for (const sla of await this.slas.list().catch(() => [])) {
+      if (sla.applicationId === schedule.applicationId) await this.slas.delete(sla.id).catch(() => false);
+    }
+    this.logger.log(`Removed schedule ${schedule.id}: application ${schedule.applicationId} no longer exists`);
+    return true;
   }
 
   private attemptDue(schedule: ReportSchedule, now: Date): boolean {
