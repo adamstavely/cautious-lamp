@@ -95,6 +95,8 @@ export interface ComponentIssue {
 export interface DesignSystemMetaDoc {
   id: string;
   createdAt: string;
+  /** On the content-version document: changes on every component or token write */
+  stamp?: string;
 }
 
 const keyword = { type: 'keyword' };

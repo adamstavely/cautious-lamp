@@ -12,6 +12,7 @@ import { ComponentVariantDto, CreateBannerDto, CreateComponentDto, HeuristicEval
 import { CreatePatternDto, UpdatePatternDto } from '../../patterns-library/patterns-library.dto';
 import { ComponentScaffoldDto } from '../../component-scaffolding/component-scaffolding.dto';
 import { ExtractRequestDto } from '../../design-extraction/design-extraction.dto';
+import { CreateCheckDto, CreateGuidelineDto, CreateTemplateDto, GeneratePullRequestDto } from '../../contribution-workflow/contribution-workflow.dto';
 import { GLOBAL_VALIDATION_OPTIONS, globalValidationPipe } from './global-validation';
 
 /**
@@ -33,10 +34,6 @@ const FREE_FORM_BODIES: Record<string, string> = {
   'DesignSyncController.updateConnection': 'validated by the design-sync service per provider',
   // Multipart: validated in the handler against VersionDto, so a refused request can delete its staged upload
   'ReviewsController.addVersion': 'validated in the handler (VersionDto) after the upload is staged',
-  'ContributionWorkflowController.createGuideline': 'not converted yet (contributions)',
-  'ContributionWorkflowController.createTemplate': 'not converted yet (contributions)',
-  'ContributionWorkflowController.generatePRTemplate': 'not converted yet (contributions)',
-  'ContributionWorkflowController.createCheck': 'not converted yet (contributions)',
 };
 
 /** Every controller class under src/, with the file it came from */
@@ -163,6 +160,21 @@ describe('Global validation (whitelist + forbidNonWhitelisted)', () => {
       expect(await refused({ ...scaffold, props: [{ name: 'tone', type: 'tuple' }] }, ComponentScaffoldDto)).toEqual([expect.stringContaining('props.0.type must be one of')]);
       expect(await refused({ url: 'https://example.com', options: { headless: false } }, ExtractRequestDto)).toEqual(['options.property headless should not exist']);
       expect(await refused({ url: '  ' }, ExtractRequestDto)).toEqual(['URL cannot be empty']);
+    });
+    it('contribution guidelines, templates, checks and pull requests', async () => {
+      const guideline = { title: 'Buttons', description: 'How', category: 'component', content: 'Use tokens', checklist: ['Tokens'] };
+      await expect(pipe.transform(guideline, body(CreateGuidelineDto))).resolves.toEqual(guideline);
+      expect(await refused({ ...guideline, category: 'other' }, CreateGuidelineDto)).toEqual([expect.stringContaining('category must be one of')]);
+      expect(await refused({ ...guideline, title: '  ' }, CreateGuidelineDto)).toEqual(['title should not be empty']);
+      expect(await refused({ name: 'PR', description: 'x', category: 'token', template: { title: 'T', description: '', checklist: [], owner: 'x' } }, CreateTemplateDto)).toEqual(['template.property owner should not exist']);
+      expect(await refused({ name: 'Lint', description: 'x', category: 'linting', enabled: 'yes' }, CreateCheckDto)).toEqual(['enabled must be a boolean value']);
+
+      const pr = { title: 'Add Chip', files: [{ path: 'src/components/Chip.vue', content: '<template />' }] };
+      await expect(pipe.transform(pr, body(GeneratePullRequestDto))).resolves.toEqual(pr);
+      for (const path of ['../secrets', '/etc/passwd', '.github/workflows/ci.yml', 'src//Chip.vue', 'src/./Chip.vue']) {
+        expect(await refused({ files: [{ path, content: '' }] }, GeneratePullRequestDto)).toEqual([expect.stringContaining('files.0.path must be a relative path')]);
+      }
+      expect(await refused({ files: [{ path: 'a.txt', content: 'x', mode: '100755' }] }, GeneratePullRequestDto)).toEqual(['files.0.property mode should not exist']);
     });
   });
 });

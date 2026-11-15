@@ -143,8 +143,8 @@ Besides the routes above, these need a permission on the server (`403` otherwise
 | `PUT /components/:id/status`, `PUT /components/:id/deprecation`, `PUT /components/:id/dependencies` (lifecycle: status, deprecation with replacement and sunset date, dependencies) | `component:edit`, and for a workspace's component the `editor` role in that workspace. A replacement or dependency must be a component the caller can see; dependencies can't form a cycle. |
 | `POST /patterns-library/patterns`, `PUT /patterns-library/patterns/:id`, `DELETE /patterns-library/patterns/:id` (including a pattern's `status`) | `pattern:create`, `pattern:edit`, `pattern:delete` |
 | `POST /brands`, `PUT /brands/:id`, `DELETE /brands/:id` (brands and their token overrides, stored in `design-system-brands`) | `token:create`, `token:edit`, `token:delete` |
-| `POST /contribution-workflow/guidelines`, `/templates`, `/checks` (defining the contribution process) | `component:approve` |
-| `POST /contribution-workflow/templates/:id/generate-pr`, `POST /contribution-workflow/checks/run` | `component:create` |
+| `POST /api/v1/contribution-workflow/guidelines`, `/templates`, `/checks` (defining the contribution process) | `component:approve` |
+| `POST /api/v1/contribution-workflow/templates/:id/generate-pr` (opens a GitHub pull request when `GITHUB_TOKEN`, `GITHUB_REPO_OWNER` and `GITHUB_REPO_NAME` are set), `POST /api/v1/contribution-workflow/checks/run` | `component:create` |
 
 Feature flags: `GET /feature-flags/check/:key` evaluates the flag for the caller (their id, and their roles as groups); `?userId=` and `?userGroups=` are ignored. Stored flags keep their values; the built-in flags are defaults for flags that were never stored, and deleting a built-in flag resets it to its default. Unknown keys return `404`.
 

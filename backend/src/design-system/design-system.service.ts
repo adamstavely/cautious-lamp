@@ -142,6 +142,14 @@ const SEED_DONE = 'starting-content-seeded-v1';
 
 const MAX_WRITE_ATTEMPTS = 5;
 
+/**
+ * Meta document whose stamp changes on every component write, so another
+ * server sharing the indices notices and reloads its copy
+ */
+export const CONTENT_VERSION = 'content-version';
+/** How long a loaded copy is trusted before the content version is checked again */
+export const CONTENT_CHECK_INTERVAL_MS = 3000;
+
 /** The stored document without its storage fields */
 function toComponent(doc: StoredComponent): Component {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -178,7 +186,9 @@ function toIsoDate(value: string | undefined): string | undefined {
  * design-system-tokens). Reads are synchronous and served from an in-process
  * copy that is loaded on startup and updated after every write this service
  * makes; until it has loaded (Elasticsearch down at startup), reads fail with
- * a 503 and the next one retries the load. Roadmap items, banners and
+ * a 503 and the next one retries the load. Every write also changes the
+ * content-version stamp; a copy older than CONTENT_CHECK_INTERVAL_MS checks
+ * the stamp and reloads when another server has written since. Roadmap items, banners and
  * performance budgets are read from their indices on every request.
  */
 @Injectable()
@@ -190,6 +200,10 @@ export class DesignSystemService implements OnModuleInit {
   /** Loaded components and tokens in list order, or null until the first load succeeds */
   private cache: { components: StoredComponent[]; tokens: StoredToken[] } | null = null;
   private loading: Promise<void> | null = null;
+  /** The content-version stamp the copy was loaded at, and when it was last compared */
+  private loadedStamp: string | undefined;
+  private checkedAt = 0;
+  private checking: Promise<void> | null = null;
 
   constructor(
     @Inject(COMPONENT_STORE) private readonly componentStore: DocumentStore<StoredComponent>,
@@ -212,9 +226,12 @@ export class DesignSystemService implements OnModuleInit {
     this.analyticsService = analyticsService;
   }
 
-  /** Resolves once components and tokens are loaded (seeding them on first start) */
+  /**
+   * Resolves once components and tokens are loaded (seeding them on first
+   * start), and once a copy that is due a check has caught up with other servers' writes
+   */
   ready(): Promise<void> {
-    if (this.cache) return Promise.resolve();
+    if (this.cache) return this.isDue() ? this.checkForChanges() : Promise.resolve();
     if (!this.loading) {
       this.loading = this.load().finally(() => {
         this.loading = null;
@@ -225,11 +242,69 @@ export class DesignSystemService implements OnModuleInit {
 
   private async load(): Promise<void> {
     await this.ensureSeeded();
+    // Read the stamp first: a write that lands during the listing changes it again, so the next check reloads
+    const stamp = await this.readStamp();
     const [components, tokens] = await Promise.all([this.componentStore.list(), this.tokenStore.list()]);
     this.cache = {
       components: components.sort((a, b) => byPosition(a, b) || byCreatedAt(a, b)),
       tokens: tokens.sort((a, b) => byPosition(a, b) || byCreatedAt(a, b)),
     };
+    this.loadedStamp = stamp;
+    this.checkedAt = Date.now();
+  }
+
+  private isDue(): boolean {
+    return Date.now() - this.checkedAt >= CONTENT_CHECK_INTERVAL_MS;
+  }
+
+  private async readStamp(): Promise<string | undefined> {
+    return (await this.meta.get(CONTENT_VERSION))?.doc.stamp;
+  }
+
+  /**
+   * Reloads the copy when the content-version stamp differs from the one it
+   * was loaded at. When storage can't be read, the copy is kept and checked again later.
+   */
+  private checkForChanges(): Promise<void> {
+    if (!this.checking) {
+      this.checking = (async () => {
+        try {
+          const stamp = await this.readStamp();
+          if (stamp !== this.loadedStamp) await this.load();
+          else this.checkedAt = Date.now();
+        } catch (error) {
+          this.checkedAt = Date.now();
+          this.logger.warn(`Could not check for design system changes: ${(error as Error).message}`);
+        }
+      })().finally(() => {
+        this.checking = null;
+      });
+    }
+    return this.checking;
+  }
+
+  /**
+   * Changes the content-version stamp after a write. When another server
+   * changed it at the same time, this copy may have missed that write, so
+   * the next check reloads.
+   */
+  private async bumpContentVersion(): Promise<void> {
+    const stamp = randomUUID();
+    const now = new Date().toISOString();
+    try {
+      const stored = await this.meta.get(CONTENT_VERSION);
+      const previous = stored?.doc.stamp;
+      if (stored) await this.meta.replace({ ...stored.doc, stamp }, stored.version);
+      else await this.meta.create({ id: CONTENT_VERSION, createdAt: now, stamp });
+      // Only skip the reload when nobody else wrote since this copy was loaded
+      this.loadedStamp = previous === this.loadedStamp ? stamp : undefined;
+    } catch (error) {
+      if (!(error instanceof VersionConflictError) && !(error instanceof DuplicateDocumentError)) {
+        this.logger.warn(`Could not record a design system change for other servers: ${(error as Error).message}`);
+      }
+      this.loadedStamp = undefined;
+      this.checkedAt = 0;
+    }
   }
 
   /**
@@ -279,6 +354,8 @@ export class DesignSystemService implements OnModuleInit {
       this.ready().catch((error) => this.logger.warn(`Design system not loaded yet: ${error.message}`));
       throw new ServiceUnavailableException('The design system is not available yet, please try again shortly');
     }
+    // Synchronous reads answer from the copy and check in the background; awaited ones (ready) wait for the check
+    if (this.isDue()) void this.checkForChanges();
     return this.cache;
   }
 
@@ -310,6 +387,7 @@ export class DesignSystemService implements OnModuleInit {
         throw error;
       }
       this.cacheComponent(doc);
+      await this.bumpContentVersion();
       return structuredClone(toComponent(doc));
     }
     throw new ConflictException('The component was changed by someone else at the same time, please try again');
@@ -1140,6 +1218,7 @@ export class DesignSystemService implements OnModuleInit {
       throw error;
     }
     this.cacheComponent(doc);
+    await this.bumpContentVersion();
 
     // Auto-link to matching component requests
     // This will be called via ComponentRequestsService if available

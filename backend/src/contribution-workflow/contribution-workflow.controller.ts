@@ -1,26 +1,11 @@
 import { Controller, Get, Post, Body, Param, Query, BadRequestException } from '@nestjs/common';
 import { ContributionWorkflowService, ContributionGuideline, ContributionTemplate, ContributionCheck } from './contribution-workflow.service';
-import { RequirePermission } from '../auth/principal';
+import { AuthPrincipal, Principal, RequirePermission } from '../auth/principal';
 import { strictBody } from '../governance/governance.dto';
-import { RunContributionChecksDto } from './contribution-workflow.dto';
+import { CreateCheckDto, CreateGuidelineDto, CreateTemplateDto, GeneratePullRequestDto, RunContributionChecksDto } from './contribution-workflow.dto';
 import { Permission } from '../rbac/rbac.service';
 
-const GUIDELINE_CATEGORIES: ReadonlyArray<string> = ['component', 'token', 'pattern', 'documentation', 'bug-fix', 'enhancement'];
-const CHECK_CATEGORIES: ReadonlyArray<string> = ['linting', 'formatting', 'testing', 'documentation', 'accessibility', 'performance', 'design-system', 'structure'];
-
-/** Lists sort on these fields, so nothing is stored without them */
-function assertFields(data: Record<string, unknown> | undefined, strings: string[], category: { allowed: ReadonlyArray<string> }): void {
-  if (!data || typeof data !== 'object') throw new BadRequestException('A body is required');
-  for (const field of strings) {
-    const value = data[field];
-    if (typeof value !== 'string' || !value.trim()) throw new BadRequestException(`${field} is required`);
-  }
-  if (!category.allowed.includes(data.category as string)) {
-    throw new BadRequestException(`category must be one of ${category.allowed.join(', ')}`);
-  }
-}
-
-@Controller('contribution-workflow')
+@Controller('api/v1/contribution-workflow')
 export class ContributionWorkflowController {
   constructor(
     private readonly contributionService: ContributionWorkflowService,
@@ -48,20 +33,7 @@ export class ContributionWorkflowController {
 
   @Post('guidelines')
   @RequirePermission(Permission.COMPONENT_APPROVE)
-  async createGuideline(
-    @Body() data: {
-      title: string;
-      description: string;
-      category: ContributionGuideline['category'];
-      content: string;
-      checklist: string[];
-      codeExamples?: ContributionGuideline['codeExamples'];
-    },
-  ) {
-    assertFields(data, ['title', 'description', 'content'], { allowed: GUIDELINE_CATEGORIES });
-    if (data.checklist !== undefined && (!Array.isArray(data.checklist) || data.checklist.some((item) => typeof item !== 'string'))) {
-      throw new BadRequestException('checklist must be a list of strings');
-    }
+  async createGuideline(@Body(strictBody()) data: CreateGuidelineDto) {
     return this.contributionService.createGuideline({ ...data, checklist: data.checklist ?? [] });
   }
 
@@ -87,35 +59,28 @@ export class ContributionWorkflowController {
 
   @Post('templates')
   @RequirePermission(Permission.COMPONENT_APPROVE)
-  async createTemplate(
-    @Body() data: {
-      name: string;
-      description: string;
-      category: ContributionTemplate['category'];
-      template: ContributionTemplate['template'];
-    },
-  ) {
-    assertFields(data, ['name', 'description'], { allowed: GUIDELINE_CATEGORIES });
-    if (!data.template || typeof data.template !== 'object') throw new BadRequestException('template is required');
+  async createTemplate(@Body(strictBody()) data: CreateTemplateDto) {
     return this.contributionService.createTemplate(data);
   }
 
-  /** Returns the pull request text (markdown) only; no pull request is opened */
+  /** Whether submitting a contribution opens a pull request (GitHub set up on the server), and in which repository */
+  @Get('pull-requests/setup')
+  getPullRequestSetup() {
+    return this.contributionService.pullRequestSetup();
+  }
+
+  /**
+   * The pull request text from a template. With files and GitHub set up, the
+   * files are committed on a new branch and the pull request is opened.
+   */
   @Post('templates/:id/generate-pr')
   @RequirePermission(Permission.COMPONENT_CREATE)
-  async generatePRTemplate(
+  generatePRTemplate(
     @Param('id') id: string,
-    @Body() data: {
-      title?: string;
-      description?: string;
-      checklistItems?: string[];
-    },
+    @Body(strictBody()) data: GeneratePullRequestDto,
+    @Principal() principal: AuthPrincipal,
   ) {
-    try {
-      return await this.contributionService.generatePRTemplate(id, data ?? {});
-    } catch (error: any) {
-      throw new BadRequestException(error.message);
-    }
+    return this.contributionService.generatePRTemplate(id, data, principal);
   }
 
   // ==================== Automated Checks ====================
@@ -144,18 +109,7 @@ export class ContributionWorkflowController {
 
   @Post('checks')
   @RequirePermission(Permission.COMPONENT_APPROVE)
-  async createCheck(
-    @Body() data: {
-      name: string;
-      description: string;
-      category: ContributionCheck['category'];
-      enabled: boolean;
-      command?: string;
-      config?: Record<string, any>;
-    },
-  ) {
-    assertFields(data, ['name', 'description'], { allowed: CHECK_CATEGORIES });
-    if (typeof data.enabled !== 'boolean') throw new BadRequestException('enabled must be true or false');
+  async createCheck(@Body(strictBody()) data: CreateCheckDto) {
     return this.contributionService.createCheck(data);
   }
 

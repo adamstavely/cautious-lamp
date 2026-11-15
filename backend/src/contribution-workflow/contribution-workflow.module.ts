@@ -18,6 +18,7 @@ import {
   TEMPLATE_STORE,
 } from './contribution-workflow.service';
 import { ContributionWorkflowController } from './contribution-workflow.controller';
+import { GitHubPullRequests } from './github-pull-requests';
 import { DesignSystemModule } from '../design-system/design-system.module';
 import { GovernanceModule } from '../governance/governance.module';
 
@@ -32,6 +33,7 @@ const store = (provide: symbol, index: string, properties: Record<string, unknow
   controllers: [ContributionWorkflowController],
   providers: [
     ContributionWorkflowService,
+    { provide: GitHubPullRequests, useFactory: () => new GitHubPullRequests() },
     store(GUIDELINE_STORE, GUIDELINES_INDEX, GUIDELINE_PROPERTIES),
     store(TEMPLATE_STORE, TEMPLATES_INDEX, TEMPLATE_PROPERTIES),
     store(CHECK_STORE, CHECKS_INDEX, CHECK_PROPERTIES),

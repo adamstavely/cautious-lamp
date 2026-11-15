@@ -44,6 +44,78 @@
       </div>
     </PageSection>
 
+    <PageSection
+      title="Submit a contribution"
+      description="Pick a template, add your files, and open a pull request for the design system team to review."
+      divided
+    >
+      <UiCallout v-if="!canSubmit" tone="info" icon="lock">
+        Submitting a contribution needs permission to create components. Ask a design system manager for the contributor role.
+      </UiCallout>
+      <template v-else>
+        <UiCallout v-if="setupError" tone="warning" icon="circle-alert" role="alert">{{ setupError }}</UiCallout>
+        <UiCallout v-else-if="setup && setup.configured" tone="info" icon="git-pull-request">
+          Pull requests open in <strong>{{ setup.repository }}</strong>, against
+          {{ setup.baseBranch ? `the ${setup.baseBranch} branch` : 'its default branch' }}.
+        </UiCallout>
+        <UiCallout v-else-if="setup" tone="warning" icon="circle-alert">
+          GitHub isn't set up on this server, so no pull request will be opened. You'll get the pull request text to paste into your repository instead.
+        </UiCallout>
+
+        <form class="contribution-form" novalidate @submit.prevent="submit">
+          <UiSelect
+            v-model="form.templateId"
+            label="Template"
+            :options="templateOptions"
+            placeholder="Choose a template"
+            :hint="selectedTemplate ? selectedTemplate.description : ''"
+            :error="errors.templateId"
+            required
+          />
+          <UiInput v-model="form.title" label="Pull request title" :hint="selectedTemplate ? `Leave empty for “${selectedTemplate.template.title}”` : ''" />
+          <UiTextarea v-model="form.description" label="Description" :rows="4" hint="What the contribution adds or changes, and why." />
+
+          <fieldset class="files">
+            <legend class="files-legend">Files</legend>
+            <p class="files-hint">Paths are relative to the repository root, for example src/components/Chip.vue.</p>
+            <div v-for="(file, index) in form.files" :key="file.key" class="file">
+              <div class="file-head">
+                <UiInput v-model="file.path" :label="`File ${index + 1} path`" mono :error="errors.files[index]" />
+                <UiButton
+                  variant="ghost"
+                  icon="trash-2"
+                  icon-only
+                  :label="`Remove file ${index + 1}`"
+                  :disabled="form.files.length === 1"
+                  @click="removeFile(index)"
+                />
+              </div>
+              <UiTextarea v-model="file.content" :label="`File ${index + 1} content`" :rows="8" mono />
+            </div>
+            <div>
+              <UiButton icon="plus" :disabled="form.files.length >= MAX_FILES" @click="addFile">Add a file</UiButton>
+            </div>
+          </fieldset>
+
+          <UiCallout v-if="submitError" tone="danger" icon="circle-alert" role="alert">{{ submitError }}</UiCallout>
+          <div>
+            <UiButton type="submit" variant="primary" icon="git-pull-request" :loading="submitting">
+              {{ setup && setup.configured ? 'Open pull request' : 'Generate pull request text' }}
+            </UiButton>
+          </div>
+        </form>
+
+        <div v-if="result" class="result" aria-live="polite">
+          <UiCallout v-if="result.pullRequestOpened" tone="success" icon="circle-check" title="Pull request opened" role="status">
+            <p>{{ result.message }}</p>
+            <UiLink :href="result.pullRequest.url" external arrow>View pull request #{{ result.pullRequest.number }} on GitHub</UiLink>
+          </UiCallout>
+          <UiCallout v-else tone="info" icon="info" role="status">{{ result.message }}</UiCallout>
+          <UiCodeBlock :code="result.prTemplate" label="Pull request text (Markdown)" />
+        </div>
+      </template>
+    </PageSection>
+
     <PageSection title="Need help?" divided>
       <div class="grid md:grid-cols-2 gap-4">
         <UiPanel title="Questions?" heading-tag="h3">
@@ -67,7 +139,85 @@
 </template>
 
 <script setup>
-import { AppIcon, PageHero, PageSection, PageShell, UiButton, UiCard, UiLink, UiPanel } from '../components/ui';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { AppIcon, PageHero, PageSection, PageShell, UiButton, UiCallout, UiCard, UiCodeBlock, UiInput, UiLink, UiPanel, UiSelect, UiTextarea } from '../components/ui';
+import { useAuth } from '../composables/useAuth.js';
+import apiClient, { apiErrorMessage } from '../services/api.js';
+
+/*
+ * Submitting a contribution (POST /api/v1/contribution-workflow/templates/:id/generate-pr,
+ * component:create): the server commits the files on a new branch and opens a
+ * pull request when GitHub is set up, and otherwise returns the text to paste.
+ */
+const API = '/api/v1/contribution-workflow';
+const MAX_FILES = 50;
+const PATH_PATTERN = /^(?!\.git(?:hub)?\/)(?!.*\/\/)(?!.*(?:^|\/)\.{1,2}(?:\/|$))[A-Za-z0-9._@+-]([A-Za-z0-9._@+\-/]*[A-Za-z0-9._@+-])?$/;
+
+const { hasPermission } = useAuth();
+const canSubmit = computed(() => hasPermission('component:create'));
+
+const templates = ref([]);
+const setup = ref(null);
+const setupError = ref('');
+let nextKey = 0;
+const newFile = () => ({ key: nextKey++, path: '', content: '' });
+const form = reactive({ templateId: '', title: '', description: '', files: [newFile()] });
+const errors = reactive({ templateId: '', files: [] });
+const submitting = ref(false);
+const submitError = ref('');
+const result = ref(null);
+
+const templateOptions = computed(() => templates.value.map((t) => ({ value: t.id, label: t.name })));
+const selectedTemplate = computed(() => templates.value.find((t) => t.id === form.templateId));
+
+const addFile = () => form.files.push(newFile());
+const removeFile = (index) => form.files.splice(index, 1);
+
+onMounted(async () => {
+  if (!canSubmit.value) return;
+  try {
+    const [templateList, setupInfo] = await Promise.all([apiClient.get(`${API}/templates`), apiClient.get(`${API}/pull-requests/setup`)]);
+    templates.value = templateList.data;
+    setup.value = setupInfo.data;
+  } catch (error) {
+    setupError.value = apiErrorMessage(error, 'The contribution templates could not be loaded.');
+  }
+});
+
+function validate() {
+  errors.templateId = form.templateId ? '' : 'Choose a template';
+  const seen = new Set();
+  errors.files = form.files.map((file) => {
+    const path = file.path.trim();
+    const blank = !path && !file.content;
+    if (blank && form.files.length === 1) return '';
+    if (!PATH_PATTERN.test(path)) return 'Enter a path inside the repository, such as src/components/Chip.vue (not under .git or .github)';
+    if (seen.has(path)) return 'This path is already listed';
+    seen.add(path);
+    return '';
+  });
+  return !errors.templateId && errors.files.every((message) => !message);
+}
+
+async function submit() {
+  submitError.value = '';
+  if (!validate()) return;
+  submitting.value = true;
+  try {
+    const files = form.files.filter((file) => file.path.trim()).map((file) => ({ path: file.path.trim(), content: file.content }));
+    const body = {
+      ...(form.title.trim() ? { title: form.title.trim() } : {}),
+      ...(form.description.trim() ? { description: form.description.trim() } : {}),
+      ...(files.length ? { files } : {}),
+    };
+    const { data } = await apiClient.post(`${API}/templates/${encodeURIComponent(form.templateId)}/generate-pr`, body);
+    result.value = data;
+  } catch (error) {
+    submitError.value = apiErrorMessage(error, 'The contribution could not be submitted.');
+  } finally {
+    submitting.value = false;
+  }
+}
 
 const ways = [
   {
@@ -216,5 +366,33 @@ const resources = [
 }
 .step-title {
   @apply mb-1.5 text-lg font-semibold text-ink-strong;
+}
+
+.contribution-form {
+  @apply mt-6 flex flex-col gap-5 max-w-3xl;
+}
+.files {
+  @apply flex flex-col gap-4 rounded-card border border-line bg-surface-raised p-6;
+}
+.files-legend {
+  @apply px-1 text-base font-semibold text-ink-strong;
+}
+.files-hint {
+  @apply -mt-2 text-sm text-ink-secondary;
+}
+.file {
+  @apply flex flex-col gap-3;
+}
+.file + .file {
+  @apply border-t border-line pt-4;
+}
+.file-head {
+  @apply flex items-end gap-2;
+}
+.file-head > :first-child {
+  @apply flex-1 min-w-0;
+}
+.result {
+  @apply mt-6 flex flex-col gap-4 max-w-3xl;
 }
 </style>

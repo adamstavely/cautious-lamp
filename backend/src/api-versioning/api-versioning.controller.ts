@@ -1,4 +1,4 @@
-import { Controller, Get, Param, BadRequestException } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import { ApiVersioningService } from './api-versioning.service';
 
 @Controller('api')
@@ -17,13 +17,19 @@ export class ApiVersioningController {
     return this.versioningService.getCurrentVersion();
   }
 
+  /** The routes the server registers, with who may call them */
+  @Get('versions/current/routes')
+  getRoutes() {
+    return this.versioningService.getRoutes();
+  }
+
   @Get('versions/:version')
   getVersion(
     @Param('version') version: string,
   ) {
     const versionInfo = this.versioningService.getVersion(version);
     if (!versionInfo) {
-      throw new BadRequestException(`Version '${version}' not found`);
+      throw new NotFoundException(`Version '${version}' not found`);
     }
     return versionInfo;
   }

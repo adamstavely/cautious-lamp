@@ -22,7 +22,7 @@ import {
 import { strictBody } from '../auth/auth.dto';
 import { ComponentIssueService } from './component-issue.service';
 import { ComponentAccessService } from './component-access.service';
-import { AuthPrincipal, Principal, Public, RequirePermission } from '../auth/principal';
+import { AuthPrincipal, Principal, RequirePermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
 import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { CHANGE_RECORDER, ChangeRecorder } from '../notifications/notification.types';
@@ -41,15 +41,6 @@ function componentChange(component: Component) {
 
 @Controller('api/v1')
 export class DesignSystemController {
-  @Public()
-  @Get('health')
-  health() {
-    return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      version: '1.0.0',
-    };
-  }
   constructor(
     private readonly designSystemService: DesignSystemService,
     private readonly componentIssueService: ComponentIssueService,
@@ -140,16 +131,6 @@ export class DesignSystemController {
       components,
       status,
       count: components.length
-    };
-  }
-
-  @Public()
-  @Get('health')
-  healthCheck() {
-    return { 
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      version: '1.0.0'
     };
   }
 

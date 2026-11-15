@@ -1,11 +1,13 @@
-import { BadRequestException, Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, OnModuleInit, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DefaultsSeeder, SeedMarker } from '../common/elasticsearch/seed-defaults';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { ScansService } from '../governance/scans.service';
+import { AuthPrincipal } from '../auth/principal';
 import { DocumentStore } from '../reviews/document-store';
 import { isSafeId } from '../workspaces/workspace-access.service';
 import { DEFAULT_CHECKS, DEFAULT_GUIDELINES, DEFAULT_TEMPLATES } from './contribution-defaults';
+import { GitHubPullRequests, OpenedPullRequest, PullRequestFile, PullRequestSetup } from './github-pull-requests';
 import {
   CheckFinding,
   CheckOutcome,
@@ -108,17 +110,20 @@ export const CHECK_PROPERTIES = {
   enabled: { type: 'boolean' },
 };
 
-/** What `generate-pr` returns: the text for a pull request, which the contributor opens themselves */
-export interface GeneratedPullRequestText {
+/** What `generate-pr` returns: the pull request's text, and the pull request when one was opened */
+export interface GeneratedPullRequest {
   /** Markdown for the pull request description */
   prTemplate: string;
-  /** Always false: nothing is opened on a code host */
-  pullRequestOpened: false;
+  pullRequestOpened: boolean;
+  /** Set when a pull request was opened on GitHub */
+  pullRequest?: OpenedPullRequest;
   message: string;
 }
 
-export const PR_TEXT_ONLY =
-  'This is the text for your pull request. No pull request was opened: paste it into a new pull request in your repository.';
+export const PR_NOT_CONFIGURED =
+  "GitHub isn't set up on this server, so no pull request was opened. Paste this text into a new pull request in your repository.";
+export const PR_NEEDS_FILES =
+  'No pull request was opened: add the files of your contribution to open one. This is the text for it.';
 
 /** Governance rule categories each governance-run check category uses */
 const GOVERNANCE_CATEGORIES: Partial<Record<ContributionCheck['category'], string[]>> = {
@@ -157,6 +162,7 @@ export class ContributionWorkflowService implements OnModuleInit {
     @Inject(TEMPLATE_STORE) private readonly templates: DocumentStore<ContributionTemplate>,
     @Inject(CHECK_STORE) private readonly checks: DocumentStore<ContributionCheck>,
     @Inject(CONTRIBUTION_META_STORE) meta: DocumentStore<SeedMarker>,
+    @Optional() private readonly github: GitHubPullRequests = new GitHubPullRequests(),
   ) {
     const now = () => new Date().toISOString();
     this.seeders = [
@@ -270,18 +276,25 @@ export class ContributionWorkflowService implements OnModuleInit {
     return (await this.checks.get(id))?.doc ?? null;
   }
 
+  /** Whether contributions open pull requests, and where */
+  pullRequestSetup(): PullRequestSetup {
+    return this.github.setup();
+  }
+
   /**
-   * The markdown for a pull request, from a contribution template. Only the
-   * text: it opens no pull request anywhere.
+   * The markdown for a pull request from a contribution template, and, when
+   * GitHub is set up and files were sent, the pull request itself: the files
+   * committed on a new branch and a pull request opened with this text.
    */
   async generatePRTemplate(templateId: string, data: {
     title?: string;
     description?: string;
     checklistItems?: string[];
-  }): Promise<GeneratedPullRequestText> {
+    files?: PullRequestFile[];
+  }, principal?: AuthPrincipal): Promise<GeneratedPullRequest> {
     const template = await this.getTemplate(templateId);
     if (!template) {
-      throw new Error(`Template ${templateId} not found`);
+      throw new BadRequestException(`Template ${templateId} not found`);
     }
 
     const title = data.title || template.template.title;
@@ -307,7 +320,23 @@ ${template.template.codeExample}
 Run these checks on the contribution before review:
 ${enabledChecks.map(check => `- [ ] ${check.name}: ${check.description}`).join('\n')}
 `;
-    return { prTemplate, pullRequestOpened: false, message: PR_TEXT_ONLY };
+    if (!this.github.isConfigured()) return { prTemplate, pullRequestOpened: false, message: PR_NOT_CONFIGURED };
+    const files = data.files ?? [];
+    if (!files.length) return { prTemplate, pullRequestOpened: false, message: PR_NEEDS_FILES };
+    const paths = new Set<string>();
+    for (const file of files) {
+      if (paths.has(file.path)) throw new BadRequestException(`${file.path} is listed twice`);
+      paths.add(file.path);
+    }
+
+    const submitter = principal ? `\n---\nSubmitted through the design system by ${principal.name}${principal.email ? ` (${principal.email})` : ''}.\n` : '';
+    const pullRequest = await this.github.open({
+      title,
+      body: prTemplate + submitter,
+      commitMessage: `${title}\n\nContribution from the "${template.name}" template.`,
+      files,
+    });
+    return { prTemplate, pullRequestOpened: true, pullRequest, message: `Opened pull request #${pullRequest.number} in ${pullRequest.repository}.` };
   }
 
   private buildGuideline(data: GuidelineInput, id: string, now: string): ContributionGuideline {
