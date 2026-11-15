@@ -3,27 +3,25 @@
     <TransitionGroup
       name="toast"
       tag="div"
-      class="fixed top-4 right-4 z-50 space-y-2 pointer-events-none"
+      class="toast-stack"
+      role="status"
+      aria-live="polite"
     >
       <div
         v-for="toast in toasts"
         :key="toast.id"
-        class="pointer-events-auto min-w-[300px] max-w-md rounded-lg shadow-lg border p-4 flex items-start gap-3"
-        :class="getToastClasses(toast.type)"
+        class="toast"
+        :class="`toast-${toneFor(toast.type)}`"
       >
-        <AppIcon :name="getIcon(toast.type)" class="flex-shrink-0" :class="getIconClass(toast.type)" />
-        <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium" :class="getTextClass(toast.type)">
-            {{ toast.message }}
-          </p>
-        </div>
+        <AppIcon :name="getIcon(toast.type)" class="toast-icon" />
+        <p class="toast-message">{{ toast.message }}</p>
         <button
+          type="button"
           @click="removeToast(toast.id)"
-          class="flex-shrink-0 p-1 rounded hover:bg-black/10 transition-colors"
-          :class="getTextClass(toast.type)"
+          class="toast-close"
           aria-label="Close notification"
         >
-          <AppIcon name="x" class="text-base" />
+          <AppIcon name="x" />
         </button>
       </div>
     </TransitionGroup>
@@ -64,46 +62,7 @@ const removeToast = (id) => {
   }
 };
 
-const getToastClasses = (type) => {
-  const isDark = document.documentElement.classList.contains('dark');
-  const classes = {
-    success: isDark 
-      ? 'bg-green-900/90 border-green-700 text-green-100' 
-      : 'bg-green-50 border-green-200 text-green-800',
-    error: isDark 
-      ? 'bg-red-900/90 border-red-700 text-red-100' 
-      : 'bg-red-50 border-red-200 text-red-800',
-    warning: isDark 
-      ? 'bg-yellow-900/90 border-yellow-700 text-yellow-100' 
-      : 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    info: isDark 
-      ? 'bg-blue-900/90 border-blue-700 text-blue-100' 
-      : 'bg-blue-50 border-blue-200 text-blue-800',
-  };
-  return classes[type] || classes.info;
-};
-
-const getIconClass = (type) => {
-  const isDark = document.documentElement.classList.contains('dark');
-  const classes = {
-    success: isDark ? 'text-green-400' : 'text-green-600',
-    error: isDark ? 'text-red-400' : 'text-red-600',
-    warning: isDark ? 'text-yellow-400' : 'text-yellow-600',
-    info: isDark ? 'text-blue-400' : 'text-blue-600',
-  };
-  return classes[type] || classes.info;
-};
-
-const getTextClass = (type) => {
-  const isDark = document.documentElement.classList.contains('dark');
-  const classes = {
-    success: isDark ? 'text-green-100' : 'text-green-800',
-    error: isDark ? 'text-red-100' : 'text-red-800',
-    warning: isDark ? 'text-yellow-100' : 'text-yellow-800',
-    info: isDark ? 'text-blue-100' : 'text-blue-800',
-  };
-  return classes[type] || classes.info;
-};
+const toneFor = (type) => ({ error: 'danger', warning: 'warning', success: 'success' })[type] || 'info';
 
 const getIcon = (type) => {
   const icons = {
@@ -132,6 +91,40 @@ defineExpose({
 </script>
 
 <style scoped>
+.toast-stack {
+  @apply pointer-events-none fixed right-4 top-4 z-50 flex flex-col gap-2;
+}
+.toast {
+  @apply pointer-events-auto flex w-80 max-w-full items-start gap-3 rounded-tile border bg-surface-raised p-4 shadow-overlay;
+  /* Status tints are see-through: lay the tone over a solid surface so the page doesn't show through */
+  background-image: linear-gradient(var(--toast-tint), var(--toast-tint));
+}
+.toast-icon {
+  @apply flex-shrink-0 text-lg leading-5;
+}
+.toast-message {
+  @apply min-w-0 flex-1 text-sm font-medium text-ink-strong;
+}
+.toast-close {
+  @apply -m-1 flex-shrink-0 rounded p-1 text-ink-secondary transition-colors hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
+}
+.toast-info {
+  @apply border-info-border text-info;
+  --toast-tint: theme('colors.info.bg');
+}
+.toast-success {
+  @apply border-success-border text-success;
+  --toast-tint: theme('colors.success.bg');
+}
+.toast-warning {
+  @apply border-warning-border text-warning;
+  --toast-tint: theme('colors.warning.bg');
+}
+.toast-danger {
+  @apply border-danger-border text-danger;
+  --toast-tint: theme('colors.danger.bg');
+}
 .toast-enter-active {
   transition: all 0.3s ease-out;
 }
