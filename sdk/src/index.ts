@@ -254,6 +254,8 @@ export class DesignSystemAPI {
     suggestions?: string[];
     relatedComponents?: string[];
     relatedTokens?: string[];
+    /** The Claude model that answered */
+    model?: string;
   }> {
     const response = await this.client.post('/ai/chat', { message, conversationHistory });
     return response.data;

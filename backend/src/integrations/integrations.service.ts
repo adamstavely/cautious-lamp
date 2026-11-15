@@ -110,11 +110,11 @@ export class IntegrationsService {
 
   private altText(): IntegrationStatus {
     if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
-      return { state: 'ok', summary: 'Alt text generation has a Claude API key' };
+      return { state: 'ok', summary: 'Alt text, Eero and AI suggestions have a Claude API key' };
     }
     return {
       state: 'not_configured',
-      summary: "Alt text generation has no Claude API key",
+      summary: 'Alt text, Eero and AI suggestions have no Claude API key',
       action: 'Set ANTHROPIC_API_KEY on the backend',
     };
   }

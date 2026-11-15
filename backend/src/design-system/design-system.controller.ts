@@ -119,15 +119,6 @@ export class DesignSystemController {
     };
   }
 
-  @Post('ai/chat')
-  async chatWithAI(
-    @Body() body: { message: string; conversationHistory?: Array<{ role: string; content: string }> },
-    @Principal() principal: AuthPrincipal,
-  ) {
-    const components = await this.componentAccess.list(principal);
-    return await this.designSystemService.chatWithAI(body.message, body.conversationHistory, components);
-  }
-
   @Get('performance/budgets')
   getPerformanceBudgets() {
     return this.designSystemService.getPerformanceBudgets();
