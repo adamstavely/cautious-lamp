@@ -12,8 +12,8 @@
       </div>
 
       <div v-else class="h-full overflow-y-auto">
-        <Breadcrumbs v-if="breadcrumbs" />
-        <div class="page-body" :class="widthClass">
+        <div class="page-body" :class="[widthClass, breadcrumbs ? 'page-body-crumbs' : 'page-body-plain']">
+          <Breadcrumbs v-if="breadcrumbs" inline class="page-crumbs" />
           <slot />
         </div>
       </div>
@@ -78,9 +78,9 @@ onMounted(() => {
 const widthClass = computed(
   () =>
     ({
-      default: 'max-w-6xl px-6 md:px-10 py-12 md:py-16',
-      wide: 'max-w-7xl px-6 md:px-10 py-12 md:py-16',
-      full: 'max-w-none px-6 py-8',
+      default: 'max-w-6xl px-6 md:px-10',
+      wide: 'max-w-7xl px-6 md:px-10',
+      full: 'max-w-none px-6',
     })[props.width],
 );
 </script>
@@ -93,6 +93,16 @@ const widthClass = computed(
   @apply relative flex-1 h-full overflow-hidden transition-all duration-300;
 }
 .page-body {
-  @apply mx-auto;
+  @apply mx-auto pb-12 md:pb-16;
+}
+/* Breadcrumbs sit at the top of the page column, lined up with its content */
+.page-body-crumbs {
+  @apply pt-6 md:pt-8;
+}
+.page-body-plain {
+  @apply pt-12 md:pt-16;
+}
+.page-crumbs {
+  @apply mb-10 md:mb-12;
 }
 </style>

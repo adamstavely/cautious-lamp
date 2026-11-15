@@ -1,104 +1,56 @@
 <template>
-  <div class="markdown-viewer-container h-full flex">
-    <!-- Main Content Area -->
-    <div class="markdown-viewer flex-1 h-full overflow-hidden" :class="isDarkMode ? 'bg-slate-900 dark' : 'bg-white'">
+  <div class="md-viewer">
+    <div class="md-main">
       <!-- VitePress iframe for VitePress pages -->
-      <div v-if="isVitePressPage" class="h-full w-full relative">
-        <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900 z-10">
-          <div class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p class="text-gray-500 dark:text-gray-400">Loading VitePress page...</p>
-            <p class="text-xs text-gray-400 mt-2 font-mono">{{ vitePressUrl }}</p>
-          </div>
-        </div>
+      <div v-if="isVitePressPage" class="relative w-full h-full">
+        <UiSpinner v-if="loading" class="md-overlay" label="Loading page…" />
         <iframe
           v-show="!loading && !error"
           :src="vitePressUrl"
           class="w-full h-full border-0"
-          frameborder="0"
+          title="Documentation page"
           @load="handleIframeLoad"
           @error="handleIframeError"
         ></iframe>
-        <div v-if="error" class="absolute inset-0 flex items-center justify-center bg-white dark:bg-slate-900 z-10">
-          <div class="text-center p-4">
-            <p class="text-red-600 dark:text-red-400 font-semibold mb-2">Error loading VitePress page</p>
-            <p class="text-gray-500 dark:text-gray-400 text-sm mb-2">{{ error }}</p>
-            <p class="text-xs text-gray-400 font-mono">{{ vitePressUrl }}</p>
-            <p class="text-xs text-gray-400 mt-4">Make sure the VitePress dev server is running: <code class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">npm run docs:dev</code></p>
-          </div>
+        <div v-if="error" class="md-overlay">
+          <UiCallout tone="danger" title="This page didn't load">{{ error }}. Is the docs server running (<code>npm run docs:dev</code>)?</UiCallout>
         </div>
       </div>
-      
+
       <!-- Markdown content for regular markdown files -->
-      <div v-else class="h-full overflow-y-auto p-8">
-        <div v-if="loading" class="flex items-center justify-center h-full">
-          <div class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p class="text-gray-500 dark:text-gray-400">Loading content...</p>
-          </div>
-        </div>
-        <div v-else-if="error" class="flex items-center justify-center h-full">
-          <div class="text-center">
-            <p class="text-red-600 dark:text-red-400 font-semibold mb-2">Error loading content</p>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">{{ error }}</p>
-          </div>
-        </div>
-        <div v-else>
-          <div ref="markdownContentRef" v-html="renderedMarkdown" class="prose prose-slate dark:prose-invert max-w-none markdown-content"></div>
-          
-          <!-- Edit Page and Last Updated Footer -->
-          <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-sm">
-            <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-              <AppIcon name="pencil" class="text-base" />
-              <a 
-                :href="editPageUrl" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                Edit this page
-              </a>
-            </div>
-            <div v-if="lastUpdated" class="text-gray-500 dark:text-gray-400">
-              Last updated: {{ lastUpdated }}
-            </div>
-          </div>
+      <div v-else ref="scrollRef" class="md-scroll">
+        <div class="md-page">
+          <UiSpinner v-if="loading" label="Loading content…" />
+          <UiCallout v-else-if="error" tone="danger" title="This page didn't load">{{ error }}</UiCallout>
+          <template v-else>
+            <PageHero v-if="hero" size="tool" :title="hero.title" :lead="hero.description" :spot="hero.spot" class="md-hero" />
+            <div ref="markdownContentRef" class="md-prose markdown-content" v-html="renderedMarkdown"></div>
+
+            <footer class="md-footer">
+              <UiLink :href="editPageUrl" external>Edit this page</UiLink>
+              <span v-if="lastUpdated">Last updated {{ lastUpdated }}</span>
+            </footer>
+          </template>
         </div>
       </div>
     </div>
-    
-    <!-- Right Sidebar - Table of Contents -->
-    <aside 
-      v-if="!isVitePressPage && toc.length > 0 && !loading && !error"
-      class="toc-sidebar w-64 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto"
-      :class="isDarkMode ? 'bg-slate-900' : 'bg-white'"
-    >
-      <div class="sticky top-6">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4 uppercase tracking-wider">
-          On this page
-        </h3>
-        <nav class="space-y-1">
-          <a
-            v-for="item in toc"
-            :key="item.id"
-            :href="`#${item.id}`"
-            @click.prevent="scrollToHeading(item.id)"
-            class="block py-1 px-2 rounded text-sm transition-colors"
-            :class="[
-              item.level === 1 ? 'font-semibold' : item.level === 2 ? 'font-medium pl-4' : 'pl-6 text-xs',
-              activeHeading === item.id
-                ? (isDarkMode 
-                  ? 'text-indigo-400 bg-indigo-900/20' 
-                  : 'text-indigo-600 bg-indigo-50')
-                : (isDarkMode
-                  ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-800'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50')
-            ]"
-          >
-            {{ item.text }}
-          </a>
-        </nav>
-      </div>
+
+    <!-- Table of contents -->
+    <aside v-if="!isVitePressPage && toc.length > 0 && !loading && !error" class="md-toc" aria-labelledby="md-toc-title">
+      <h2 id="md-toc-title" class="md-toc-title">On this page</h2>
+      <nav aria-labelledby="md-toc-title">
+        <a
+          v-for="item in toc"
+          :key="item.id"
+          :href="`#${item.id}`"
+          class="md-toc-link"
+          :class="[`md-toc-level-${Math.min(item.level, 3)}`, { 'md-toc-on': activeHeading === item.id }]"
+          :aria-current="activeHeading === item.id ? 'location' : undefined"
+          @click.prevent="scrollToHeading(item.id)"
+        >
+          {{ item.text }}
+        </a>
+      </nav>
     </aside>
   </div>
 </template>
@@ -106,7 +58,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { marked } from 'marked';
-import { spot } from '../utils/spotIllustrations.js';
+import { PageHero, UiCallout, UiLink, UiSpinner } from './ui';
 
 const props = defineProps({
   docPath: {
@@ -119,7 +71,16 @@ const loading = ref(true);
 const error = ref(null);
 const markdownContent = ref('');
 const markdownContentRef = ref(null);
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
+const scrollRef = ref(null);
+
+// Whichever element actually scrolls the article: its own box when the page gives
+// it a fixed height, otherwise an ancestor such as the app's main column
+const scroller = () => {
+  for (let el = scrollRef.value; el; el = el.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight) return el;
+  }
+  return document.scrollingElement;
+};
 const toc = ref([]);
 const activeHeading = ref('');
 const lastUpdated = ref(null);
@@ -180,244 +141,47 @@ const foundationHeroCards = {
   '/colors': {
     title: 'Colors',
     description: 'Our color system is built on a foundation of semantic colors and a comprehensive palette that supports both light and dark modes.',
-    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="colorsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <!-- Color swatches -->
-      <circle cx="60" cy="60" r="25" fill="url(#colorsGradient)" opacity="0.8"/>
-      <circle cx="140" cy="60" r="25" fill="#10b981" opacity="0.8"/>
-      <circle cx="60" cy="140" r="25" fill="#f59e0b" opacity="0.8"/>
-      <circle cx="140" cy="140" r="25" fill="#ef4444" opacity="0.8"/>
-      <!-- Central palette icon -->
-      <rect x="85" y="85" width="30" height="30" rx="4" fill="url(#colorsGradient)" opacity="0.6"/>
-    </svg>`
+    spot: 'foundations/colors'
   },
   '/typography': {
     title: 'Typography',
     description: 'Typography establishes visual hierarchy and ensures readability across all interfaces. Our type system includes font families, sizes, weights, and line heights.',
-    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="typographyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <!-- Typography lines -->
-      <line x1="40" y1="60" x2="160" y2="60" stroke="url(#typographyGradient)" stroke-width="4" opacity="0.8"/>
-      <line x1="40" y1="90" x2="160" y2="90" stroke="url(#typographyGradient)" stroke-width="3" opacity="0.7"/>
-      <line x1="40" y1="120" x2="160" y2="120" stroke="url(#typographyGradient)" stroke-width="2" opacity="0.6"/>
-      <line x1="40" y1="150" x2="160" y2="150" stroke="url(#typographyGradient)" stroke-width="2" opacity="0.5"/>
-      <!-- Letter "A" representation -->
-      <path d="M 100 50 L 70 150 L 85 150 L 95 120 L 105 120 L 115 150 L 130 150 L 100 50 Z" fill="url(#typographyGradient)" opacity="0.3"/>
-    </svg>`
+    spot: 'foundations/typography'
   },
   '/spacing': {
     title: 'Spacing',
     description: 'Consistent spacing creates rhythm and improves visual hierarchy. Our spacing system uses a consistent scale to maintain harmony across all components.',
-    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="spacingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <!-- Spacing blocks -->
-      <rect x="50" y="50" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
-      <rect x="90" y="50" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
-      <rect x="130" y="50" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
-      <rect x="50" y="90" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
-      <rect x="130" y="90" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
-      <rect x="50" y="130" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
-      <rect x="90" y="130" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
-      <rect x="130" y="130" width="20" height="20" fill="url(#spacingGradient)" opacity="0.8"/>
-    </svg>`
+    spot: 'foundations/spacing'
   },
   '/shadows': {
     title: 'Shadows',
     description: 'Shadows add depth and elevation to our interface, helping users understand the hierarchy and relationships between elements.',
-    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="shadowsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-        </linearGradient>
-        <filter id="shadowFilter">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-          <feOffset dx="2" dy="2" result="offsetblur"/>
-          <feComponentTransfer>
-            <feFuncA type="linear" slope="0.3"/>
-          </feComponentTransfer>
-          <feMerge>
-            <feMergeNode/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      <!-- Layered cards with shadows -->
-      <rect x="50" y="50" width="100" height="100" rx="8" fill="url(#shadowsGradient)" opacity="0.9" filter="url(#shadowFilter)"/>
-      <rect x="60" y="60" width="100" height="100" rx="8" fill="url(#shadowsGradient)" opacity="0.7" filter="url(#shadowFilter)"/>
-      <rect x="70" y="70" width="100" height="100" rx="8" fill="url(#shadowsGradient)" opacity="0.5" filter="url(#shadowFilter)"/>
-    </svg>`
+    spot: 'foundations/shadows'
   },
   '/accessibility': {
     title: 'Accessibility',
     description: 'Guidelines and best practices for creating accessible, inclusive experiences that work for everyone. Ensure your designs meet WCAG standards and provide equal access to all users.',
-    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="accessibilityGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <!-- Accessibility icon - person with arms raised in circle -->
-      <circle cx="100" cy="100" r="50" fill="none" stroke="url(#accessibilityGradient)" stroke-width="4" opacity="0.6"/>
-      <circle cx="100" cy="80" r="15" fill="url(#accessibilityGradient)" opacity="0.6"/>
-      <path d="M 100 95 Q 70 95 70 125 L 70 150 L 130 150 L 130 125 Q 130 95 100 95" fill="url(#accessibilityGradient)" opacity="0.5"/>
-      <!-- Arms raised -->
-      <line x1="70" y1="110" x2="50" y2="90" stroke="url(#accessibilityGradient)" stroke-width="4" opacity="0.6" stroke-linecap="round"/>
-      <line x1="130" y1="110" x2="150" y2="90" stroke="url(#accessibilityGradient)" stroke-width="4" opacity="0.6" stroke-linecap="round"/>
-      <!-- Accessibility indicators -->
-      <circle cx="50" cy="50" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
-      <circle cx="150" cy="50" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
-      <circle cx="50" cy="150" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
-      <circle cx="150" cy="150" r="8" fill="url(#accessibilityGradient)" opacity="0.4"/>
-    </svg>`
+    spot: 'foundations/accessibility'
   },
   '/tui-guidance': {
     title: 'Terminal UI (TUI) Guidance',
     description: 'Design standards for Terminal User Interfaces (TUIs) across command-line and console-based applications. Ensure consistency, accessibility, and scriptability in all terminal interfaces.',
-    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="tuiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <!-- Terminal window frame -->
-      <rect x="30" y="40" width="140" height="120" rx="4" fill="url(#tuiGradient)" opacity="0.2" stroke="url(#tuiGradient)" stroke-width="2"/>
-      <!-- Terminal header bar -->
-      <rect x="30" y="40" width="140" height="20" rx="4" fill="url(#tuiGradient)" opacity="0.4"/>
-      <!-- Terminal window dots (close, minimize, maximize) -->
-      <circle cx="42" cy="50" r="3" fill="url(#tuiGradient)" opacity="0.6"/>
-      <circle cx="52" cy="50" r="3" fill="url(#tuiGradient)" opacity="0.6"/>
-      <circle cx="62" cy="50" r="3" fill="url(#tuiGradient)" opacity="0.6"/>
-      <!-- Terminal prompt and text lines -->
-      <text x="40" y="75" font-family="monospace" font-size="10" fill="url(#tuiGradient)" opacity="0.8">$ tool deploy</text>
-      <text x="40" y="95" font-family="monospace" font-size="10" fill="url(#tuiGradient)" opacity="0.6">✓ Deployment complete</text>
-      <text x="40" y="115" font-family="monospace" font-size="10" fill="url(#tuiGradient)" opacity="0.6">> service-api [running]</text>
-      <!-- Cursor blinking indicator -->
-      <rect x="120" y="68" width="8" height="10" fill="url(#tuiGradient)" opacity="0.8">
-        <animate attributeName="opacity" values="0.8;0.2;0.8" dur="1s" repeatCount="indefinite"/>
-      </rect>
-      <!-- Command line prompt symbol -->
-      <text x="40" y="135" font-family="monospace" font-size="10" fill="url(#tuiGradient)" opacity="0.7">$</text>
-      <!-- Keyboard keys representation -->
-      <rect x="50" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
-      <rect x="75" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
-      <rect x="100" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
-      <rect x="125" y="150" width="20" height="12" rx="2" fill="url(#tuiGradient)" opacity="0.3"/>
-    </svg>`
+    spot: 'foundations/tui-guidance'
   },
   '/data-viz/types-of-dashboards': {
     title: 'Types of Dashboards',
     description: 'Learn about different dashboard types and their characteristics. Understand the distinction between curated dashboards and data collection dashboards, and discover when to use each type.',
-    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="dashboardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <!-- Dashboard frame -->
-      <rect x="20" y="30" width="160" height="140" rx="4" fill="url(#dashboardGradient)" opacity="0.1" stroke="url(#dashboardGradient)" stroke-width="2"/>
-      <!-- Dashboard header -->
-      <rect x="20" y="30" width="160" height="25" rx="4" fill="url(#dashboardGradient)" opacity="0.3"/>
-      <!-- Dashboard title bar dots -->
-      <circle cx="32" cy="42" r="3" fill="url(#dashboardGradient)" opacity="0.5"/>
-      <circle cx="42" cy="42" r="3" fill="url(#dashboardGradient)" opacity="0.5"/>
-      <circle cx="52" cy="42" r="3" fill="url(#dashboardGradient)" opacity="0.5"/>
-      <!-- Chart elements - Bar chart -->
-      <rect x="35" y="100" width="15" height="50" rx="2" fill="url(#dashboardGradient)" opacity="0.7"/>
-      <rect x="55" y="80" width="15" height="70" rx="2" fill="url(#dashboardGradient)" opacity="0.7"/>
-      <rect x="75" y="90" width="15" height="60" rx="2" fill="url(#dashboardGradient)" opacity="0.7"/>
-      <rect x="95" y="70" width="15" height="80" rx="2" fill="url(#dashboardGradient)" opacity="0.7"/>
-      <!-- Line chart -->
-      <path d="M 35 120 Q 55 100, 75 110 T 115 105" stroke="url(#dashboardGradient)" stroke-width="2.5" fill="none" opacity="0.6"/>
-      <circle cx="35" cy="120" r="3" fill="url(#dashboardGradient)" opacity="0.7"/>
-      <circle cx="75" cy="110" r="3" fill="url(#dashboardGradient)" opacity="0.7"/>
-      <circle cx="115" cy="105" r="3" fill="url(#dashboardGradient)" opacity="0.7"/>
-      <!-- Pie chart segment -->
-      <path d="M 140 100 L 140 100 A 20 20 0 0 1 155 110 Z" fill="url(#dashboardGradient)" opacity="0.5"/>
-      <path d="M 140 100 L 155 110 A 20 20 0 0 1 140 120 Z" fill="url(#dashboardGradient)" opacity="0.6"/>
-      <path d="M 140 100 L 140 120 A 20 20 0 0 1 125 110 Z" fill="url(#dashboardGradient)" opacity="0.4"/>
-      <!-- Grid lines -->
-      <line x1="30" y1="75" x2="120" y2="75" stroke="url(#dashboardGradient)" stroke-width="1" opacity="0.2" stroke-dasharray="2,2"/>
-      <line x1="30" y1="95" x2="120" y2="95" stroke="url(#dashboardGradient)" stroke-width="1" opacity="0.2" stroke-dasharray="2,2"/>
-      <line x1="30" y1="115" x2="120" y2="115" stroke="url(#dashboardGradient)" stroke-width="1" opacity="0.2" stroke-dasharray="2,2"/>
-      <!-- Dashboard widgets/sections -->
-      <rect x="130" y="70" width="40" height="25" rx="2" fill="url(#dashboardGradient)" opacity="0.2" stroke="url(#dashboardGradient)" stroke-width="1"/>
-      <rect x="130" y="100" width="40" height="25" rx="2" fill="url(#dashboardGradient)" opacity="0.2" stroke="url(#dashboardGradient)" stroke-width="1"/>
-      <rect x="130" y="130" width="40" height="25" rx="2" fill="url(#dashboardGradient)" opacity="0.2" stroke="url(#dashboardGradient)" stroke-width="1"/>
-    </svg>`
+    spot: 'foundations/dashboard-types'
   },
   '/data-viz/dashboard-design': {
     title: 'Dashboard Design',
     description: 'Design dashboards around the decisions people need to make: choose the right dashboard type, prioritize what matters, and keep data easy to scan.',
-    svg: spot('foundations/dashboard-types'),
+    spot: 'foundations/dashboard-types',
   },
   '/data-viz/dashboard-patterns': {
     title: 'Dashboard Patterns',
     description: 'Explore comprehensive design patterns for dashboards including data information, visual representations, layout strategies, interactions, and color schemes. Learn how to effectively organize and present data.',
-    svg: `<svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="patternsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <!-- Pattern grid background -->
-      <rect x="20" y="20" width="160" height="160" rx="4" fill="url(#patternsGradient)" opacity="0.05" stroke="url(#patternsGradient)" stroke-width="1"/>
-      <!-- Grid pattern -->
-      <line x1="40" y1="40" x2="40" y2="160" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
-      <line x1="80" y1="40" x2="80" y2="160" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
-      <line x1="120" y1="40" x2="120" y2="160" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
-      <line x1="160" y1="40" x2="160" y2="160" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
-      <line x1="20" y1="60" x2="180" y2="60" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
-      <line x1="20" y1="100" x2="180" y2="100" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
-      <line x1="20" y1="140" x2="180" y2="140" stroke="url(#patternsGradient)" stroke-width="1" opacity="0.2"/>
-      <!-- Pattern elements - various visualizations -->
-      <!-- Bar chart pattern -->
-      <rect x="30" y="110" width="12" height="30" rx="1" fill="url(#patternsGradient)" opacity="0.6"/>
-      <rect x="45" y="100" width="12" height="40" rx="1" fill="url(#patternsGradient)" opacity="0.6"/>
-      <rect x="60" y="115" width="12" height="25" rx="1" fill="url(#patternsGradient)" opacity="0.6"/>
-      <!-- Line chart pattern -->
-      <path d="M 90 120 Q 105 100, 120 110 T 150 105" stroke="url(#patternsGradient)" stroke-width="2" fill="none" opacity="0.6"/>
-      <circle cx="90" cy="120" r="2.5" fill="url(#patternsGradient)" opacity="0.7"/>
-      <circle cx="120" cy="110" r="2.5" fill="url(#patternsGradient)" opacity="0.7"/>
-      <circle cx="150" cy="105" r="2.5" fill="url(#patternsGradient)" opacity="0.7"/>
-      <!-- Pie chart pattern -->
-      <path d="M 100 50 L 100 50 A 18 18 0 0 1 112 58 Z" fill="url(#patternsGradient)" opacity="0.5"/>
-      <path d="M 100 50 L 112 58 A 18 18 0 0 1 100 68 Z" fill="url(#patternsGradient)" opacity="0.6"/>
-      <path d="M 100 50 L 100 68 A 18 18 0 0 1 88 58 Z" fill="url(#patternsGradient)" opacity="0.4"/>
-      <!-- Gauge pattern -->
-      <path d="M 50 70 A 15 15 0 0 1 65 70" stroke="url(#patternsGradient)" stroke-width="3" fill="none" opacity="0.6"/>
-      <line x1="50" y1="70" x2="57" y2="63" stroke="url(#patternsGradient)" stroke-width="2" opacity="0.6"/>
-      <!-- Table/grid pattern -->
-      <rect x="30" y="50" width="25" height="15" rx="1" fill="url(#patternsGradient)" opacity="0.2" stroke="url(#patternsGradient)" stroke-width="1"/>
-      <rect x="58" y="50" width="25" height="15" rx="1" fill="url(#patternsGradient)" opacity="0.2" stroke="url(#patternsGradient)" stroke-width="1"/>
-      <!-- Number/KPI pattern -->
-      <text x="90" y="75" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="url(#patternsGradient)" opacity="0.7">42</text>
-      <!-- Trend arrow pattern -->
-      <path d="M 140 70 L 140 60 L 145 65 L 140 60 L 135 65 Z" fill="url(#patternsGradient)" opacity="0.6"/>
-      <!-- Color swatches pattern -->
-      <rect x="160" y="50" width="12" height="12" rx="1" fill="#10b981" opacity="0.7"/>
-      <rect x="160" y="65" width="12" height="12" rx="1" fill="#f59e0b" opacity="0.7"/>
-      <rect x="160" y="80" width="12" height="12" rx="1" fill="#ef4444" opacity="0.7"/>
-    </svg>`
+    spot: 'foundations/dashboard-patterns'
   }
 };
 
@@ -425,39 +189,7 @@ const isFoundationPage = computed(() => {
   return foundationHeroCards.hasOwnProperty(props.docPath);
 });
 
-const getHeroCardHTML = () => {
-  if (!isFoundationPage.value) return '';
-  const hero = foundationHeroCards[props.docPath];
-  // Make gradient IDs unique by adding the doc path
-  const uniqueId = props.docPath.replace(/\//g, '-').replace(/^-/, '');
-  let svgWithUniqueIds = hero.svg;
-  
-  // Replace gradient IDs
-  svgWithUniqueIds = svgWithUniqueIds.replace(/id="([^"]+Gradient)"/g, `id="$1-${uniqueId}"`);
-  // Replace filter IDs
-  svgWithUniqueIds = svgWithUniqueIds.replace(/id="([^"]+Filter)"/g, `id="$1-${uniqueId}"`);
-  // Replace URL references to gradients
-  svgWithUniqueIds = svgWithUniqueIds.replace(/url\(#([^)]+Gradient)\)/g, `url(#$1-${uniqueId})`);
-  // Replace URL references to filters
-  svgWithUniqueIds = svgWithUniqueIds.replace(/url\(#([^)]+Filter)\)/g, `url(#$1-${uniqueId})`);
-  
-  return `
-    <div class="mb-12 -mx-4">
-      <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-        <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-          <div class="flex-1">
-            <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">${hero.title}</h1>
-            <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">${hero.description}</p>
-          </div>
-          <div class="hidden md:block flex-shrink-0">
-            <div class="w-64 h-64 relative">${svgWithUniqueIds}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-};
+const hero = computed(() => (isFoundationPage.value ? foundationHeroCards[props.docPath] : null));
 
 // Cache for loaded SVG content (synchronous cache for processed SVGs)
 // Use a ref with a counter to trigger reactivity when cache updates
@@ -646,10 +378,6 @@ const renderedMarkdown = computed(() => {
   // Process SVG img tags - embed cached SVGs directly, keep img tags for uncached ones
   parsedMarkdown = processSvgImages(parsedMarkdown);
   
-  // Prepend hero card for foundation pages
-  if (isFoundationPage.value) {
-    return getHeroCardHTML() + parsedMarkdown;
-  }
   return parsedMarkdown;
 });
 
@@ -937,16 +665,12 @@ const loadMarkdown = async () => {
 
 const scrollToHeading = (id) => {
   const element = document.getElementById(id);
-  if (element) {
-    const offset = 100; // Account for fixed header
-    const elementPosition = element.getBoundingClientRect().top;
-    const offsetPosition = elementPosition + window.pageYOffset - offset;
-    
-    window.scrollTo({
-      top: offsetPosition,
-      behavior: 'smooth'
-    });
-    
+  const container = scrollRef.value && scroller();
+  if (element && container) {
+    const viewTop = container === document.scrollingElement ? 0 : container.getBoundingClientRect().top;
+    const top = element.getBoundingClientRect().top - viewTop + container.scrollTop - 24;
+    container.scrollTo({ top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+
     // Update URL hash without scrolling again
     history.pushState(null, null, `#${id}`);
     activeHeading.value = id;
@@ -961,63 +685,36 @@ const updateActiveHeading = () => {
   
   if (headings.length === 0) return;
   
-  const scrollPosition = window.pageYOffset + 150; // Offset for header
-  
+  if (!scrollRef.value) return;
+  const line = Math.max(scroller().getBoundingClientRect().top, 0) + 120; // a heading counts once it passes this line
+
   for (let i = headings.length - 1; i >= 0; i--) {
     const heading = headings[i];
-    if (heading.element.offsetTop <= scrollPosition) {
+    if (heading.element.getBoundingClientRect().top <= line) {
       activeHeading.value = heading.id;
       break;
     }
   }
 };
 
-const setupScrollSpy = () => {
-  const handleScroll = () => {
-    updateActiveHeading();
-  };
-  
-  window.addEventListener('scroll', handleScroll);
-  
-  // Cleanup on component unmount
-  return () => {
-    window.removeEventListener('scroll', handleScroll);
-  };
-};
-
 let scrollSpyCleanup = null;
 
-// Watch for dark mode changes
-let darkModeObserver = null;
-let darkModeInterval = null;
+// Highlight the section being read as the article scrolls; replaces any earlier listener
+const setupScrollSpy = () => {
+  scrollSpyCleanup?.();
+  if (!scrollRef.value) return null;
+  const handleScroll = () => updateActiveHeading();
+  // Scroll events don't bubble, but a capturing listener hears whichever ancestor scrolls
+  document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+  scrollSpyCleanup = () => document.removeEventListener('scroll', handleScroll, { capture: true });
+  return scrollSpyCleanup;
+};
 
 onMounted(() => {
   loadMarkdown();
   
-  // Watch for dark mode changes
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-  
   // Setup scroll spy after content loads
-  nextTick(() => {
-    if (scrollSpyCleanup) {
-      scrollSpyCleanup();
-    }
-    scrollSpyCleanup = setupScrollSpy();
-  });
+  nextTick(setupScrollSpy);
 });
 
 watch(() => props.docPath, () => {
@@ -1035,12 +732,6 @@ watch(() => props.docPath, () => {
 
 // Cleanup
 onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
   if (scrollSpyCleanup) {
     scrollSpyCleanup();
   }
@@ -1048,341 +739,126 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.markdown-viewer-container {
-  max-width: 100%;
-  transition: background-color 0.3s ease;
+.md-viewer {
+  @apply flex h-full bg-surface text-ink;
+}
+.md-main {
+  @apply flex-1 min-w-0 h-full overflow-hidden;
+}
+.md-scroll {
+  @apply h-full overflow-y-auto;
+}
+.md-page {
+  @apply max-w-4xl mx-auto px-6 md:px-10 pt-8 pb-16;
+}
+.md-overlay {
+  @apply absolute inset-0 z-10 flex items-center justify-center p-6 bg-surface;
+}
+.md-hero {
+  @apply mb-10;
+}
+.md-footer {
+  @apply mt-16 pt-6 border-t border-line flex flex-wrap items-center justify-between gap-4 text-sm text-ink-secondary;
 }
 
-.markdown-viewer {
-  max-width: 100%;
-  transition: background-color 0.3s ease;
+/* Table of contents */
+.md-toc {
+  @apply hidden xl:block sticky top-0 self-start w-64 shrink-0 max-h-screen overflow-y-auto border-l border-line bg-surface px-5 py-8;
+}
+.md-toc-title {
+  @apply mb-3 px-2 text-xs font-semibold uppercase tracking-wider text-ink-muted;
+}
+.md-toc-link {
+  @apply block rounded-control px-2 py-1 text-sm leading-snug text-ink-secondary transition-colors hover:bg-surface-sunken hover:text-ink;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+.md-toc-level-1 {
+  @apply font-semibold text-ink;
+}
+.md-toc-level-2 {
+  @apply pl-4;
+}
+.md-toc-level-3 {
+  @apply pl-6 text-xs;
+}
+.md-toc-on {
+  @apply bg-accent-subtle text-accent-text;
 }
 
-.markdown-viewer.bg-white {
-  background-color: #ffffff !important;
+/* Markdown content */
+.md-prose {
+  @apply text-base leading-relaxed text-ink-secondary;
+}
+.md-prose :deep(h1) {
+  @apply mt-0 mb-6 text-3xl md:text-4xl font-semibold tracking-tight leading-tight text-ink-strong;
+}
+.md-prose :deep(h2) {
+  @apply mt-14 mb-4 pt-8 border-t border-line text-2xl font-semibold tracking-tight text-ink-strong scroll-mt-6;
+}
+.md-prose :deep(h3) {
+  @apply mt-10 mb-3 text-lg font-semibold text-ink-strong scroll-mt-6;
+}
+.md-prose :deep(h4) {
+  @apply mt-8 mb-2 text-base font-semibold text-ink-strong scroll-mt-6;
+}
+.md-prose :deep(p) {
+  @apply my-4;
+}
+.md-prose :deep(ul),
+.md-prose :deep(ol) {
+  @apply my-4 pl-6 space-y-1.5;
+}
+.md-prose :deep(ul) {
+  @apply list-disc;
+}
+.md-prose :deep(ol) {
+  @apply list-decimal;
+}
+.md-prose :deep(li::marker) {
+  @apply text-ink-muted;
+}
+.md-prose :deep(a) {
+  @apply font-medium text-accent-text underline underline-offset-4 decoration-accent-border hover:decoration-current;
+}
+.md-prose :deep(strong) {
+  @apply font-semibold text-ink;
+}
+.md-prose :deep(code) {
+  @apply rounded-control bg-surface-sunken px-1.5 py-0.5 font-mono text-sm text-ink;
+}
+.md-prose :deep(pre) {
+  @apply my-6 overflow-x-auto rounded-card border border-line bg-surface-sunken p-5 text-sm leading-relaxed;
+}
+.md-prose :deep(pre code) {
+  @apply bg-transparent p-0 text-ink;
+}
+.md-prose :deep(blockquote) {
+  @apply my-6 border-l-4 border-accent bg-accent-subtle rounded-control px-5 py-3 text-ink;
+}
+.md-prose :deep(blockquote p) {
+  @apply my-1;
+}
+.md-prose :deep(hr) {
+  @apply my-10 border-line;
+}
+.md-prose :deep(table) {
+  @apply my-6 w-full border-collapse text-sm;
+}
+.md-prose :deep(thead th) {
+  @apply border-b border-line px-3 py-2 text-left font-semibold text-ink;
+}
+.md-prose :deep(tbody td) {
+  @apply border-b border-line-faint px-3 py-2 align-top;
+}
+.md-prose :deep(img) {
+  @apply block max-w-full h-auto;
 }
 
-.markdown-viewer.bg-slate-900 {
-  background-color: #0f172a !important;
+/* SVGs embedded from markdown keep their own size and gradients */
+.md-prose :deep(svg) {
+  @apply block w-full h-full overflow-visible;
 }
-
-.toc-sidebar {
-  height: 100%;
-  transition: background-color 0.3s ease;
-}
-
-.toc-sidebar.bg-white {
-  background-color: #ffffff !important;
-}
-
-.toc-sidebar.bg-slate-900 {
-  background-color: #0f172a !important;
-}
-
-/* Prose styles for markdown content */
-.markdown-viewer :deep(.prose) {
-  color: #1f2937;
-  transition: color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose),
-.markdown-viewer.bg-slate-900 :deep(.prose) {
-  color: #e5e7eb;
-}
-
-.markdown-viewer :deep(.prose h1) {
-  font-size: 2.25em;
-  font-weight: 700;
-  margin-top: 0;
-  margin-bottom: 0.8888889em;
-  line-height: 1.1111111;
-  color: #111827;
-  transition: color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose h1),
-.markdown-viewer.bg-slate-900 :deep(.prose h1) {
-  color: #f9fafb;
-}
-
-.markdown-viewer :deep(.prose h2) {
-  font-size: 1.5em;
-  font-weight: 600;
-  margin-top: 2em;
-  margin-bottom: 1em;
-  line-height: 1.3333333;
-  color: #111827;
-  transition: color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose h2),
-.markdown-viewer.bg-slate-900 :deep(.prose h2) {
-  color: #f9fafb;
-}
-
-.markdown-viewer :deep(.prose h3) {
-  font-size: 1.25em;
-  font-weight: 600;
-  margin-top: 1.6em;
-  margin-bottom: 0.6em;
-  line-height: 1.6;
-  color: #111827;
-  transition: color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose h3),
-.markdown-viewer.bg-slate-900 :deep(.prose h3) {
-  color: #f9fafb;
-}
-
-.markdown-viewer :deep(.prose p) {
-  margin-top: 1.25em;
-  margin-bottom: 1.25em;
-  line-height: 1.75;
-}
-
-.markdown-viewer :deep(.prose ul),
-.markdown-viewer :deep(.prose ol) {
-  margin-top: 1.25em;
-  margin-bottom: 1.25em;
-  padding-left: 1.625em;
-}
-
-.markdown-viewer :deep(.prose li) {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
-}
-
-.markdown-viewer :deep(.prose code) {
-  font-size: 0.875em;
-  font-weight: 600;
-  color: #111827;
-  background-color: #f3f4f6;
-  padding: 0.125em 0.375em;
-  border-radius: 0.25rem;
-  transition: color 0.3s ease, background-color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose code),
-.markdown-viewer.bg-slate-900 :deep(.prose code) {
-  color: #f9fafb;
-  background-color: #374151;
-}
-
-.markdown-viewer :deep(.prose pre) {
-  color: #e5e7eb;
-  background-color: #1f2937;
-  overflow-x: auto;
-  font-weight: 400;
-  font-size: 0.875em;
-  line-height: 1.7142857;
-  margin-top: 1.7142857em;
-  margin-bottom: 1.7142857em;
-  border-radius: 0.375rem;
-  padding: 0.8571429em 1.1428571em;
-}
-
-.markdown-viewer.dark :deep(.prose pre),
-.markdown-viewer.bg-slate-900 :deep(.prose pre) {
-  background-color: #111827;
-}
-
-.markdown-viewer :deep(.prose pre code) {
-  background-color: transparent;
-  border-width: 0;
-  border-radius: 0;
-  padding: 0;
-  font-weight: inherit;
-  color: inherit;
-  font-size: inherit;
-  font-family: inherit;
-  line-height: inherit;
-}
-
-.markdown-viewer :deep(.prose a) {
-  color: #4f46e5;
-  text-decoration: underline;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose a),
-.markdown-viewer.bg-slate-900 :deep(.prose a) {
-  color: #818cf8;
-}
-
-.markdown-viewer :deep(.prose a:hover) {
-  color: #4338ca;
-}
-
-.markdown-viewer.dark :deep(.prose a:hover),
-.markdown-viewer.bg-slate-900 :deep(.prose a:hover) {
-  color: #a5b4fc;
-}
-
-.markdown-viewer :deep(.prose strong) {
-  color: #111827;
-  font-weight: 600;
-  transition: color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose strong),
-.markdown-viewer.bg-slate-900 :deep(.prose strong) {
-  color: #f9fafb;
-}
-
-.markdown-viewer :deep(.prose blockquote) {
-  font-weight: 500;
-  font-style: italic;
-  color: #111827;
-  border-left-width: 0.25rem;
-  border-left-color: #e5e7eb;
-  quotes: "\201C""\201D""\2018""\2019";
-  margin-top: 1.6em;
-  margin-bottom: 1.6em;
-  padding-left: 1em;
-  transition: color 0.3s ease, border-color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose blockquote),
-.markdown-viewer.bg-slate-900 :deep(.prose blockquote) {
-  color: #e5e7eb;
-  border-left-color: #374151;
-}
-
-.markdown-viewer :deep(.prose hr) {
-  border-color: #e5e7eb;
-  border-top-width: 1px;
-  margin-top: 3em;
-  margin-bottom: 3em;
-  transition: border-color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose hr),
-.markdown-viewer.bg-slate-900 :deep(.prose hr) {
-  border-color: #374151;
-}
-
-.markdown-viewer :deep(.prose table) {
-  width: 100%;
-  table-layout: auto;
-  text-align: left;
-  margin-top: 2em;
-  margin-bottom: 2em;
-  font-size: 0.875em;
-  line-height: 1.7142857;
-}
-
-.markdown-viewer :deep(.prose thead) {
-  border-bottom-width: 1px;
-  border-bottom-color: #e5e7eb;
-  transition: border-color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose thead),
-.markdown-viewer.bg-slate-900 :deep(.prose thead) {
-  border-bottom-color: #374151;
-}
-
-.markdown-viewer :deep(.prose thead th) {
-  color: #111827;
-  font-weight: 600;
-  vertical-align: bottom;
-  padding-right: 0.5714286em;
-  padding-bottom: 0.5714286em;
-  padding-left: 0.5714286em;
-  transition: color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose thead th),
-.markdown-viewer.bg-slate-900 :deep(.prose thead th) {
-  color: #f9fafb;
-}
-
-.markdown-viewer :deep(.prose tbody tr) {
-  border-bottom-width: 1px;
-  border-bottom-color: #e5e7eb;
-  transition: border-color 0.3s ease;
-}
-
-.markdown-viewer.dark :deep(.prose tbody tr),
-.markdown-viewer.bg-slate-900 :deep(.prose tbody tr) {
-  border-bottom-color: #374151;
-}
-
-.markdown-viewer :deep(.prose tbody td) {
-  vertical-align: baseline;
-  padding-top: 0.5714286em;
-  padding-right: 0.5714286em;
-  padding-bottom: 0.5714286em;
-  padding-left: 0.5714286em;
-}
-
-/* Ensure images in markdown are visible */
-.markdown-viewer :deep(.prose img),
-.markdown-content :deep(img) {
-  display: block !important;
-  max-width: 100% !important;
-  height: auto !important;
-}
-
-.markdown-viewer :deep(.prose img[src*="/svgs/"]) {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: contain !important;
-}
-
-/* Hero card styles within markdown */
-.markdown-content :deep(.texture-pattern) {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* Ensure hero card h1 doesn't conflict with prose styles */
-.markdown-content :deep(.mb-12 h1) {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-/* Ensure SVG elements render correctly */
-.markdown-content :deep(svg) {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  position: relative;
-}
-
-/* Ensure line elements are visible and render correctly */
-.markdown-content :deep(svg line) {
-  display: block !important;
-  visibility: visible !important;
-  opacity: inherit !important;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-  /* Ensure stroke is applied */
-  stroke-width: inherit;
-  stroke: inherit;
-}
-
-/* Ensure defs and gradients are properly rendered */
-.markdown-content :deep(svg defs) {
-  display: block;
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-.markdown-content :deep(svg defs linearGradient),
-.markdown-content :deep(svg defs radialGradient) {
-  display: block;
-}
-
-/* Ensure gradient references resolve correctly */
-.markdown-content :deep(svg [fill*="url(#"]),
-.markdown-content :deep(svg [stroke*="url(#"]) {
-  /* Don't override - let the gradient work */
+.md-prose :deep(svg defs) {
+  @apply absolute w-0 h-0 overflow-hidden;
 }
 </style>
-

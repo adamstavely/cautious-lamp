@@ -1,416 +1,122 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-          <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <!-- Background texture/grain effect -->
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Component Status
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Track the development status, availability, and documentation coverage of all components in the design system.
-                </p>
-              </div>
-              <div class="hidden md:block flex-shrink-0">
-                <div class="w-64 h-64 relative">
-                  <svg viewBox="0 0 200 200" class="w-full h-full text-indigo-400">
-                    <defs>
-                      <linearGradient id="statusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
-                      </linearGradient>
-                    </defs>
-                    <!-- Stylized status/checkmark icon -->
-                    <circle cx="100" cy="100" r="70" fill="url(#statusGradient)" opacity="0.3"/>
-                    <circle cx="100" cy="100" r="50" fill="url(#statusGradient)" opacity="0.5"/>
-                    <path d="M 70 100 L 90 120 L 130 80" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/components', label: 'Components' }"
+      title="Component status"
+      lead="Track the development status, availability and documentation coverage of every component in the design system."
+      spot="admin/component-status"
+    />
 
-        <!-- Status Overview -->
-        <div class="max-w-7xl mx-auto mb-16">
-          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
-            <div 
-              @click="setStatusFilter('Production Ready')"
-              class="rounded-2xl p-6 border cursor-pointer transition-all"
-              :class="selectedStatus === 'Production Ready'
-                ? (isDarkMode 
-                  ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
-                  : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
-                : (isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500')"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <AppIcon name="circle-check" class="text-indigo-600" />
-                  Production Ready
-                </span>
-                <span class="w-3 h-3 rounded-full bg-green-500"></span>
-              </div>
-              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.productionReady }}</p>
-            </div>
-            <div 
-              @click="setStatusFilter('Planned')"
-              class="rounded-2xl p-6 border cursor-pointer transition-all"
-              :class="selectedStatus === 'Planned'
-                ? (isDarkMode 
-                  ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
-                  : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
-                : (isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500')"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <AppIcon name="calendar-check" class="text-indigo-600" />
-                  Planned
-                </span>
-                <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-              </div>
-              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.planned }}</p>
-            </div>
-            <div 
-              @click="setStatusFilter('In Progress')"
-              class="rounded-2xl p-6 border cursor-pointer transition-all"
-              :class="selectedStatus === 'In Progress'
-                ? (isDarkMode 
-                  ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
-                  : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
-                : (isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500')"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <AppIcon name="loader-circle" class="text-indigo-600" />
-                  In Progress
-                </span>
-                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
-              </div>
-              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.inProgress }}</p>
-            </div>
-            <div 
-              @click="setStatusFilter('Sunsetting')"
-              class="rounded-2xl p-6 border cursor-pointer transition-all"
-              :class="selectedStatus === 'Sunsetting'
-                ? (isDarkMode 
-                  ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
-                  : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
-                : (isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500')"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <AppIcon name="clock" class="text-indigo-600" />
-                  Sunsetting
-                </span>
-                <span class="w-3 h-3 rounded-full bg-orange-500"></span>
-              </div>
-              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.sunsetting }}</p>
-            </div>
-            <div 
-              @click="setStatusFilter('Experimental')"
-              class="rounded-2xl p-6 border cursor-pointer transition-all"
-              :class="selectedStatus === 'Experimental'
-                ? (isDarkMode 
-                  ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
-                  : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
-                : (isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500')"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <AppIcon name="flask-conical" class="text-indigo-600" />
-                  Experimental
-                </span>
-                <span class="w-3 h-3 rounded-full bg-purple-500"></span>
-              </div>
-              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.experimental }}</p>
-            </div>
-            <div 
-              @click="setStatusFilter('Deprecated')"
-              class="rounded-2xl p-6 border cursor-pointer transition-all"
-              :class="selectedStatus === 'Deprecated'
-                ? (isDarkMode 
-                  ? 'bg-indigo-900/30 border-indigo-500 ring-2 ring-indigo-500' 
-                  : 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500')
-                : (isDarkMode 
-                  ? 'bg-slate-900 border-gray-700 hover:border-indigo-500' 
-                  : 'bg-white border-gray-200 hover:border-indigo-500')"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium flex items-center gap-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                  <AppIcon name="triangle-alert" class="text-indigo-600" />
-                  Deprecated
-                </span>
-                <span class="w-3 h-3 rounded-full bg-red-500"></span>
-              </div>
-              <p class="text-3xl font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ statusCounts.deprecated }}</p>
-            </div>
-          </div>
-        </div>
+    <PageSection title="Status overview" description="How many components sit at each stage.">
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        <UiStat v-for="stage in stages" :key="stage.value" :label="stage.label" :icon="stage.icon" :tone="counts[stage.value] ? stage.statTone : 'neutral'" :value="counts[stage.value]" />
+      </div>
+    </PageSection>
 
-        <!-- Component Status Table -->
-        <div class="max-w-7xl mx-auto">
-          <div 
-            class="rounded-2xl border overflow-hidden"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <div 
-              class="px-6 py-4 border-b"
-              :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'"
-            >
-              <h2 class="text-2xl font-bold flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <AppIcon name="blocks" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
-                All Components
-              </h2>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full">
-                <thead :class="isDarkMode ? 'bg-slate-800' : 'bg-gray-50'">
-                  <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Component</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Version</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Documentation</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">Last Updated</th>
-                  </tr>
-                </thead>
-                <tbody :class="isDarkMode ? 'divide-y divide-gray-700' : 'divide-y divide-gray-200'">
-                  <tr 
-                    v-for="component in filteredComponents" 
-                    :key="component.name" 
-                    class="transition-colors cursor-pointer"
-                    :class="isDarkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50'"
-                    @click="navigateToComponent(component.name)"
-                  >
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="flex items-center gap-3">
-                        <Pipette v-if="component.name === 'Color Picker'" :size="20" :stroke-width="2" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
-                        <AppIcon :name="component.icon" v-else :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
-                        <span class="font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">{{ component.name }}</span>
-                      </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span 
-                        class="px-3 py-1 rounded-full text-xs font-medium"
-                        :class="getStatusClass(component.status)"
-                      >
-                        {{ component.status }}
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                      {{ component.version }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span 
-                        class="px-3 py-1 rounded-full text-xs font-medium"
-                        :class="component.documentation === 'Complete' 
-                          ? (isDarkMode 
-                            ? 'bg-green-900/30 text-green-400' 
-                            : 'bg-green-100 text-green-800')
-                          : (isDarkMode
-                            ? 'bg-yellow-900/30 text-yellow-400' 
-                            : 'bg-yellow-100 text-yellow-800')"
-                      >
-                        {{ component.documentation }}
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                      {{ component.lastUpdated }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
-    </div>
-  </div>
+    <PageSection title="All components" description="Choose a component to open its documentation." divided>
+      <UiSegmented v-model="selectedStatus" label="Filter by status" :options="filterOptions" class="mb-6" />
+
+      <UiTable v-if="filteredComponents.length" caption="Component status" bordered>
+        <thead>
+          <tr>
+            <th scope="col">Component</th>
+            <th scope="col">Status</th>
+            <th scope="col">Version</th>
+            <th scope="col">Documentation</th>
+            <th scope="col">Last updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="component in filteredComponents" :key="component.name">
+            <th scope="row">
+              <router-link :to="getComponentRoute(component.name)" class="status-name">
+                <AppIcon :name="component.icon" class="text-lg text-accent-text" />
+                {{ component.name }}
+              </router-link>
+            </th>
+            <td><UiChip :tone="statusTone(component.status)">{{ component.status }}</UiChip></td>
+            <td class="text-ink-secondary whitespace-nowrap">{{ component.version }}</td>
+            <td><UiChip :tone="documentationTone(component.documentation)">{{ component.documentation }}</UiChip></td>
+            <td class="text-ink-secondary whitespace-nowrap">{{ component.lastUpdated }}</td>
+          </tr>
+        </tbody>
+      </UiTable>
+
+      <UiEmptyState v-else title="No components at this stage" :body="`Nothing is marked ${selectedStatus} right now.`">
+        <template #actions>
+          <UiButton @click="selectedStatus = ALL">Show all components</UiButton>
+        </template>
+      </UiEmptyState>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import { useDrawer } from '../composables/useDrawer.js';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { Pipette } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import { PageHero, PageSection, PageShell, UiButton, UiChip, UiEmptyState, UiSegmented, UiStat, UiTable } from '../components/ui';
 import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 
-const router = useRouter();
-const { components: sharedComponents } = useComponentPatternStatus();
+const { components } = useComponentPatternStatus();
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const selectedStatus = ref(null);
+const ALL = 'all';
+const selectedStatus = ref(ALL);
 
-// Use shared components from composable
-const components = computed(() => sharedComponents.value);
+const stages = [
+  { value: 'Production Ready', label: 'Production ready', icon: 'circle-check', statTone: 'success', chipTone: 'success' },
+  { value: 'Planned', label: 'Planned', icon: 'calendar-check', statTone: 'neutral', chipTone: 'info' },
+  { value: 'In Progress', label: 'In progress', icon: 'loader-circle', statTone: 'accent', chipTone: 'accent' },
+  { value: 'Sunsetting', label: 'Sunsetting', icon: 'clock', statTone: 'warning', chipTone: 'warning' },
+  { value: 'Experimental', label: 'Experimental', icon: 'flask-conical', statTone: 'neutral', chipTone: 'neutral' },
+  { value: 'Deprecated', label: 'Deprecated', icon: 'triangle-alert', statTone: 'danger', chipTone: 'danger' },
+];
 
-const statusCounts = computed(() => {
-  return {
-    productionReady: components.value.filter(c => c.status === 'Production Ready').length,
-    planned: components.value.filter(c => c.status === 'Planned').length,
-    inProgress: components.value.filter(c => c.status === 'In Progress').length,
-    experimental: components.value.filter(c => c.status === 'Experimental').length,
-    sunsetting: components.value.filter(c => c.status === 'Sunsetting').length,
-    deprecated: components.value.filter(c => c.status === 'Deprecated').length,
-  };
-});
+const counts = computed(() =>
+  Object.fromEntries(stages.map((stage) => [stage.value, components.value.filter((c) => c.status === stage.value).length])),
+);
 
-const filteredComponents = computed(() => {
-  if (!selectedStatus.value) {
-    return components.value;
-  }
-  return components.value.filter(c => c.status === selectedStatus.value);
-});
+const filterOptions = computed(() => [
+  { value: ALL, label: `All (${components.value.length})` },
+  ...stages.map((stage) => ({ value: stage.value, label: `${stage.label} (${counts.value[stage.value]})` })),
+]);
 
-const setStatusFilter = (status) => {
-  if (selectedStatus.value === status) {
-    // If clicking the same status, clear the filter
-    selectedStatus.value = null;
-  } else {
-    selectedStatus.value = status;
-  }
+const filteredComponents = computed(() =>
+  selectedStatus.value === ALL ? components.value : components.value.filter((c) => c.status === selectedStatus.value),
+);
+
+const statusTone = (status) => stages.find((stage) => stage.value === status)?.chipTone ?? 'neutral';
+
+const documentationTone = (documentation) => {
+  if (documentation === 'Complete') return 'success';
+  if (documentation === 'Partial') return 'warning';
+  return 'neutral';
 };
 
-const getStatusClass = (status) => {
-  switch (status) {
-    case 'Production Ready':
-      return isDarkMode.value 
-        ? 'bg-green-900/30 text-green-400' 
-        : 'bg-green-100 text-green-800';
-    case 'In Progress':
-      return isDarkMode.value 
-        ? 'bg-yellow-900/30 text-yellow-400' 
-        : 'bg-yellow-100 text-yellow-800';
-    case 'Planned':
-      return isDarkMode.value 
-        ? 'bg-blue-900/30 text-blue-400' 
-        : 'bg-blue-100 text-blue-800';
-    case 'Experimental':
-      return isDarkMode.value 
-        ? 'bg-purple-900/30 text-purple-400' 
-        : 'bg-purple-100 text-purple-800';
-    case 'Sunsetting':
-      return isDarkMode.value 
-        ? 'bg-orange-900/30 text-orange-400' 
-        : 'bg-orange-100 text-orange-800';
-    case 'Deprecated':
-      return isDarkMode.value 
-        ? 'bg-red-900/30 text-red-400' 
-        : 'bg-red-100 text-red-800';
-    default:
-      return isDarkMode.value 
-        ? 'bg-gray-900/30 text-gray-400' 
-        : 'bg-gray-100 text-gray-800';
-  }
+// Components without a page of their own fall back to the components index
+const routeMap = {
+  Button: '/components/buttons',
+  Input: '/components/forms',
+  Card: '/components/cards',
+  Modal: '/components',
+  Dropdown: '/components',
+  Checkbox: '/components/forms',
+  Radio: '/components/forms',
+  Switch: '/components/forms',
+  'Color Picker': '/components/color-picker',
+  Tabs: '/components/navigation',
+  Accordion: '/components',
+  Tooltip: '/components',
+  Popover: '/components',
+  Breadcrumbs: '/components/navigation',
+  Pagination: '/components/navigation',
+  'Data Table': '/components/data-display',
 };
 
-
-
-
-
-// Map component names to their routes
-const getComponentRoute = (componentName) => {
-  const routeMap = {
-    'Button': '/components/buttons',
-    'Input': '/components/forms',
-    'Card': '/components/cards',
-    'Modal': '/components',
-    'Dropdown': '/components',
-    'Checkbox': '/components/forms',
-    'Radio': '/components/forms',
-    'Switch': '/components/forms',
-    'Color Picker': '/components/color-picker',
-    'Tabs': '/components/navigation',
-    'Accordion': '/components',
-    'Tooltip': '/components',
-    'Popover': '/components',
-    'Breadcrumbs': '/components/navigation',
-    'Pagination': '/components/navigation',
-    'Data Table': '/components/data-display',
-  };
-  
-  // Return mapped route or generate a default route
-  if (routeMap[componentName]) {
-    return routeMap[componentName];
-  }
-  
-  // Fallback: convert component name to route
-  // Convert to lowercase, replace spaces with hyphens
-  const routeName = componentName.toLowerCase().replace(/\s+/g, '-');
-  return `/components/${routeName}`;
-};
-
-const navigateToComponent = (componentName) => {
-  const route = getComponentRoute(componentName);
-  router.push(route);
-};
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
-  }
-});
+const getComponentRoute = (name) => routeMap[name] ?? `/components/${name.toLowerCase().replace(/\s+/g, '-')}`;
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.status-name {
+  @apply inline-flex items-center gap-3 font-medium text-ink-strong whitespace-nowrap hover:text-accent-text hover:underline underline-offset-4;
+  @apply rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
 </style>
-
