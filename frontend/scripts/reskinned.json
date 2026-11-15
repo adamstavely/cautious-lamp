@@ -67,6 +67,7 @@
     "src/components/workspaces/WorkspaceModal.vue",
     "src/components/workspaces/WorkspaceResourceList.vue",
     "src/components/workspaces/WorkspaceSettingsForm.vue",
+    "src/views/AISuggestions.vue",
     "src/views/APCACalculator.vue",
     "src/views/AccessibilityReports.vue",
     "src/views/Admin.vue",

@@ -1,388 +1,187 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  AI-Powered Suggestions
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Get intelligent recommendations for components, accessibility improvements, and design patterns powered by AI.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+  <PageShell>
+    <PageHero
+      :back="{ to: '/tools', label: 'Tools' }"
+      title="AI suggestions"
+      lead="Paste component code and Claude reviews it against this design system: which components and tokens to use, and what to fix for accessibility. Suggestions only name components and tokens that exist."
+      spot="ai/ai-components"
+      size="tool"
+    />
 
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6">
-          <!-- Left Column: Input -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Component Analyzer -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Analyze Component
-              </h3>
-              <textarea
-                v-model="componentCode"
-                placeholder="Paste component code here..."
-                rows="10"
-                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                :class="isDarkMode 
-                  ? 'border-gray-600 bg-slate-700 text-white placeholder-gray-400' 
-                  : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400'"
-              ></textarea>
-              <button
-                @click="analyzeComponent"
-                :disabled="!componentCode.trim()"
-                class="w-full mt-4 px-4 py-2 rounded-lg font-medium transition-colors"
-                :class="componentCode.trim()
-                  ? (isDarkMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white')
-                  : (isDarkMode ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')"
-              >
-                Analyze
-              </button>
-            </div>
+    <PageSection>
+      <UiCallout v-if="configured === false" tone="warning" title="AI suggestions aren't configured" icon="triangle-alert" class="mb-6">
+        The backend needs a Claude API key (<UiCode>ANTHROPIC_API_KEY</UiCode>) before it can review code. Ask your administrator to set it up.
+      </UiCallout>
 
-            <!-- Quick Suggestions -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Quick Suggestions
-              </h3>
-              <div class="space-y-2">
-                <button
-                  @click="getAccessibilitySuggestions"
-                  class="w-full px-4 py-2 rounded-lg text-left transition-colors text-sm"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 hover:bg-slate-700 text-white' 
-                    : 'bg-gray-50 hover:bg-gray-100 text-gray-700'"
-                >
-                  <AppIcon name="accessibility" class="text-sm align-middle mr-2" />
-                  Accessibility Improvements
-                </button>
-                <button
-                  @click="getComponentRecommendations"
-                  class="w-full px-4 py-2 rounded-lg text-left transition-colors text-sm"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 hover:bg-slate-700 text-white' 
-                    : 'bg-gray-50 hover:bg-gray-100 text-gray-700'"
-                >
-                  <AppIcon name="lightbulb" class="text-sm align-middle mr-2" />
-                  Component Recommendations
-                </button>
-                <button
-                  @click="getPatternSuggestions"
-                  class="w-full px-4 py-2 rounded-lg text-left transition-colors text-sm"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 hover:bg-slate-700 text-white' 
-                    : 'bg-gray-50 hover:bg-gray-100 text-gray-700'"
-                >
-                  <AppIcon name="layout-template" class="text-sm align-middle mr-2" />
-                  Design Patterns
-                </button>
-              </div>
-            </div>
+      <div class="grid lg:grid-cols-5 gap-6">
+        <UiPanel title="Your code" class="lg:col-span-2">
+          <div class="space-y-6">
+            <UiTextarea
+              id="ai-suggestions-code"
+              v-model="code"
+              label="Component code"
+              rows="14"
+              mono
+              placeholder="Paste a Vue, React or HTML component…"
+              :hint="`${code.length.toLocaleString()} / ${MAX_CODE.toLocaleString()} characters`"
+              :error="tooLong ? `Paste at most ${MAX_CODE.toLocaleString()} characters.` : ''"
+            />
+            <UiSegmented v-model="focus" label="Look for" :options="FOCUSES" />
+            <InlineNotice :notice="notice" @dismiss="clearNotice" />
           </div>
 
-          <!-- Right Column: Suggestions -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- AI Suggestions -->
-            <div 
-              v-if="suggestions.length > 0"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  AI Suggestions
-                </h3>
-                <button
-                  @click="suggestions = []"
-                  class="px-3 py-1 rounded text-sm font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                >
-                  Clear
-                </button>
-              </div>
-              <div class="space-y-4">
-                <div
-                  v-for="suggestion in suggestions"
-                  :key="suggestion.id"
-                  class="p-4 rounded-lg border"
-                  :class="suggestion.type === 'error'
-                    ? (isDarkMode ? 'bg-red-900/20 border-red-700' : 'bg-red-50 border-red-200')
-                    : suggestion.type === 'warning'
-                    ? (isDarkMode ? 'bg-yellow-900/20 border-yellow-700' : 'bg-yellow-50 border-yellow-200')
-                    : (isDarkMode ? 'bg-blue-900/20 border-blue-700' : 'bg-blue-50 border-blue-200')"
-                >
-                  <div class="flex items-start justify-between mb-2">
-                    <div class="flex items-center gap-2">
-                      <AppIcon :name="suggestion.type === 'error' ? 'circle-alert' : suggestion.type === 'warning' ? 'triangle-alert' : 'info'" class="text-sm" :class="suggestion.type === 'error' ? 'text-red-500' : suggestion.type === 'warning' ? 'text-yellow-500' : 'text-blue-500'" />
-                      <span class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ suggestion.title }}
-                      </span>
-                    </div>
-                    <span 
-                      class="text-xs px-2 py-1 rounded"
-                      :class="suggestion.category === 'accessibility'
-                        ? (isDarkMode ? 'bg-purple-900/50 text-purple-300' : 'bg-purple-100 text-purple-700')
-                        : suggestion.category === 'performance'
-                        ? (isDarkMode ? 'bg-green-900/50 text-green-300' : 'bg-green-100 text-green-700')
-                        : (isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700')"
-                    >
-                      {{ suggestion.category }}
-                    </span>
-                  </div>
-                  <div class="text-sm mb-3" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    {{ suggestion.description }}
-                  </div>
-                  <div v-if="suggestion.fix" class="rounded-lg overflow-hidden" :class="isDarkMode ? 'bg-slate-950' : 'bg-gray-900'">
-                    <div class="p-3">
-                      <div class="text-xs font-semibold mb-2 text-green-400">Suggested Fix:</div>
-                      <pre class="text-xs text-green-400 font-mono whitespace-pre-wrap"><code>{{ suggestion.fix }}</code></pre>
-                    </div>
-                  </div>
-                  <button
-                    @click="applySuggestion(suggestion)"
-                    class="mt-3 px-3 py-1 rounded text-xs font-medium transition-colors"
-                    :class="isDarkMode 
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                  >
-                    Apply Suggestion
-                  </button>
+          <template #footer>
+            <UiButton variant="primary" icon="sparkles" class="w-full" :loading="isLoading" :disabled="!canAnalyze" @click="analyze">
+              {{ isLoading ? 'Reviewing…' : 'Get suggestions' }}
+            </UiButton>
+          </template>
+        </UiPanel>
+
+        <div class="lg:col-span-3">
+          <UiPanel v-if="result" title="Suggestions" :description="result.summary">
+            <template #actions>
+              <UiButton size="sm" variant="ghost" icon="x" @click="result = null">Clear</UiButton>
+            </template>
+
+            <UiEmptyState
+              v-if="!result.suggestions.length"
+              title="Nothing to change"
+              body="Claude found no design system or accessibility changes to suggest for this code."
+              :bordered="false"
+            />
+            <ul v-else class="space-y-6">
+              <li v-for="suggestion in result.suggestions" :key="suggestion.id" class="space-y-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <AppIcon :name="SEVERITY[suggestion.severity].icon" class="text-base text-ink-secondary" />
+                  <h3 class="text-base font-semibold text-ink-strong">{{ suggestion.title }}</h3>
+                  <UiChip :tone="SEVERITY[suggestion.severity].tone">{{ SEVERITY[suggestion.severity].label }}</UiChip>
+                  <UiChip>{{ CATEGORY[suggestion.category] }}</UiChip>
                 </div>
-              </div>
-            </div>
-
-            <!-- Component Recommendations -->
-            <div 
-              v-if="recommendations.length > 0"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Recommended Components
-              </h3>
-              <div class="grid md:grid-cols-2 gap-4">
-                <div
-                  v-for="rec in recommendations"
-                  :key="rec.id"
-                  class="p-4 rounded-lg border cursor-pointer transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700 hover:border-indigo-500' 
-                    : 'bg-gray-50 border-gray-200 hover:border-indigo-500'"
-                >
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ rec.name }}
-                  </div>
-                  <div class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ rec.description }}
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs px-2 py-1 rounded" :class="isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700'">
-                      {{ rec.matchScore }}% match
-                    </span>
-                  </div>
+                <p class="text-sm text-ink-secondary">{{ suggestion.description }}</p>
+                <div v-if="suggestion.components.length || suggestion.tokens.length" class="flex flex-wrap items-center gap-2">
+                  <span class="text-sm text-ink-secondary">Use</span>
+                  <UiChip v-for="component in suggestion.components" :key="component.id" tone="accent" icon="blocks">{{ component.name }}</UiChip>
+                  <UiChip v-for="token in suggestion.tokens" :key="token.name" icon="palette">{{ token.name }}</UiChip>
                 </div>
-              </div>
-            </div>
+                <UiCodeBlock v-if="suggestion.fix" :code="suggestion.fix" label="Suggested change" />
+              </li>
+            </ul>
 
-            <!-- Empty State -->
-            <div v-if="suggestions.length === 0 && recommendations.length === 0" class="text-center py-12 rounded-lg border" :class="isDarkMode ? 'border-gray-700 bg-slate-900' : 'border-gray-200 bg-white'">
-              <AppIcon name="brain" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
-              <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                No suggestions yet
+            <template #footer>
+              <p class="text-sm text-ink-secondary">
+                <template v-if="result.removedReferences.length">
+                  Left out {{ result.removedReferences.length === 1 ? 'a name' : `${result.removedReferences.length} names` }}
+                  that {{ result.removedReferences.length === 1 ? "isn't" : "aren't" }} in the design system:
+                  {{ result.removedReferences.join(', ') }}.
+                </template>
+                Written by {{ result.model }}. Check suggestions before you use them.
               </p>
-              <p class="text-sm" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
-                Analyze a component or use quick suggestions to get AI-powered recommendations
-              </p>
-            </div>
-          </div>
-        </div>
+            </template>
+          </UiPanel>
+
+          <UiPanel v-else-if="isLoading" title="Suggestions">
+            <UiSpinner label="Claude is reviewing your code…" />
+          </UiPanel>
+
+          <UiEmptyState
+            v-else
+            title="No suggestions yet"
+            body="Paste component code, choose what to look for, then Get suggestions."
+            spot="ai/ai-components"
+          />
         </div>
       </div>
-    </div>
-  </div>
+    </PageSection>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
+import { computed, onMounted, ref } from 'vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiChip,
+  UiCode,
+  UiCodeBlock,
+  UiEmptyState,
+  UiPanel,
+  UiSegmented,
+  UiSpinner,
+  UiTextarea,
+} from '../components/ui';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient from '../services/api.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const componentCode = ref('');
-const suggestions = ref([]);
-const recommendations = ref([]);
+/**
+ * AI suggestions: POST /ai/suggestions sends the pasted code to Claude with
+ * the design system's components and tokens. The backend drops any component
+ * or token the model names that doesn't exist, and says which.
+ */
+const MAX_CODE = 20000;
 
-const analyzeComponent = () => {
-  if (!componentCode.value.trim()) return;
-  
-  // Mock AI analysis
-  suggestions.value = [
-    {
-      id: 1,
-      type: 'warning',
-      category: 'accessibility',
-      title: 'Missing ARIA Label',
-      description: 'Interactive elements should have proper ARIA labels for screen readers.',
-      fix: '<button aria-label="Close dialog">×</button>'
-    },
-    {
-      id: 2,
-      type: 'error',
-      category: 'accessibility',
-      title: 'Low Color Contrast',
-      description: 'Text color does not meet WCAG AA contrast requirements.',
-      fix: 'color: #000000; // Use darker color for better contrast'
-    },
-    {
-      id: 3,
-      type: 'info',
-      category: 'performance',
-      title: 'Consider Using CSS Variables',
-      description: 'Using CSS variables for colors improves maintainability.',
-      fix: 'background-color: var(--color-primary);'
-    }
-  ];
+const FOCUSES = [
+  { value: 'general', label: 'Everything' },
+  { value: 'accessibility', label: 'Accessibility' },
+  { value: 'components', label: 'Components and tokens' },
+  { value: 'patterns', label: 'Patterns' },
+];
+
+const SEVERITY = {
+  error: { label: 'Fix', tone: 'danger', icon: 'circle-alert' },
+  warning: { label: 'Should change', tone: 'warning', icon: 'triangle-alert' },
+  info: { label: 'Could improve', tone: 'info', icon: 'info' },
 };
 
-const getAccessibilitySuggestions = () => {
-  suggestions.value = [
-    {
-      id: 4,
-      type: 'warning',
-      category: 'accessibility',
-      title: 'Add Keyboard Navigation',
-      description: 'Ensure all interactive elements are keyboard accessible.',
-      fix: '@keydown.enter="handleClick"\n@keydown.space.prevent="handleClick"'
-    },
-    {
-      id: 5,
-      type: 'warning',
-      category: 'accessibility',
-      title: 'Add Focus Indicators',
-      description: 'Visible focus indicators help keyboard users navigate.',
-      fix: ':focus-visible {\n  outline: 2px solid #4f46e5;\n  outline-offset: 2px;\n}'
-    }
-  ];
+const CATEGORY = {
+  accessibility: 'Accessibility',
+  components: 'Components',
+  tokens: 'Tokens',
+  patterns: 'Patterns',
+  maintainability: 'Maintainability',
 };
 
-const getComponentRecommendations = () => {
-  recommendations.value = [
-    {
-      id: 1,
-      name: 'Button',
-      description: 'Based on your usage patterns, consider using the Button component',
-      matchScore: 95
-    },
-    {
-      id: 2,
-      name: 'Card',
-      description: 'Similar patterns found in Card component',
-      matchScore: 87
-    },
-    {
-      id: 3,
-      name: 'Modal',
-      description: 'You might benefit from the Modal component',
-      matchScore: 72
-    }
-  ];
-};
+const { notice, showNotice, clearNotice } = useNotice();
+const code = ref('');
+const focus = ref('general');
+const isLoading = ref(false);
+const result = ref(null);
+/** null until the status check answers */
+const configured = ref(null);
 
-const getPatternSuggestions = () => {
-  suggestions.value = [
-    {
-      id: 6,
-      type: 'info',
-      category: 'pattern',
-      title: 'Consider Compound Component Pattern',
-      description: 'Your component could benefit from the compound component pattern for better flexibility.',
-      fix: '// Use composition instead of props\n<Card>\n  <Card.Header>Title</Card.Header>\n  <Card.Body>Content</Card.Body>\n</Card>'
-    }
-  ];
-};
+const tooLong = computed(() => code.value.length > MAX_CODE);
+const canAnalyze = computed(() => !!code.value.trim() && !tooLong.value && configured.value !== false && !isLoading.value);
 
-const applySuggestion = (suggestion) => {
-  if (suggestion.fix) {
-    componentCode.value = suggestion.fix;
-  }
-};
-
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
-
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
-  }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
+onMounted(async () => {
+  try {
+    const { data } = await apiClient.get('/api/v1/ai/status');
+    configured.value = !!data.configured;
+  } catch {
+    // Unknown: let the person try, and show whatever the suggestions route says
   }
 });
+
+const analyze = async () => {
+  if (!canAnalyze.value) return;
+  isLoading.value = true;
+  result.value = null;
+  clearNotice();
+  try {
+    const { data } = await apiClient.post('/api/v1/ai/suggestions', { code: code.value, focus: focus.value }, { timeout: 180000 });
+    result.value = data;
+  } catch (error) {
+    const status = error.response?.status;
+    const message = error.response?.data?.message;
+    if (status === 503 && /not configured/i.test(message ?? '')) configured.value = false;
+    showNotice(
+      Array.isArray(message) ? message.join(' ') : message || 'Could not reach the AI suggestions service. Please try again.',
+      'error',
+    );
+  } finally {
+    isLoading.value = false;
+  }
+};
 </script>
-
-<style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
-</style>
-
