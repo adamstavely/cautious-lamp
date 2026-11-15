@@ -2,15 +2,15 @@
   <div class="ui-codeblock">
     <div class="ui-codeblock-head">
       <span class="ui-codeblock-label">{{ label }}</span>
-      <UiButton size="sm" variant="ghost" :icon="copied ? 'check' : 'copy'" :label="copied ? 'Copied' : 'Copy'" @click="copy" />
+      <UiButton size="sm" variant="ghost" :icon="status === 'copied' ? 'check' : status === 'failed' ? 'circle-alert' : 'copy'" :label="buttonLabel" @click="copy" />
     </div>
     <pre class="ui-codeblock-pre" tabindex="0" :aria-label="label"><code>{{ code }}</code></pre>
-    <p class="sr-only" aria-live="polite">{{ copied ? `${label} copied` : '' }}</p>
+    <p class="sr-only" aria-live="polite">{{ announcement }}</p>
   </div>
 </template>
 
 <script setup>
-import { onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import UiButton from './UiButton.vue';
 
 /** Generated code or markup with a copy button; `label` names it ("CSS", "Vue component") */
@@ -20,17 +20,27 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['copied', 'copy-failed']);
-const copied = ref(false);
+// idle · copied · failed (the browser refused clipboard access); resets after a moment
+const status = ref('idle');
 let timer;
+const buttonLabel = computed(() => ({ idle: 'Copy', copied: 'Copied', failed: "Couldn't copy" })[status.value]);
+const announcement = computed(
+  () => ({ idle: '', copied: `${props.label} copied`, failed: `Couldn't copy ${props.label}. Select the code and copy it instead.` })[status.value],
+);
+
+const show = (next) => {
+  status.value = next;
+  clearTimeout(timer);
+  timer = setTimeout(() => (status.value = 'idle'), next === 'failed' ? 4000 : 2000);
+};
 
 const copy = async () => {
   try {
     await navigator.clipboard.writeText(props.code);
-    copied.value = true;
+    show('copied');
     emit('copied');
-    clearTimeout(timer);
-    timer = setTimeout(() => (copied.value = false), 2000);
   } catch {
+    show('failed');
     emit('copy-failed');
   }
 };

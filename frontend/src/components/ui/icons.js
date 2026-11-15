@@ -259,6 +259,14 @@ import {
   X,
   Zap,
   ZoomIn,
+  Atom,
+  Repeat,
+  Smile,
+  SpellCheck,
+  MousePointerClick,
+  Hand,
+  LifeBuoy,
+  CalendarClock,
 } from 'lucide-vue-next';
 
 export const ICONS = {
@@ -517,6 +525,14 @@ export const ICONS = {
   'x': X,
   'zap': Zap,
   'zoom-in': ZoomIn,
+  'atom': Atom,
+  'repeat': Repeat,
+  'smile': Smile,
+  'spell-check': SpellCheck,
+  'mouse-pointer-click': MousePointerClick,
+  'hand': Hand,
+  'life-buoy': LifeBuoy,
+  'calendar-clock': CalendarClock,
 };
 
 /**
