@@ -37,13 +37,13 @@ defineProps({
 
 <style scoped>
 .page-hero {
-  @apply grid md:grid-cols-content-aside items-center gap-10 border-b border-line;
+  @apply relative isolate grid md:grid-cols-content-aside items-center gap-10 border-b border-line;
 }
 .page-hero-page {
-  @apply relative isolate pb-14 md:pb-16;
+  @apply pb-14 md:pb-16;
 }
-/* Index pages sit on graph paper: a blueprint grid that fades out at the edges */
-.page-hero-page::before {
+/* Every hero sits on graph paper: a blueprint grid that fades out at the edges */
+.page-hero::before {
   @apply absolute inset-x-0 -top-10 bottom-0 -z-10 pointer-events-none;
   content: '';
   --major: calc(var(--app-hero-grid-cell) * 5);
