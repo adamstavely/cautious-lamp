@@ -87,7 +87,7 @@ export function createComponentSource() {
     listComponents: () => components,
     getComponent: (id) => components.find((c) => c.id === id),
     usage: (id) => usage.get(id) ?? [],
-    setSharing: (id, sharing) => {
+    setSharing: async (id, sharing) => {
       const c = components.find((x) => x.id === id);
       if (!c) return undefined;
       c.isGlobal = sharing.isGlobal;

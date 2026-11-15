@@ -300,7 +300,7 @@ describe('Governance scan visibility', () => {
     });
     const designSystem = h.moduleRef.get(DesignSystemService);
     // Not PascalCase, so the naming rule reports it by name
-    designSystem.createComponent({ id: 'alpha-secret', name: 'alphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
+    await designSystem.createComponent({ id: 'alpha-secret', name: 'alphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
   });
 
   afterAll(async () => {

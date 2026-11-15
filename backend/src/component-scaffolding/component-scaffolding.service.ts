@@ -741,6 +741,7 @@ export const config: Config = {
   async createComponentFromScaffold(rawInput: ComponentScaffoldInput): Promise<CreatedComponentResult> {
     const input = this.normalizeInput(rawInput);
     const componentId = this.toKebabCase(input.name);
+    await this.designSystemService.ready();
     if (this.designSystemService.getComponentById(componentId)) {
       throw new ConflictException(`A component with id '${componentId}' already exists`);
     }
@@ -752,7 +753,7 @@ export const config: Config = {
       ? (input.status as (typeof DESIGN_SYSTEM_STATUSES)[number])
       : 'in-progress';
 
-    const component = this.designSystemService.createComponent({
+    const component = await this.designSystemService.createComponent({
       id: componentId,
       name: input.name,
       description: input.description,

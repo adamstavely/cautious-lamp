@@ -1,113 +1,86 @@
-import { Injectable } from '@nestjs/common';
-import type { RequestComment } from '../component-requests/component-request.types';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { DocumentStore, VersionConflictError } from '../reviews/document-store';
+import { ComponentIssue, ISSUE_STORE, IssueSeverity } from './design-system-stores';
 
-export interface ComponentIssue {
-  id: string;
+export type { ComponentIssue };
+
+const MAX_WRITE_ATTEMPTS = 5;
+
+export interface IssueFilters {
+  status?: string;
+  severity?: string;
+  componentId?: string;
+}
+
+export interface CreateIssueInput {
   title: string;
   description: string;
   category: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: IssueSeverity;
   reportedBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-  status: 'open' | 'investigating' | 'in-progress' | 'resolved' | 'closed';
-  assignedTo?: string;
   componentId?: string;
-  comments: RequestComment[];
 }
 
+export type IssueUpdate = Partial<Pick<ComponentIssue, 'title' | 'description' | 'status' | 'severity' | 'assignedTo'>>;
+
+/** The fields an update may change; anything else in the body is ignored */
+const UPDATABLE: ReadonlyArray<keyof IssueUpdate> = ['title', 'description', 'status', 'severity', 'assignedTo'];
+
+/** Issues reported against design-system components, stored in Elasticsearch (design-system-issues) */
 @Injectable()
 export class ComponentIssueService {
-  private issues = new Map<string, ComponentIssue>();
+  constructor(@Inject(ISSUE_STORE) private readonly store: DocumentStore<ComponentIssue>) {}
 
-  constructor() {
-    // Initialize with some example data
-    this.initializeExampleData();
-  }
-
-  private initializeExampleData() {
-    const issue1: ComponentIssue = {
-      id: 'issue-1',
-      title: 'Button hover state not working in dark mode',
-      description: 'The button component hover state is not visible in dark mode.',
-      category: 'bug',
-      severity: 'medium',
-      reportedBy: 'user-1',
-      createdAt: new Date('2024-01-20'),
-      updatedAt: new Date('2024-01-20'),
-      status: 'open',
-      componentId: 'button',
-      comments: []
-    };
-
-    this.issues.set(issue1.id, issue1);
-  }
-
-  // Issue CRUD operations
-  createIssue(data: {
-    title: string;
-    description: string;
-    category: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    reportedBy: string;
-    componentId?: string;
-  }): ComponentIssue {
-    const id = `issue-${Date.now()}`;
+  async create(data: CreateIssueInput): Promise<ComponentIssue> {
+    const now = new Date().toISOString();
     const issue: ComponentIssue = {
-      id,
+      id: `issue-${randomUUID()}`,
       title: data.title,
       description: data.description,
       category: data.category,
       severity: data.severity,
       reportedBy: data.reportedBy,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
       status: 'open',
       componentId: data.componentId,
-      comments: []
+      comments: [],
     };
-
-    this.issues.set(id, issue);
+    await this.store.create(issue);
     return issue;
   }
 
-  getIssue(id: string): ComponentIssue | null {
-    return this.issues.get(id) || null;
+  async get(id: string): Promise<ComponentIssue | null> {
+    return (await this.store.get(id))?.doc ?? null;
   }
 
-  getAllIssues(filters?: {
-    status?: string;
-    severity?: string;
-    componentId?: string;
-  }): ComponentIssue[] {
-    let issues = Array.from(this.issues.values());
+  /** Newest first */
+  async list(filters: IssueFilters = {}): Promise<ComponentIssue[]> {
+    const where: Record<string, string> = {};
+    if (filters.status) where.status = filters.status;
+    if (filters.severity) where.severity = filters.severity;
+    if (filters.componentId) where.componentId = filters.componentId;
+    return this.store.list({ where });
+  }
 
-    if (filters) {
-      if (filters.status) {
-        issues = issues.filter(i => i.status === filters.status);
+  /** The updated issue, or null when there is no such issue */
+  async update(id: string, updates: IssueUpdate): Promise<ComponentIssue | null> {
+    for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
+      const stored = await this.store.get(id);
+      if (!stored) return null;
+      const issue = stored.doc;
+      for (const field of UPDATABLE) {
+        if (updates[field] !== undefined) (issue as unknown as Record<string, unknown>)[field] = updates[field];
       }
-      if (filters.severity) {
-        issues = issues.filter(i => i.severity === filters.severity);
-      }
-      if (filters.componentId) {
-        issues = issues.filter(i => i.componentId === filters.componentId);
+      issue.updatedAt = new Date().toISOString();
+      try {
+        await this.store.replace(issue, stored.version);
+        return issue;
+      } catch (error) {
+        if (!(error instanceof VersionConflictError)) throw error;
       }
     }
-
-    return issues.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }
-
-  updateIssue(id: string, updates: Partial<ComponentIssue>): ComponentIssue | null {
-    const issue = this.issues.get(id);
-    if (!issue) return null;
-
-    const updated = {
-      ...issue,
-      ...updates,
-      updatedAt: new Date()
-    };
-
-    this.issues.set(id, updated);
-    return updated;
+    throw new ConflictException('The issue was changed by someone else at the same time, please try again');
   }
 }

@@ -1,7 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { brotliCompressSync, constants, gzipSync } from 'zlib';
 import { analyzeComponentBundle, bundleStatus, measureCode } from './bundle-analysis.service';
-import { DesignSystemService } from './design-system.service';
+import { createDesignSystemService } from './testing/in-memory-stores';
 
 describe('bundle analysis', () => {
   it('measures raw, gzip and brotli sizes of known input', () => {
@@ -48,8 +48,8 @@ describe('bundle analysis', () => {
     expect(bundleStatus(150_000)).toBe('error');
   });
 
-  it('DesignSystemService.analyzeBundle measures the stored color-picker source', () => {
-    const service = new DesignSystemService();
+  it('DesignSystemService.analyzeBundle measures the stored color-picker source', async () => {
+    const service = await createDesignSystemService();
     const component = service.getComponentById('color-picker')!;
     const result = service.analyzeBundle('color-picker', true) as ReturnType<typeof analyzeComponentBundle>;
     expect(result.vueSize).toBe(Buffer.byteLength(component.code.vue, 'utf8'));

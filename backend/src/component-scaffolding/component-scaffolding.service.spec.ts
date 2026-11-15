@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { createDesignSystemService } from '../design-system/testing/in-memory-stores';
 import { ComponentScaffoldingService, ComponentScaffoldInput } from './component-scaffolding.service';
 
 describe('ComponentScaffoldingService.createComponentFromScaffold', () => {
@@ -20,8 +21,8 @@ describe('ComponentScaffoldingService.createComponentFromScaffold', () => {
     status: 'experimental',
   };
 
-  beforeEach(() => {
-    designSystem = new DesignSystemService();
+  beforeEach(async () => {
+    designSystem = await createDesignSystemService();
     service = new ComponentScaffoldingService(designSystem);
   });
 

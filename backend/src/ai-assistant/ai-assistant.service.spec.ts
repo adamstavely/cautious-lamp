@@ -12,6 +12,7 @@ jest.mock('@anthropic-ai/sdk', () => {
 import { AuthPrincipal } from '../auth/principal';
 import { ComponentAccessService } from '../design-system/component-access.service';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { createDesignSystemService } from '../design-system/testing/in-memory-stores';
 import { PatternsLibraryService } from '../patterns-library/patterns-library.service';
 import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { AI_MODEL, AiAssistantService, conversation } from './ai-assistant.service';
@@ -28,9 +29,12 @@ const reply = (output: unknown, overrides: Record<string, unknown> = {}) => ({
 
 describe('AiAssistantService', () => {
   const originalEnv = { ...process.env };
-  const designSystem = new DesignSystemService();
-  // Ann may see the library components but not Alpha's private one
-  designSystem.createComponent({ id: 'alpha-secret', name: 'AlphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
+  let designSystem: DesignSystemService;
+  beforeAll(async () => {
+    designSystem = await createDesignSystemService();
+    // Ann may see the library components but not Alpha's private one
+    await designSystem.createComponent({ id: 'alpha-secret', name: 'AlphaSecret', description: 'Alpha only', workspaceId: 'ws_alpha' });
+  });
   const access = {
     list: jest.fn(async () => designSystem.getAllComponents().filter((c) => !c.workspaceId)),
   } as unknown as ComponentAccessService;

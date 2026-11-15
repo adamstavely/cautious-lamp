@@ -15,7 +15,7 @@ import { WORKSPACE_RESOURCES_INDEX, WORKSPACE_RESOURCE_PROPERTIES, WORKSPACE_RES
 import { WorkspacesController } from './workspaces.controller';
 import { WorkspacesService } from './workspaces.service';
 
-/** Components from DesignSystemService and usage from AnalyticsService (both in memory) */
+/** Components from DesignSystemService and usage from AnalyticsService */
 export function designSystemComponentSource(
   designSystem: DesignSystemService,
   analytics: AnalyticsService,
@@ -24,12 +24,9 @@ export function designSystemComponentSource(
     listComponents: () => designSystem.getAllComponents() as unknown as WorkspaceComponent[],
     getComponent: (id) => designSystem.getComponentById(id) as unknown as WorkspaceComponent | undefined,
     usage: (id) => analytics.getComponentUsage(id).map((r) => ({ applicationId: r.applicationId, usageCount: r.usageCount })),
-    setSharing: (id, sharing) => {
-      const component = designSystem.getComponentById(id);
-      if (!component) return undefined;
-      component.isGlobal = sharing.isGlobal;
-      component.sharedWith = sharing.isGlobal ? undefined : sharing.sharedWith;
-      return component as unknown as WorkspaceComponent;
+    setSharing: async (id, sharing) => {
+      if (!designSystem.getComponentById(id)) return undefined;
+      return (await designSystem.setComponentSharing(id, sharing)) as unknown as WorkspaceComponent;
     },
   };
 }

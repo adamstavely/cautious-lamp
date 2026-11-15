@@ -18,16 +18,16 @@ export interface ComponentUsageRecord {
 }
 
 /**
- * Components live in DesignSystemService and usage in AnalyticsService (both
- * in memory today). The module wires this to them; tests use a fake.
+ * Components live in DesignSystemService (stored in Elasticsearch) and usage
+ * in AnalyticsService. The module wires this to them; tests use a fake.
  */
 export interface WorkspaceComponentSource {
   listComponents(): WorkspaceComponent[];
   getComponent(id: string): WorkspaceComponent | undefined;
   /** Usage recorded by application scans, per application */
   usage(componentId: string): ComponentUsageRecord[];
-  /** Replaces a component's sharing; returns the updated component */
-  setSharing(componentId: string, sharing: { sharedWith: string[]; isGlobal: boolean }): WorkspaceComponent | undefined;
+  /** Replaces a component's sharing and stores it; returns the updated component */
+  setSharing(componentId: string, sharing: { sharedWith: string[]; isGlobal: boolean }): Promise<WorkspaceComponent | undefined>;
 }
 
 /** Components a workspace can see: its own, those shared with it, and global ones */

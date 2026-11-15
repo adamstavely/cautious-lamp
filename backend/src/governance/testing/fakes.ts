@@ -14,6 +14,7 @@ import { WORKSPACE_STORE, WorkspaceDoc } from '../../workspaces/workspace.types'
 import { READ_SCOPE } from '../evidence-access';
 import { ApplicationDirectory, DesignSystemSource, GovernanceApplication } from '../sources';
 import { DesignComponent, DesignToken } from '../governance.types';
+import { designSystemStoreProviders } from '../../design-system/testing/in-memory-stores';
 
 export const API_KEY = 'test-key';
 export const ADMIN_KEY = 'admin-key';
@@ -124,6 +125,7 @@ export function readScopeProviders(workspaces: WorkspaceDoc[] = []) {
   workspaces.forEach((ws) => store.forceWrite(ws));
   return [
     DesignSystemService,
+    ...designSystemStoreProviders(),
     ComponentAccessService,
     WorkspaceAccessService,
     { provide: WORKSPACE_STORE, useValue: store },

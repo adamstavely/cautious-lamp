@@ -144,6 +144,9 @@ Besides the routes above, these need a permission on the server (`403` otherwise
 | `PUT /component-requests/:id` (title, description, use case only) | the request's author, while it is submitted, under review or needs more info |
 | `DELETE /component-requests/:id` | the request's author while it is open, or `roadmap:edit` |
 | `POST /components` | `component:create`, and the `editor` role in `workspaceId` if one is given. `isGlobal` is ignored: sharing is set through the workspace routes. |
+| `POST /component-scaffolding/create` (generates a component and adds it to the design system) | `component:create`. `POST /component-scaffolding/scaffold`, which only returns the generated files, needs no permission. |
+| `POST /issues` (report an issue against a component) | `feedback:create` |
+| `PUT /issues/:id` (triage: status, severity, assignee) | `component:edit` |
 | `POST /components/:id/variants`, `DELETE /components/:id/variants/:name` | `component:edit`, and for a workspace's component the `editor` role in that workspace (see [Components and workspaces](#components-and-workspaces)) |
 | `PUT /components/:id/status`, `PUT /components/:id/deprecation`, `PUT /components/:id/dependencies` (lifecycle: status, deprecation with replacement and sunset date, dependencies) | `component:edit`, and for a workspace's component the `editor` role in that workspace. A replacement or dependency must be a component the caller can see; dependencies can't form a cycle. |
 | `POST /patterns-library/patterns`, `PUT /patterns-library/patterns/:id`, `DELETE /patterns-library/patterns/:id` (including a pattern's `status`) | `pattern:create`, `pattern:edit`, `pattern:delete` |
@@ -157,7 +160,7 @@ Feature flags: `GET /feature-flags/check/:key` evaluates the flag for the caller
 
 A component that belongs to a workspace (`workspaceId`) is visible only to that workspace's members, to members of workspaces it is shared with (`sharedWith`), and to everyone if `isGlobal`. Components without a workspace are the shared library and visible to all. `admin:users` holders see everything, as they do in workspaces; API keys can't be workspace members, so they see only library and global components.
 
-The global routes apply this: `GET /components`, `/components/status/:status`, `/component-metadata`, `/search`, `/search/suggestions`, `/search/filters` and the AI chat leave hidden components out, and `/components/:id` (with `/variants`, `/test-coverage`, `/linked-requests`) answers a hidden component exactly like a missing one.
+The global routes apply this: `GET /components`, `/components/status/:status`, `/component-metadata`, `/search`, `/search/suggestions`, `/search/filters` and the AI chat leave hidden components out, and `/components/:id` (with `/variants` and `/test-coverage`) answers a hidden component exactly like a missing one.
 
 Reading a component is not enough to change it. Changing a workspace's component (saving and deleting variants, and its status, deprecation and dependencies) needs the route's permission (`component:edit`) **and** the `editor` role or higher in the component's own workspace (`admin:users` holders act as owner there). Sharing a component with another workspace, or making it global, never lets anyone else change it: those readers get `403` ("Requires the editor role in the component's workspace"). API keys can't be workspace members, so only the admin key can change workspace components. Library components (no workspace) keep the previous rule: `component:edit` is enough. A hidden component still answers like a missing one. The check is `ComponentAccessService.getForWrite`; new component-changing routes must use it.
 

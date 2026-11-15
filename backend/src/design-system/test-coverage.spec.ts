@@ -1,11 +1,15 @@
 import { NotFoundException } from '@nestjs/common';
 import { DesignSystemService } from './design-system.service';
+import { createDesignSystemService } from './testing/in-memory-stores';
 
 describe('DesignSystemService.calculateTestCoverage', () => {
-  const service = new DesignSystemService();
+  let service: DesignSystemService;
+  beforeAll(async () => {
+    service = await createDesignSystemService();
+  });
 
-  it('reports no coverage data, and the testable surface from real props', () => {
-    service.createComponent({
+  it('reports no coverage data, and the testable surface from real props', async () => {
+    await service.createComponent({
       id: 'coverage-fixture',
       name: 'Coverage Fixture',
       description: 'fixture',
