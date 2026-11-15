@@ -1,11 +1,12 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, NotImplementedException, Param, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, NotFoundException, Param, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
 import { AuthPrincipal, Principal, Public } from '../auth/principal';
+import { UsersService } from '../auth/users.service';
 import { parsePaginationParams } from '../common/pagination/pagination.types';
 import { ApiKeyGuard } from '../common/security/api-key.guard';
+import { PublicBaseUrl } from '../reviews/request-context';
 import { CreateProjectDto } from './dto/create-project.dto';
-import { TriggerTestDto } from './dto/trigger-test.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
-import { CreateBaselineDto, NotificationSettingsDto, WebhookSecretDto } from './dto/project-settings.dto';
+import { CreateBaselineDto, NotificationSettingsDto, ShareProjectDto, WebhookSecretDto } from './dto/project-settings.dto';
 import { creatorOf } from './project-access';
 import { VisualRegressionService } from './visual-regression.service';
 
@@ -18,7 +19,10 @@ import { VisualRegressionService } from './visual-regression.service';
 @Controller('api/v1/visual-regression')
 @UseGuards(ApiKeyGuard)
 export class VisualRegressionController {
-  constructor(private readonly visualRegressionService: VisualRegressionService) {}
+  constructor(
+    private readonly visualRegressionService: VisualRegressionService,
+    private readonly users: UsersService,
+  ) {}
 
   @Get('projects')
   async getProjects(
@@ -55,20 +59,28 @@ export class VisualRegressionController {
     return { message: 'Project deleted successfully' };
   }
 
-  @Post('projects/:id/runs')
-  async triggerTest(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Body() dto: TriggerTestDto) {
-    await this.visualRegressionService.authorizeProject(principal, projectId, 'run');
-    return this.visualRegressionService.triggerTest(projectId, principal.id, dto);
+  /**
+   * Argos builds are created by uploading screenshots from CI, so runs can't
+   * be started here. This returns what the project's CI runs, from its settings.
+   */
+  @Get('projects/:id/ci-setup')
+  async getCiSetup(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @PublicBaseUrl() publicBaseUrl: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
+    return this.visualRegressionService.getCiSetup(projectId, publicBaseUrl);
   }
 
+  /** The project's Argos builds, newest first; `from`/`to` (YYYY-MM-DD) limit when they started */
   @Get('projects/:id/runs')
   async getTestRuns(
     @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
-    @Query() query: { page?: string; limit?: string; offset?: string },
+    @Query() query: { page?: string; limit?: string; offset?: string; from?: string; to?: string },
   ) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
-    return this.visualRegressionService.getTestRuns(projectId, parsePaginationParams(query));
+    return this.visualRegressionService.getTestRuns(projectId, parsePaginationParams(query), {
+      from: typeof query.from === 'string' ? query.from : undefined,
+      to: typeof query.to === 'string' ? query.to : undefined,
+    });
   }
 
   @Get('runs/:id')
@@ -102,7 +114,7 @@ export class VisualRegressionController {
     return { message: 'Diff rejected successfully' };
   }
 
-  // Analytics & Reporting
+  // Analytics
   @Get('projects/:id/analytics')
   async getProjectAnalytics(
     @Principal() principal: AuthPrincipal,
@@ -114,18 +126,33 @@ export class VisualRegressionController {
     return this.visualRegressionService.getProjectAnalytics(projectId, startDate, endDate);
   }
 
-  /** 501: there is no PDF renderer */
-  @Get('projects/:id/reports/pdf')
-  async generatePDFReport(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
-    await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
-    return this.visualRegressionService.generatePDFReport(projectId);
+  // Sharing: besides its workspace, a project can be shared with people one by one
+  @Get('projects/:id/shares')
+  async getShares(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
+    return this.visualRegressionService.getShares(projectId);
   }
 
-  /** 501: projects are shared by adding people to their workspace */
+  /** Gives an active user the viewer or editor role on this project (body `{ email, role }`) */
   @Post('projects/:id/share')
-  async shareProject(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+  async shareProject(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Body() dto: ShareProjectDto) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
-    throw new NotImplementedException("Projects are shared through their workspace. Add people to the project's workspace instead.");
+    const user = await this.users.findByEmail(dto.email);
+    if (!user || user.status !== 'active') {
+      throw new NotFoundException('No active user has that email. Ask an administrator to create their account first.');
+    }
+    if (principal.type === 'user' && user.id === principal.id) throw new BadRequestException('You already have access to this project');
+    return this.visualRegressionService.shareProject(projectId, { userId: user.id, email: user.email, name: user.name }, dto.role, {
+      id: principal.id,
+      name: principal.name,
+    });
+  }
+
+  @Delete('projects/:id/share/:userId')
+  @HttpCode(204)
+  async unshareProject(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Param('userId') userId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'manage');
+    await this.visualRegressionService.unshareProject(projectId, userId);
   }
 
   /** Who the project belongs to (its workspace, application and creator) */
@@ -146,27 +173,35 @@ export class VisualRegressionController {
     return this.visualRegressionService.createBaseline(projectId, dto, principal.id);
   }
 
+  /** Every baseline version, newest first, with `current` on the one builds are compared against */
   @Get('projects/:id/baselines')
   async getBaselines(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
     return this.visualRegressionService.getBaselines(projectId);
   }
 
-  /** 501: Argos baselines change only by approving builds in Argos */
+  @Get('projects/:id/baselines/history')
+  async getBaselineHistory(@Principal() principal: AuthPrincipal, @Param('id') projectId: string) {
+    await this.visualRegressionService.authorizeProject(principal, projectId, 'read');
+    return this.visualRegressionService.getBaselineHistory(projectId);
+  }
+
+  /** Makes an earlier baseline current again; the CI upload then compares against its commit */
   @Post('projects/:id/baselines/:baselineId/rollback')
+  @HttpCode(200)
   async rollbackBaseline(
     @Principal() principal: AuthPrincipal,
     @Param('id') projectId: string,
     @Param('baselineId') baselineId: string,
   ) {
     await this.visualRegressionService.authorizeProject(principal, projectId, 'run');
-    return this.visualRegressionService.rollbackBaseline(projectId, baselineId);
+    return this.visualRegressionService.rollbackBaseline(projectId, baselineId, principal.id);
   }
 
-  // Argos webhooks
+  // Build notifications from CI
   /**
-   * Sets the secret Argos signs webhooks with (body `{ secret? }`; generated
-   * when left out). The response is the only time the secret is shown.
+   * Sets the secret CI signs build notifications with (body `{ secret? }`;
+   * generated when left out). The response is the only time the secret is shown.
    */
   @Post('projects/:id/webhook-secret')
   async setWebhookSecret(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Body() dto: WebhookSecretDto) {
@@ -202,7 +237,8 @@ export class VisualRegressionController {
 }
 
 /**
- * Argos calls this without an API key, so it is public and lives outside the
+ * CI calls this after uploading screenshots to Argos (Argos itself sends no
+ * webhooks), without an API key, so it is public and lives outside the
  * guarded controller. Each request must carry a valid signature instead.
  */
 @Controller('api/v1/visual-regression')
@@ -216,8 +252,7 @@ export class ArgosWebhookController {
     @Body() payload: any,
     @Request() req: { rawBody?: Buffer },
     @Headers('x-argos-signature') signature?: string,
-    @Headers('x-argos-event') event?: string,
   ) {
-    return this.visualRegressionService.handleWebhook(payload, signature, event, req.rawBody);
+    return this.visualRegressionService.handleWebhook(payload, signature, req.rawBody);
   }
 }

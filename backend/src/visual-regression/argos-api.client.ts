@@ -1,38 +1,107 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
+
+/**
+ * Argos REST API v2 (https://argos-ci.com/docs/api-reference; the schema is
+ * published in @argos-ci/api-client). Projects are addressed as
+ * `{owner}/{project}` (account slug and project name). Requests carry a
+ * project token or a personal access token as a bearer token: either can read
+ * a project, its builds and their diffs, but reviews need a personal access token.
+ */
+export const ARGOS_API_URL = 'https://api.argos-ci.com/v2';
 
 export interface ArgosProject {
   id: string;
   name: string;
-  repository: string;
-  branch: string;
+  account: { id: string; slug: string };
+  defaultBaseBranch: string;
 }
+
+/** Build statuses: review states, conclusions and progress states */
+export type ArgosBuildStatus =
+  | 'accepted'
+  | 'rejected'
+  | 'no-changes'
+  | 'changes-detected'
+  | 'expired'
+  | 'pending'
+  | 'progress'
+  | 'error'
+  | 'aborted';
 
 export interface ArgosBuild {
   id: string;
-  projectId: string;
-  branch: string;
-  commit: string;
-  status: 'pending' | 'progress' | 'stable' | 'error';
-  createdAt: string;
-  updatedAt: string;
-  url?: string;
+  number: number;
+  head: { sha: string; branch: string };
+  base: { sha: string; branch: string } | null;
+  status: ArgosBuildStatus;
+  conclusion: 'no-changes' | 'changes-detected' | null;
+  stats: {
+    added: number;
+    removed: number;
+    unchanged: number;
+    changed: number;
+    ignored: number;
+    failure: number;
+    retryFailure: number;
+    total: number;
+  } | null;
+  metadata: {
+    testReport?: {
+      status: 'passed' | 'failed' | 'timedout' | 'interrupted';
+      stats?: { startTime?: string; duration?: number };
+    };
+  } | null;
+  url: string;
 }
 
-export interface ArgosScreenshot {
+interface ArgosSnapshot {
   id: string;
   name: string;
-  status: 'stable' | 'failure' | 'new' | 'removed';
-  baselineUrl?: string;
-  compareUrl?: string;
-  diffUrl?: string;
-  width?: number;
-  height?: number;
-  s3Id?: string;
+  url: string;
+  width: number | null;
+  height: number | null;
 }
 
-export interface ArgosBuildWithScreenshots extends ArgosBuild {
-  screenshots: ArgosScreenshot[];
+/** One screenshot of a build compared with its baseline */
+export interface ArgosSnapshotDiff {
+  id: string;
+  name: string;
+  status: 'pending' | 'removed' | 'failure' | 'added' | 'changed' | 'unchanged' | 'retryFailure' | 'ignored';
+  score: number | null;
+  /** The diff image */
+  url: string | null;
+  base: ArgosSnapshot | null;
+  head: ArgosSnapshot | null;
 }
+
+interface Page<T> {
+  pageInfo: { total: number; page: number; perPage: number };
+  results: T[];
+}
+
+/** Why the token or project can't be used */
+export type ArgosVerificationFailure = 'unauthorized' | 'project_not_found' | 'invalid_project_id' | 'unreachable' | 'error';
+
+export type ArgosVerificationFailed = { ok: false; reason: ArgosVerificationFailure; status?: number; message: string };
+
+export type ArgosVerification = { ok: true; project: ArgosProject } | ArgosVerificationFailed;
+
+/** A failed Argos call, with the HTTP status when Argos answered */
+export class ArgosApiError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+    this.name = 'ArgosApiError';
+  }
+}
+
+/** Splits `owner/project`; null when it isn't in that form */
+export function parseArgosProjectId(argosProjectId: string): { owner: string; project: string } | null {
+  const match = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/.exec((argosProjectId ?? '').trim());
+  return match ? { owner: match[1], project: match[2] } : null;
+}
+
+/** Most diffs fetched for one build (100 per page, Argos's maximum) */
+const MAX_DIFF_PAGES = 20;
 
 export class ArgosApiClient {
   private client: AxiosInstance;
@@ -40,193 +109,108 @@ export class ArgosApiClient {
   private token: string;
 
   constructor(baseUrl: string, token: string) {
-    // Normalize base URL (remove trailing slash)
-    this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
     this.token = token;
-
     this.client = axios.create({
       baseURL: this.baseUrl,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       timeout: 30000,
     });
   }
 
   /**
-   * Verify connection to Argos instance
-   * Note: This attempts to access the API root or health endpoint
-   * Adjust the endpoint based on your Argos instance configuration
+   * Checks the token against the project itself: 401/403 mean Argos refused
+   * the token, 404 that the project doesn't exist (or the token can't see it).
    */
-  async verifyConnection(): Promise<boolean> {
+  async verify(argosProjectId: string): Promise<ArgosVerification> {
+    if (!parseArgosProjectId(argosProjectId)) {
+      return { ok: false, reason: 'invalid_project_id', message: 'The Argos project must be written as owner/project, for example acme/web.' };
+    }
     try {
-      // Try to access projects endpoint or health check
-      // Adjust endpoint based on your Argos API structure
-      const response = await this.client.get('/api/projects', {
-        validateStatus: (status) => status < 500, // Accept 4xx as valid connection
-      });
-      // If we get a response (even 401/403), the connection works
-      return true;
-    } catch (error: any) {
-      // Network errors mean connection failed
-      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-        return false;
+      return { ok: true, project: await this.getProject(argosProjectId) };
+    } catch (error) {
+      const status = error instanceof ArgosApiError ? error.status : undefined;
+      if (status === 401 || status === 403) {
+        return { ok: false, reason: 'unauthorized', status, message: 'Argos refused the token. Check that it is a valid project token or personal access token.' };
       }
-      // Other errors (like 401) mean connection works but auth might be wrong
-      return true;
-    }
-  }
-
-  /**
-   * Get project by ID
-   */
-  async getProject(projectId: string): Promise<ArgosProject> {
-    try {
-      const response = await this.client.get(`/api/projects/${projectId}`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        throw new Error(`Project ${projectId} not found in Argos`);
+      if (status === 404) {
+        return { ok: false, reason: 'project_not_found', status, message: `Argos has no project ${argosProjectId} that this token can see.` };
       }
-      throw new Error(`Failed to fetch Argos project: ${error.message}`);
-    }
-  }
-
-  /**
-   * Create a new build (test run) in Argos
-   */
-  async createBuild(projectId: string, options: {
-    branch: string;
-    commit: string;
-    name?: string;
-  }): Promise<ArgosBuild> {
-    try {
-      const response = await this.client.post(`/api/projects/${projectId}/builds`, {
-        branch: options.branch,
-        commit: options.commit,
-        name: options.name,
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(`Failed to create Argos build: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get build by ID
-   */
-  async getBuild(projectId: string, buildId: string): Promise<ArgosBuildWithScreenshots> {
-    try {
-      const response = await this.client.get(`/api/projects/${projectId}/builds/${buildId}`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        throw new Error(`Build ${buildId} not found`);
+      if (status === undefined) {
+        return { ok: false, reason: 'unreachable', message: `Argos could not be reached at ${this.baseUrl}.` };
       }
-      throw new Error(`Failed to fetch Argos build: ${error.message}`);
+      return { ok: false, reason: 'error', status, message: `Argos answered with HTTP ${status}.` };
     }
   }
 
-  /**
-   * Get all builds for a project
-   */
-  async getBuilds(projectId: string, options?: {
-    branch?: string;
-    limit?: number;
-  }): Promise<ArgosBuild[]> {
-    try {
-      const params: any = {};
-      if (options?.branch) params.branch = options.branch;
-      if (options?.limit) params.limit = options.limit;
+  /** Whether the token can read the project */
+  async verifyConnection(argosProjectId: string): Promise<boolean> {
+    return (await this.verify(argosProjectId)).ok;
+  }
 
-      const response = await this.client.get(`/api/projects/${projectId}/builds`, { params });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(`Failed to fetch Argos builds: ${error.message}`);
+  async getProject(argosProjectId: string): Promise<ArgosProject> {
+    return this.request('get', this.projectPath(argosProjectId));
+  }
+
+  /** The project's builds, most recent first */
+  async listBuilds(argosProjectId: string, options: { page?: number; perPage?: number } = {}): Promise<Page<ArgosBuild>> {
+    return this.request('get', `${this.projectPath(argosProjectId)}/builds`, {
+      params: { page: String(options.page ?? 1), perPage: String(options.perPage ?? 30) },
+    });
+  }
+
+  async getBuild(argosProjectId: string, buildNumber: number): Promise<ArgosBuild> {
+    return this.request('get', `${this.projectPath(argosProjectId)}/builds/${encodeURIComponent(String(buildNumber))}`);
+  }
+
+  /** Every screenshot diff of a build */
+  async listBuildDiffs(argosProjectId: string, buildNumber: number): Promise<ArgosSnapshotDiff[]> {
+    const path = `${this.projectPath(argosProjectId)}/builds/${encodeURIComponent(String(buildNumber))}/diffs`;
+    const all: ArgosSnapshotDiff[] = [];
+    for (let page = 1; page <= MAX_DIFF_PAGES; page++) {
+      const body = await this.request<Page<ArgosSnapshotDiff>>('get', path, { params: { page: String(page), perPage: '100' } });
+      all.push(...body.results);
+      if (body.results.length === 0 || all.length >= body.pageInfo.total) break;
     }
+    return all;
   }
 
   /**
-   * Get screenshots for a build
+   * Records a review of some of a build's screenshots (by diff id). Argos
+   * needs a personal access token for reviews; a project token gets 401/403.
    */
-  async getBuildScreenshots(projectId: string, buildId: string): Promise<ArgosScreenshot[]> {
-    try {
-      const response = await this.client.get(`/api/projects/${projectId}/builds/${buildId}/screenshots`);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(`Failed to fetch Argos screenshots: ${error.message}`);
-    }
+  async reviewSnapshots(
+    argosProjectId: string,
+    buildNumber: number,
+    snapshots: Array<{ id: string; conclusion: 'APPROVE' | 'REQUEST_CHANGES' }>,
+    comment: string,
+  ): Promise<void> {
+    await this.request('post', `${this.projectPath(argosProjectId)}/builds/${encodeURIComponent(String(buildNumber))}/reviews`, {
+      data: { event: 'COMMENT', body: comment, snapshots },
+    });
   }
 
-  /**
-   * Approve a screenshot (mark as stable)
-   */
-  async approveScreenshot(projectId: string, buildId: string, screenshotId: string): Promise<void> {
-    try {
-      await this.client.post(`/api/projects/${projectId}/builds/${buildId}/screenshots/${screenshotId}/approve`);
-    } catch (error: any) {
-      throw new Error(`Failed to approve Argos screenshot: ${error.message}`);
-    }
-  }
-
-  /**
-   * Reject a screenshot
-   */
-  async rejectScreenshot(projectId: string, buildId: string, screenshotId: string): Promise<void> {
-    try {
-      await this.client.post(`/api/projects/${projectId}/builds/${buildId}/screenshots/${screenshotId}/reject`);
-    } catch (error: any) {
-      throw new Error(`Failed to reject Argos screenshot: ${error.message}`);
-    }
-  }
-
-  /**
-   * Upload screenshot to Argos
-   * Note: This is typically done by the Argos CLI, but we provide the endpoint for reference
-   */
-  async uploadScreenshot(
-    projectId: string,
-    buildId: string,
-    screenshot: {
-      name: string;
-      file: Buffer;
-      width?: number;
-      height?: number;
-    }
-  ): Promise<ArgosScreenshot> {
-    try {
-      const formData = new FormData();
-      const buffer = Buffer.isBuffer(screenshot.file) ? screenshot.file : Buffer.from(screenshot.file);
-      // @ts-ignore - Buffer works with FormData in Node.js
-      formData.append('screenshot', buffer, screenshot.name);
-      if (screenshot.width) formData.append('width', screenshot.width.toString());
-      if (screenshot.height) formData.append('height', screenshot.height.toString());
-
-      const response = await this.client.post(
-        `/api/projects/${projectId}/builds/${buildId}/screenshots`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      return response.data;
-    } catch (error: any) {
-      throw new Error(`Failed to upload screenshot to Argos: ${error.message}`);
-    }
-  }
-
-  /**
-   * Get full image URL (handles both absolute and relative URLs)
-   */
+  /** Absolute image URL (Argos returns absolute URLs; relative ones are resolved against the API) */
   getImageUrl(url: string): string {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return url;
-    }
-    // Relative URL - prepend base URL
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
     return `${this.baseUrl}${url.startsWith('/') ? url : `/${url}`}`;
   }
-}
 
+  private projectPath(argosProjectId: string): string {
+    const parsed = parseArgosProjectId(argosProjectId);
+    if (!parsed) throw new ArgosApiError(`Invalid Argos project "${argosProjectId}": expected owner/project`);
+    return `/projects/${encodeURIComponent(parsed.owner)}/${encodeURIComponent(parsed.project)}`;
+  }
+
+  private async request<T>(method: 'get' | 'post', url: string, options: { params?: Record<string, string>; data?: unknown } = {}): Promise<T> {
+    try {
+      const response = await this.client.request<T>({ method, url, params: options.params, data: options.data });
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ error?: string }>;
+      const status = axiosError.response?.status;
+      const detail = axiosError.response?.data?.error || axiosError.message;
+      throw new ArgosApiError(status ? `Argos answered ${status}: ${detail}` : `Argos could not be reached: ${detail}`, status);
+    }
+  }
+}

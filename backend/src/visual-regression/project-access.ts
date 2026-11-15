@@ -11,6 +11,17 @@ export interface ProjectCreator {
   name: string;
 }
 
+/** A person given access to one project, outside its workspace */
+export interface ProjectShare {
+  userId: string;
+  email: string;
+  name: string;
+  /** viewer: read; editor: also run (record baselines, review diffs). Managing stays with the owners. */
+  role: 'viewer' | 'editor';
+  grantedBy: { id: string; name: string };
+  grantedAt: string;
+}
+
 /**
  * Who a visual-regression or session-replay project belongs to (docs/WORKSPACES.md,
  * "Visual regression and session replay projects"):
@@ -19,6 +30,7 @@ export interface ProjectCreator {
  * - `workspaceId` null: only its creator.
  * - `applicationId` set: the project backs an application's capability, so
  *   admin:governance holders (who manage applications) can use it too.
+ * - `sharedWith`: people given the viewer or editor role on this project alone.
  *
  * admin:users holders can use every project, as they can every workspace.
  */
@@ -26,6 +38,7 @@ export interface ProjectOwnership {
   workspaceId: string | null;
   applicationId?: string;
   createdBy: ProjectCreator;
+  sharedWith?: ProjectShare[];
 }
 
 /**
@@ -38,6 +51,13 @@ export type ProjectAction = 'read' | 'run' | 'manage';
 
 export function creatorOf(principal: AuthPrincipal): ProjectCreator {
   return { type: principal.type, id: principal.id, name: principal.name };
+}
+
+/** Whether a share gives the principal `action` (shares never give manage) */
+function shareAllows(principal: AuthPrincipal, project: ProjectOwnership, action: ProjectAction): boolean {
+  if (principal.type !== 'user' || action === 'manage') return false;
+  const share = project.sharedWith?.find((s) => s.userId === principal.id);
+  return !!share && (action === 'read' || share.role === 'editor');
 }
 
 function requiredRole(project: ProjectOwnership, action: ProjectAction): WorkspaceRole {
@@ -54,6 +74,7 @@ export class ProjectAccessService {
   async can(principal: AuthPrincipal, project: ProjectOwnership, action: ProjectAction): Promise<boolean> {
     if (isWorkspaceSuperuser(principal)) return true;
     if (project.applicationId && hasPermission(principal, Permission.ADMIN_GOVERNANCE)) return true;
+    if (shareAllows(principal, project, action)) return true;
     if (project.workspaceId) return this.workspaces.has(principal, project.workspaceId, requiredRole(project, action));
     const creator = project.createdBy;
     return !!creator && creator.type === principal.type && creator.id === principal.id;
@@ -81,7 +102,9 @@ export class ProjectAccessService {
     const out: T[] = [];
     for (const project of projects) {
       let allowed: boolean;
-      if (project.workspaceId && !isWorkspaceSuperuser(principal) && !(project.applicationId && hasPermission(principal, Permission.ADMIN_GOVERNANCE))) {
+      if (shareAllows(principal, project, 'read')) {
+        allowed = true;
+      } else if (project.workspaceId && !isWorkspaceSuperuser(principal) && !(project.applicationId && hasPermission(principal, Permission.ADMIN_GOVERNANCE))) {
         if (!memo.has(project.workspaceId)) memo.set(project.workspaceId, await this.workspaces.has(principal, project.workspaceId, 'viewer'));
         allowed = memo.get(project.workspaceId)!;
       } else {

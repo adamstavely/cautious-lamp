@@ -1,4 +1,5 @@
-import { IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsEmail, IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 import { NotificationConfig } from '../../common/types/common.types';
 
 export class CreateBaselineDto {
@@ -28,4 +29,15 @@ export class NotificationSettingsDto {
 
   @IsObject()
   config: NotificationConfig;
+}
+
+/** Gives one person access to the project (see ProjectShare) */
+export class ShareProjectDto {
+  @IsEmail()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @MaxLength(254)
+  email: string;
+
+  @IsIn(['viewer', 'editor'])
+  role: 'viewer' | 'editor';
 }

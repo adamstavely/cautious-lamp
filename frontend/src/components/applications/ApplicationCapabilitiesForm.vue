@@ -23,14 +23,14 @@
     <section class="capability">
       <UiCheckbox v-model="model.visualRegression.enabled"><span class="capability-title">Visual regression testing</span></UiCheckbox>
       <div v-if="model.visualRegression.enabled" class="grid md:grid-cols-2 gap-5">
-        <UiInput v-model="model.visualRegression.argosProjectId" label="Argos project ID" required maxlength="200" />
+        <UiInput v-model="model.visualRegression.argosProjectId" label="Argos project" required maxlength="200" placeholder="acme/web" hint="Account and project name, as owner/project." />
         <UiInput v-model="model.visualRegression.argosBranch" label="Branch" maxlength="200" pattern="[A-Za-z0-9._\/\-]+" placeholder="main" />
         <UiInput
           v-model="model.visualRegression.argosBaseUrl"
           type="url"
-          label="Argos URL"
-          placeholder="https://app.argos-ci.com"
-          hint="Must be on the server's allowed list (ARGOS_ALLOWED_BASE_URLS)."
+          label="Argos API URL"
+          placeholder="https://api.argos-ci.com/v2"
+          hint="Only for a self-hosted Argos. Must be on the server's allowed list (ARGOS_ALLOWED_BASE_URLS)."
         />
         <UiInput
           v-model="model.visualRegression.argosToken"

@@ -1,4 +1,6 @@
-import { IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { ProjectConfigDto } from './project-config.dto';
 
 export class CreateProjectDto {
   @IsString()
@@ -19,13 +21,14 @@ export class CreateProjectDto {
   @IsString()
   description?: string;
 
+  /** The Argos project as owner/project (account slug and project name) */
   @IsString()
   argosProjectId: string;
 
   @IsString()
   argosToken: string;
 
-  /** Self-hosted Argos instance URL */
+  /** Argos API URL, for a self-hosted Argos (defaults to https://api.argos-ci.com/v2) */
   @IsOptional()
   @IsString()
   argosBaseUrl?: string;
@@ -35,16 +38,7 @@ export class CreateProjectDto {
   argosBranch?: string;
 
   @IsOptional()
-  @IsObject()
-  config?: {
-    testDirectories?: string[];
-    viewports?: string[];
-    browsers?: string[];
-    ignorePatterns?: string[];
-    screenshotOptions?: {
-      fullPage?: boolean;
-      waitForSelector?: string;
-      waitForTimeout?: number;
-    };
-  };
+  @ValidateNested()
+  @Type(() => ProjectConfigDto)
+  config?: ProjectConfigDto;
 }

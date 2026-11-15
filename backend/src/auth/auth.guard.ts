@@ -29,7 +29,7 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // WebSocket gateways authenticate on connect (see VisualRegressionGateway)
+    // WebSocket gateways authenticate on connect
     if (context.getType() !== 'http') return true;
     const targets = [context.getHandler(), context.getClass()];
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets)) return true;

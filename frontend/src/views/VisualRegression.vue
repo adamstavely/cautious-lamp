@@ -81,18 +81,24 @@
           :options="workspaceOptions"
           hint="Workspace members can see the project (viewers), run it (editors) and change it. Without a workspace only you can."
         />
-        <UiInput v-model="newProject.argosProjectId" label="Argos project ID" required placeholder="your-org/your-project" />
+        <UiInput
+          v-model="newProject.argosProjectId"
+          label="Argos project"
+          required
+          placeholder="acme/web"
+          hint="The account and project name in Argos, as owner/project."
+        />
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UiInput v-model="newProject.argosBranch" label="Branch" placeholder="develop" />
-          <UiInput v-model="newProject.argosBaseUrl" type="url" label="Argos URL" :placeholder="defaultArgosUrl" hint="Self-hosted Argos URLs must be on the server's allow-list." />
+          <UiInput v-model="newProject.argosBranch" label="Base branch" placeholder="develop" hint="Builds are compared against its latest approved build." />
+          <UiInput v-model="newProject.argosBaseUrl" type="url" label="Argos API URL" :placeholder="defaultArgosUrl" hint="Only for a self-hosted Argos; it must be on the server's allow-list." />
         </div>
         <UiInput
           v-model="newProject.argosToken"
           type="password"
-          label="Argos API token"
+          label="Argos token"
           required
-          placeholder="Enter your Argos API token"
-          hint="Your Argos API token (stored securely)"
+          autocomplete="off"
+          hint="A project token reads builds. To approve or reject screenshots from here, use a personal access token. Stored encrypted; Argos checks it before the project is saved."
         />
       </form>
       <template #footer>
@@ -135,7 +141,7 @@ const loading = ref(false);
 const showCreateModal = ref(false);
 const creating = ref(false);
 
-const defaultArgosUrl = 'https://app.argos-ci.com';
+const defaultArgosUrl = 'https://api.argos-ci.com/v2';
 
 const emptyProject = () => ({
   name: '',
@@ -254,9 +260,10 @@ const getProjectStatus = (project) => {
   const run = latestRun(project);
   if (!run) return 'No runs';
   if (run.status === 'pending' || run.status === 'running') return 'Running';
-  if (run.status === 'failed') return 'Failed';
+  if (run.status === 'failed' || run.argosStatus === 'rejected') return 'Failed';
+  if (run.argosStatus === 'changes-detected') return 'Changes';
   const summary = run.resultsSummary;
-  if (summary && (summary.failed > 0 || summary.new > 0)) return 'Changes';
+  if (!run.argosStatus && summary && (summary.failed > 0 || summary.new > 0)) return 'Changes';
   return 'Passing';
 };
 

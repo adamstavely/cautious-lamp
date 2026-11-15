@@ -62,8 +62,10 @@ describe('ApplicationsService linked projects', () => {
   beforeAll(() => {
     delete process.env.OPENREPLAY_ALLOWED_BASE_URLS;
     delete process.env.OPENREPLAY_BASE_URL;
-    jest.spyOn(ArgosApiClient.prototype, 'verifyConnection').mockResolvedValue(true);
-    jest.spyOn(ArgosApiClient.prototype, 'getProject').mockResolvedValue({ id: 'argos-1', name: 'a', repository: 'r', branch: 'main' });
+    jest.spyOn(ArgosApiClient.prototype, 'verify').mockResolvedValue({
+      ok: true,
+      project: { id: 'argos-1', name: 'a', account: { id: 'acc', slug: 'acme' }, defaultBaseBranch: 'main' },
+    });
   });
 
   afterAll(() => {
