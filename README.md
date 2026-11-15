@@ -106,13 +106,13 @@ Both use the Claude API and need `ANTHROPIC_API_KEY`; without it they say they'r
 │   ├── public/docs/                  # Markdown guidance rendered in the app
 │   ├── docs/                         # VitePress site
 │   └── scripts/                      # check:styles, check:sfc, check:icons
-├── sdk/                              # @designsystem/api
-├── cli/                              # @designsystem/cli
-├── mcp-server/                       # @designsystem/mcp-server (Model Context Protocol)
-├── eslint-plugin-design-system/      # ESLint plugin
+├── sdk/                              # @adamstavely/design-system-sdk
+├── cli/                              # @adamstavely/design-system-cli
+├── mcp-server/                       # @adamstavely/design-system-mcp-server (Model Context Protocol)
+├── eslint-plugin-design-system/      # @adamstavely/eslint-plugin-design-system
 ├── vscode-design-system-extension/   # VS Code extension
-├── loupe-tool-standalone/            # @designsystem/loupe-tool
-├── breakpoint-overlay-standalone/    # @designsystem/breakpoint-overlay
+├── loupe-tool-standalone/            # @adamstavely/loupe-tool
+├── breakpoint-overlay-standalone/    # @adamstavely/breakpoint-overlay
 └── docs/                             # Further documentation
 ```
 
@@ -288,13 +288,13 @@ See the contribution guide in the app at `/getting-started/contribute`.
 
 - **CLI** (`cli/`): command-line access to the API
 - **JavaScript SDK** (`sdk/`): API client for JavaScript and TypeScript
-- **MCP server** (`mcp-server/`): exposes tokens, components, patterns, rules and docs to AI assistants
+- **MCP server** (`mcp-server/`, command `design-system-mcp`): exposes tokens, components, patterns, rules and docs to AI assistants
 - **ESLint plugin** (`eslint-plugin-design-system/`)
 - **VS Code extension** (`vscode-design-system-extension/`)
 - **Loupe tool** (`loupe-tool-standalone/`): standalone component inspector
 - **Breakpoint overlay** (`breakpoint-overlay-standalone/`): shows the active breakpoint and viewport metrics in any Vue 3 app
 
-None of them is published to a registry yet; build them from this repository.
+Apart from the VS Code extension, they are released to GitHub Packages under the `@adamstavely` scope by `.github/workflows/release.yml` (a `<package>-v<version>` tag or a manual run). Nothing has been published yet. To install them once published, add `@adamstavely:registry=https://npm.pkg.github.com` and a token with `read:packages` to your `.npmrc`; see each package's README.
 
 ## Governance
 

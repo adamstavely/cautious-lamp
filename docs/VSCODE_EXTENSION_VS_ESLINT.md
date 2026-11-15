@@ -2,7 +2,7 @@
 
 The repository has two editor tools. They do different jobs and can be used together.
 
-- **`eslint-plugin-design-system`** finds problems. It's an ESLint plugin, so it works in any editor with an ESLint integration (in VS Code, the ESLint extension) and in CI. See [LINTER_INTEGRATION.md](LINTER_INTEGRATION.md).
+- **`@adamstavely/eslint-plugin-design-system`** (`eslint-plugin-design-system/`) finds problems. It's an ESLint plugin, so it works in any editor with an ESLint integration (in VS Code, the ESLint extension) and in CI. See [LINTER_INTEGRATION.md](LINTER_INTEGRATION.md).
 - **`vscode-design-system-extension`** helps you write code in VS Code: autocomplete, hover, colour swatches, snippets, and warnings about hard-coded colours and spacing that equal a token, with a quick fix to replace them.
 
 ## Comparison
@@ -10,7 +10,7 @@ The repository has two editor tools. They do different jobs and can be used toge
 | | ESLint plugin | VS Code extension |
 | --- | --- | --- |
 | Reports problems | Yes, in any ESLint editor and in CI: five built-in rules, plus governance rules loaded from the server | Only in VS Code: hard-coded colours and spacing that equal a token (`designSystem.enableDiagnostics`) |
-| Autofix | Only where a rule supports it; on `main` no rule provides a fixer yet | Quick fix: replace a value with its token |
+| Autofix | `hardcoded-design-tokens`, `spacing-consistency` and `typography-scale`, given a `tokens` option; a value is fixed only when exactly one token matches | Quick fix: replace a value with its token |
 | Autocomplete | No | Yes |
 | Hover information | No | Yes |
 | Colour swatches | No | Yes |

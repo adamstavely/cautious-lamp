@@ -35,8 +35,8 @@ Status words:
 
 | Feature | Status | Where |
 | --- | --- | --- |
-| REST API, SDK and CLI | Built | `/api/v1/...`; `sdk` (`@designsystem/api`); `cli` (`@designsystem/cli`: config, compliance, register, applications, scan, tokens, components, health, scaffold, validate, migrate). `migrate` writes a component's current source; there is no versioned migration. |
-| ESLint plugin | Built | `eslint-plugin-design-system`: 5 rules (below) plus server rules converted at run time |
+| REST API, SDK and CLI | Built | `/api/v1/...`; `sdk` (`@adamstavely/design-system-sdk`); `cli` (`@adamstavely/design-system-cli`: config, compliance, register, applications, scan, tokens, components, health, scaffold, validate, migrate). `migrate` writes a component's current source; there is no versioned migration. |
+| ESLint plugin | Built | `@adamstavely/eslint-plugin-design-system`: 5 rules (below, 3 with token autofix) plus server rules converted at run time |
 | VS Code extension | Built | `vscode-design-system-extension`: completion, hover docs, snippets, insert component or token, replace with token |
 | MCP server | Built | `mcp-server` |
 | Component testing | Built | `/components/testing`: generates Vitest, Jest, Cypress or Playwright tests from a component's props; runs axe and timing checks on the live preview in the page. Visual tests run in your project with the visual regression integration, not on this page. |

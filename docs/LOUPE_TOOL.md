@@ -5,7 +5,7 @@ Loupe is a component inspector. It finds the design system components on a page,
 There are two versions:
 
 - **In the app** (`frontend/src/components/LoupeTool.vue`): built into this design system site. Besides component inspection it has a breakpoint ruler, a breakpoint list, viewport tracking and a layout inspector. This document covers it.
-- **The standalone package** (`loupe-tool-standalone/`, `@designsystem/loupe-tool`): component inspection only, for adding to other applications. See [LOUPE_TOOL_INTEGRATION.md](LOUPE_TOOL_INTEGRATION.md).
+- **The standalone package** (`loupe-tool-standalone/`, `@adamstavely/loupe-tool`): component inspection only, for adding to other applications. See [LOUPE_TOOL_INTEGRATION.md](LOUPE_TOOL_INTEGRATION.md).
 
 ## Turning it on
 
@@ -48,7 +48,7 @@ The in-app tool combines two sources:
 1. A local list in `frontend/src/services/componentMetadataService.js`, which works without the server.
 2. `GET /api/v1/component-metadata` (`design-system.controller.ts`), loaded when the tool starts and merged over the local list. The request uses your signed-in session.
 
-The route returns `{ [componentId]: { name, path, links: { docs, github, figma }, … } }` for the components the caller can read (`ComponentAccessService`; see [AUTH.md](AUTH.md)). It's built by `DesignSystemService.getComponentMetadata()` from the design system's components: `path` is `@design-system/components/<id>`, and `docs` points at the matching documentation page. The `github` and `figma` links come from placeholder templates (`github.com/your-org/...`, `figma.com/file/your-design-system/...`), so they don't lead anywhere real yet.
+The route returns `{ [componentId]: { name, path, links: { docs, github, figma }, … } }` for the components the caller can read (`ComponentAccessService`; see [AUTH.md](AUTH.md)). It's built by `DesignSystemService.getComponentMetadata()` from the design system's components: `path` is `@design-system/components/<id>`, and `docs` points at the component's documentation page (absolute when the backend has `APP_PUBLIC_URL`). `github` and `figma` links are included only when `COMPONENT_SOURCE_URL_TEMPLATE` and `COMPONENT_FIGMA_URL_TEMPLATE` are set on the backend.
 
 To add or correct metadata for a component that isn't in the design system, edit the local list in `componentMetadataService.js`.
 

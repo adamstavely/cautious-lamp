@@ -1,12 +1,12 @@
 # Adding Loupe to another application
 
-The standalone Loupe package (`loupe-tool-standalone/`, package name `@designsystem/loupe-tool`) brings component inspection to applications outside this site: it highlights elements marked as design system components and shows each one's name, import path and links on hover. It doesn't have the in-app version's breakpoint ruler or layout inspector; see [LOUPE_TOOL.md](LOUPE_TOOL.md) for that.
+The standalone Loupe package (`loupe-tool-standalone/`, package name `@adamstavely/loupe-tool`) brings component inspection to applications outside this site: it highlights elements marked as design system components and shows each one's name, import path and links on hover. It doesn't have the in-app version's breakpoint ruler or layout inspector; see [LOUPE_TOOL.md](LOUPE_TOOL.md) for that.
 
 The package is written in Vue 3, and `vue` (3.3 or later) is a peer dependency, so the host application needs Vue installed or loaded even if it uses another framework.
 
 ## Build and install
 
-The package isn't published to a registry. Build it from this repository:
+The package is released to GitHub Packages under the `@adamstavely` scope by `.github/workflows/release.yml`, but nothing has been published yet. Once it is, add `@adamstavely:registry=https://npm.pkg.github.com` (and a token with `read:packages`) to your `.npmrc` and run `npm install @adamstavely/loupe-tool`; see the package [README](../loupe-tool-standalone/README.md). Until then, build it from this repository:
 
 ```bash
 cd loupe-tool-standalone
@@ -49,8 +49,8 @@ Loupe finds elements with a `data-ds-component` attribute. Put it on each compon
 </template>
 
 <script setup>
-import { LoupeTool } from '@designsystem/loupe-tool';
-import '@designsystem/loupe-tool/style.css';
+import { LoupeTool } from '@adamstavely/loupe-tool';
+import '@adamstavely/loupe-tool/style.css';
 
 const apiUrl = import.meta.env.VITE_DS_API_URL; // e.g. https://design-system.example.com/api/v1
 const apiKey = import.meta.env.VITE_DS_API_KEY;
@@ -62,8 +62,8 @@ const apiKey = import.meta.env.VITE_DS_API_KEY;
 `initLoupeTool()` mounts the tool in its own Vue app and returns a handle:
 
 ```javascript
-import { initLoupeTool } from '@designsystem/loupe-tool';
-import '@designsystem/loupe-tool/style.css';
+import { initLoupeTool } from '@adamstavely/loupe-tool';
+import '@adamstavely/loupe-tool/style.css';
 
 const loupe = initLoupeTool({
   apiUrl: 'https://design-system.example.com/api/v1', // default http://localhost:3000/api/v1
@@ -104,8 +104,8 @@ When it starts, the tool requests `GET {apiUrl}/component-metadata` (`COMPONENT_
 
 - The route needs a valid credential, sent as `Authorization: Bearer <apiKey>`. If `apiKey` isn't given, the tool uses `localStorage.getItem('apiKey')`.
 - It only returns components the caller can read. An API key isn't a workspace member, so it sees the shared library and global components, not workspace-private ones (see [AUTH.md](AUTH.md)).
-- If the request fails for any reason (network error, `401`, `404`, a body that isn't an object), the tool logs a warning and uses a small built-in list for common components (button, card, input, dropdown, sidebar, top navigation, breadcrumbs).
-- The `docs` links are paths on the design system site (`/components/...`). The `github` and `figma` links come from placeholder templates on the server and don't lead anywhere real yet.
+- With no key, the tool requests nothing and says "Configure apiKey to load component details"; components show only their `data-ds-component` names. If the request fails (a wrong key, the API down), it says so the same way. There is no built-in sample metadata.
+- The `docs` link points at the component's page on the design system site, absolute when the backend has `APP_PUBLIC_URL`. `github` and `figma` links are included only when the backend sets `COMPONENT_SOURCE_URL_TEMPLATE` and `COMPONENT_FIGMA_URL_TEMPLATE` (`{id}` and `{name}` are filled in), and the tool shows only absolute links.
 
 ## Getting an API key
 
@@ -116,6 +116,6 @@ A key given to a browser can be read by anyone who can load the page. Only ship 
 ## Troubleshooting
 
 - **Nothing is highlighted.** Check that elements have `data-ds-component` and are rendered. While it's open, the tool rescans the page every second.
-- **Components show only their id and no links.** Metadata didn't load, or has no entry for that id. Look in the console for the warning from the `/component-metadata` request, and check `apiUrl` (it must end in `/api/v1`) and the key.
-- **No styles.** Import `@designsystem/loupe-tool/style.css` (or link `dist/style.css`).
+- **Components show only their id and no links.** Metadata didn't load (the tool's notice says why), or has no entry for that id. Check `apiUrl` (it must end in `/api/v1`) and the key.
+- **No styles.** Import `@adamstavely/loupe-tool/style.css` (or link `dist/style.css`).
 - **`Vue is not defined`** with the UMD build: load Vue 3's global build before the Loupe script.

@@ -232,17 +232,17 @@ Feature claims checked against the code at `main` (`69076bb`), 15 November 2026.
 ## Slide 13: Developer Tools & Integrations
 **Seamless Workflow Integration:**
 
-✅ **CLI Tool** (`@designsystem/cli`)
+✅ **CLI Tool** (`@adamstavely/design-system-cli`)
 - Scaffolding, validation, migration commands
 - CI/CD integration support
 
-✅ **JavaScript SDK** (`@designsystem/api`)
+✅ **JavaScript SDK** (`@adamstavely/design-system-sdk`)
 - Full API access from code
 - TypeScript support
 
 ✅ **ESLint Plugin**
 - Design system rule enforcement
-- 5 built-in rules, plus governance rules converted at run time
+- 5 built-in rules (3 auto-fix to your tokens), plus governance rules converted at run time
 
 ✅ **VS Code Extension**
 - Autocomplete for components
