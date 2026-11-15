@@ -3,63 +3,68 @@
     <PageHero
       :back="{ to: '/components', label: 'Components' }"
       title="Documentation generator"
-      lead="Auto-generate component documentation from code comments. Extract props, examples, and usage guidelines automatically."
+      lead="Generate component documentation from real code: a design-system component, or a Vue single-file component you upload or paste. Props, events and slots are read with Vue's own compiler."
       spot="tools/documentation-generator"
       size="tool"
     />
 
-    <PageSection title="Generate" description="Pick a bundled component or upload a file, choose what to include, then generate.">
+    <PageSection title="Generate" description="Pick a design-system component, or upload or paste a component, choose what to include, then generate.">
       <div class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-1">
           <UiPanel title="Source">
             <div class="space-y-4">
+              <UiSpinner v-if="componentsLoading" label="Loading components…" />
+              <UiCallout v-else-if="componentsError" tone="danger" title="Couldn't load the components">
+                {{ componentsError }}
+                <template #actions>
+                  <UiButton size="sm" icon="refresh-cw" @click="loadComponents">Try again</UiButton>
+                </template>
+              </UiCallout>
               <UiSelect
+                v-else
                 v-model="selectedComponent"
-                label="Component"
+                label="Design-system component"
                 placeholder="Choose a component..."
                 :options="componentOptions"
                 @update:model-value="loadComponent"
               />
-              <div>
-                <span class="mb-1.5 block text-sm font-medium text-ink">Or upload a component file</span>
-                <input
-                  id="component-file"
-                  ref="fileInput"
-                  type="file"
-                  accept=".vue,.jsx,.tsx,.js,.ts"
-                  class="peer sr-only"
-                  aria-describedby="component-file-hint"
-                  @change="handleFileUpload"
-                />
-                <label
-                  for="component-file"
-                  class="flex w-full cursor-pointer flex-col items-center gap-1 rounded-field border-2 border-dashed border-line-control bg-surface-sunken px-4 py-4 text-center text-ink-secondary transition-colors hover:border-accent-border peer-focus-visible:outline peer-focus-visible:outline-2 outline-focus"
-                >
-                  <AppIcon name="upload" class="text-2xl" />
-                  <span class="text-sm">Click to upload component file</span>
-                </label>
-                <p id="component-file-hint" class="mt-1.5 text-xs text-ink-muted">.vue, .jsx, .tsx, .js or .ts</p>
-              </div>
+              <UiFileDropZone
+                label="Or upload a component file"
+                accept=".vue,.js,.ts,.jsx,.tsx"
+                :file="uploadedFile"
+                hint=".vue, or a .js or .ts file with a component definition"
+                @select="handleFileUpload"
+                @remove="clearUpload"
+              />
+              <UiTextarea v-model="pastedCode" label="Or paste a Vue component" rows="6" mono />
+              <UiButton size="sm" icon="file-code" :disabled="!pastedCode.trim()" @click="usePasted">Use pasted code</UiButton>
             </div>
           </UiPanel>
 
           <UiPanel title="Generation options">
             <fieldset class="space-y-2">
               <legend class="sr-only">Sections to include</legend>
-              <UiCheckbox v-model="options.includeProps" label="Include Props" />
-              <UiCheckbox v-model="options.includeExamples" label="Include Examples" />
-              <UiCheckbox v-model="options.includeAccessibility" label="Accessibility Info" />
-              <UiCheckbox v-model="options.includeChangelog" label="Changelog" />
+              <UiCheckbox v-model="options.includeProps" label="Props" />
+              <UiCheckbox v-model="options.includeEvents" label="Events" />
+              <UiCheckbox v-model="options.includeSlots" label="Slots" />
+              <UiCheckbox v-model="options.includeExamples" label="Examples" />
+              <UiCheckbox v-model="options.includeAccessibility" label="Accessibility" />
             </fieldset>
           </UiPanel>
 
-          <UiButton variant="primary" class="w-full" :disabled="!selectedComponent && !uploadedCode" @click="generateDocumentation">
-            Generate Documentation
+          <UiButton variant="primary" class="w-full" :disabled="!sourceDoc" @click="generateDocumentation">
+            Generate documentation
           </UiButton>
         </div>
 
         <div class="space-y-6 lg:col-span-2">
           <InlineNotice v-if="notice" :notice="notice" @dismiss="clearNotice" />
+
+          <UiCallout v-if="sourceDoc?.errors?.length" tone="warning" title="Part of the source couldn't be read">
+            <ul class="list-disc pl-5">
+              <li v-for="error in sourceDoc.errors" :key="error">{{ error }}</li>
+            </ul>
+          </UiCallout>
 
           <template v-if="generatedDocs">
             <UiPanel title="Generated documentation">
@@ -83,7 +88,7 @@
           <UiEmptyState
             v-else
             title="No documentation generated yet"
-            body="Select a component or upload a file to generate documentation"
+            body="Select a component, or upload or paste one, to generate documentation"
             spot="tools/documentation-generator"
           />
         </div>
@@ -93,104 +98,64 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import InlineNotice from '../components/InlineNotice.vue';
-import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiCodeBlock, UiEmptyState, UiPanel, UiSelect } from '../components/ui';
+import {
+  PageHero,
+  PageSection,
+  PageShell,
+  UiButton,
+  UiCallout,
+  UiCheckbox,
+  UiCodeBlock,
+  UiEmptyState,
+  UiFileDropZone,
+  UiPanel,
+  UiSelect,
+  UiSpinner,
+  UiTextarea,
+} from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
+import apiClient, { apiErrorMessage } from '../services/api.js';
+import { componentMarkdown, docFromComponent, parseVueComponent } from '../utils/componentDocs.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
+const components = ref([]);
+const componentsLoading = ref(false);
+const componentsError = ref('');
 const selectedComponent = ref('');
-const uploadedCode = ref('');
-const fileInput = ref(null);
+const uploadedFile = ref(null);
+const pastedCode = ref('');
+// The parsed source the docs are generated from
+const sourceDoc = ref(null);
 const outputFormat = ref('markdown');
 const generatedDocs = ref('');
 const options = ref({
   includeProps: true,
+  includeEvents: true,
+  includeSlots: true,
   includeExamples: true,
   includeAccessibility: true,
-  includeChangelog: true
 });
 
-// Mock component data with JSDoc comments
-const componentData = {
-  button: {
-    name: 'Button',
-    description: 'A versatile button component with multiple variants and sizes.',
-    code: `/**
- * Button Component
- * 
- * @component
- * @description A versatile button component with multiple variants and sizes.
- * Supports primary, secondary, and tertiary variants with small, medium, and large sizes.
- * 
- * @example
- * <Button variant="primary" size="md">Click me</Button>
- * 
- * @accessibility
- * - Supports keyboard navigation (Enter, Space)
- * - Includes proper ARIA labels
- * - WCAG AA compliant
- */
-export default {
-  name: 'Button',
-  props: {
-    /**
-     * Button variant style
-     * @type {'primary' | 'secondary' | 'tertiary'}
-     * @default 'primary'
-     */
-    variant: {
-      type: String,
-      default: 'primary'
-    },
-    /**
-     * Button size
-     * @type {'sm' | 'md' | 'lg'}
-     * @default 'md'
-     */
-    size: {
-      type: String,
-      default: 'md'
-    },
-    /**
-     * Whether the button is disabled
-     * @type {boolean}
-     * @default false
-     */
-    disabled: {
-      type: Boolean,
-      default: false
-    },
-    /**
-     * Button label text
-     * @type {string}
-     * @required
-     */
-    label: {
-      type: String,
-      required: true
-    }
-  }
-}`,
-    props: [
-      { name: 'variant', type: 'string', default: 'primary', description: 'Button variant style', required: false },
-      { name: 'size', type: 'string', default: 'md', description: 'Button size', required: false },
-      { name: 'disabled', type: 'boolean', default: false, description: 'Whether the button is disabled', required: false },
-      { name: 'label', type: 'string', description: 'Button label text', required: true }
-    ],
-    examples: [
-      { title: 'Primary Button', code: '<Button variant="primary" label="Click me" />' },
-      { title: 'Secondary Button', code: '<Button variant="secondary" size="lg" label="Submit" />' }
-    ],
-    accessibility: {
-      keyboard: true,
-      aria: true,
-      wcag: 'AA'
-    }
+const loadComponents = async () => {
+  componentsLoading.value = true;
+  componentsError.value = '';
+  try {
+    const { data } = await apiClient.get('/api/v1/components');
+    components.value = data.components ?? [];
+  } catch (error) {
+    componentsError.value = apiErrorMessage(error, 'The component library did not answer.');
+  } finally {
+    componentsLoading.value = false;
   }
 };
+
+const componentOptions = computed(() =>
+  [...components.value].sort((a, b) => a.name.localeCompare(b.name)).map((component) => ({ value: component.id, label: component.name })),
+);
 
 // Rendered + sanitised HTML. Uploaded files feed straight into the Markdown,
 // so marked's output must never reach v-html (or the HTML export) unsanitised.
@@ -211,7 +176,6 @@ const escapeHtml = (value) => String(value)
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#39;');
 
-const componentOptions = Object.entries(componentData).map(([value, component]) => ({ value, label: component.name }));
 const formatOptions = [
   { value: 'markdown', label: 'Markdown' },
   { value: 'html', label: 'HTML' },
@@ -248,169 +212,55 @@ ${renderedMarkdown.value}
 });
 
 const loadComponent = () => {
-  if (!selectedComponent.value) return;
+  const component = components.value.find((c) => c.id === selectedComponent.value);
+  if (!component) return;
+  uploadedFile.value = null;
+  sourceDoc.value = docFromComponent(component);
   generateDocumentation();
 };
 
-const handleFileUpload = (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+// A .js/.ts file is a component's script on its own: parse it as an SFC's <script>
+const asSfc = (code, name) => {
+  if (/\.vue$/i.test(name)) return code;
+  const lang = (/\.(ts|tsx|jsx)$/i.exec(name)?.[1] ?? 'js').toLowerCase();
+  return `<script${lang === 'js' ? '' : ` lang="${lang}"`}>\n${code}\n</${'script'}>`;
+};
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    uploadedCode.value = e.target?.result || '';
-    // The upload replaces any bundled component selection.
-    selectedComponent.value = '';
-    generateDocumentation();
+const useSource = (code, name) => {
+  selectedComponent.value = '';
+  sourceDoc.value = parseVueComponent(asSfc(code, name), name);
+  generateDocumentation();
+};
+
+const handleFileUpload = async (file) => {
+  if (!/\.(vue|js|ts|jsx|tsx)$/i.test(file.name)) {
+    showNotice(`${file.name} isn't a component file. Upload a .vue, .js or .ts file.`, 'error');
+    return;
+  }
+  uploadedFile.value = file;
+  try {
+    useSource(await (typeof file.text === 'function' ? file.text() : new Response(file).text()), file.name);
     showNotice(`Generated documentation from ${file.name}.`, 'success');
-  };
-  reader.onerror = () => {
+  } catch {
     showNotice(`Could not read ${file.name}.`, 'error');
-  };
-  reader.readAsText(file);
-  // Let the same file be chosen again later.
-  event.target.value = '';
+  }
+};
+
+const clearUpload = () => {
+  uploadedFile.value = null;
+};
+
+const usePasted = () => {
+  uploadedFile.value = null;
+  useSource(pastedCode.value, 'Component.vue');
 };
 
 const generateDocumentation = () => {
-  const component = selectedComponent.value ? componentData[selectedComponent.value] : null;
-  if (!component && !uploadedCode.value) return;
-
-  let docs = '';
-
-  if (component) {
-    docs += `# ${component.name}\n\n`;
-    docs += `${component.description}\n\n`;
-
-    if (options.value.includeProps && component.props) {
-      docs += `## Props\n\n`;
-      docs += `| Name | Type | Default | Required | Description |\n`;
-      docs += `|------|------|---------|----------|-------------|\n`;
-      component.props.forEach(prop => {
-        docs += `| \`${prop.name}\` | \`${prop.type}\` | ${prop.default !== undefined ? `\`${prop.default}\`` : '-'} | ${prop.required ? 'Yes' : 'No'} | ${prop.description || ''} |\n`;
-      });
-      docs += `\n`;
-    }
-
-    if (options.value.includeExamples && component.examples) {
-      docs += `## Examples\n\n`;
-      component.examples.forEach((example, index) => {
-        docs += `### ${example.title}\n\n`;
-        docs += `\`\`\`vue\n${example.code}\n\`\`\`\n\n`;
-      });
-    }
-
-    if (options.value.includeAccessibility && component.accessibility) {
-      docs += `## Accessibility\n\n`;
-      docs += `- **Keyboard Navigation**: ${component.accessibility.keyboard ? 'Supported' : 'Not supported'}\n`;
-      docs += `- **ARIA Attributes**: ${component.accessibility.aria ? 'Included' : 'Not included'}\n`;
-      docs += `- **WCAG Compliance**: ${component.accessibility.wcag}\n\n`;
-    }
-
-    if (options.value.includeChangelog) {
-      docs += `## Changelog\n\n`;
-      docs += `### v2.1.0\n`;
-      docs += `- Added loading state\n`;
-      docs += `- Improved accessibility\n\n`;
-      docs += `### v2.0.0\n`;
-      docs += `- Breaking: Renamed \`type\` prop to \`variant\`\n`;
-      docs += `- Added \`size\` prop\n\n`;
-    }
-  } else if (uploadedCode.value) {
-    // Parse uploaded code
-    docs += parseUploadedCode(uploadedCode.value);
-  }
-
-  generatedDocs.value = docs;
+  generatedDocs.value = sourceDoc.value ? componentMarkdown(sourceDoc.value, options.value) : '';
 };
 
-// Text safe inside a Markdown table cell.
-const cell = (value) => String(value ?? '').replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ').trim();
-
-// Index of the brace that closes the one at `open`, or -1.
-const matchBrace = (code, open) => {
-  let depth = 0;
-  for (let i = open; i < code.length; i++) {
-    if (code[i] === '{') depth++;
-    else if (code[i] === '}' && --depth === 0) return i;
-  }
-  return -1;
-};
-
-const extractPropsBody = (code) => {
-  const start = code.search(/(?:\bprops\s*:|defineProps\s*\(\s*)\{/);
-  if (start === -1) return null;
-  const open = code.indexOf('{', start);
-  const close = matchBrace(code, open);
-  return close === -1 ? null : code.slice(open + 1, close);
-};
-
-// Top-level entries of a props object, with the JSDoc comment above each.
-const parsePropEntries = (body) => {
-  const entries = [];
-  const entryRegex = /(?:\/\*\*([\s\S]*?)\*\/\s*)?(\w+)\s*:\s*/g;
-  let m;
-  while ((m = entryRegex.exec(body)) !== null) {
-    const name = m[2];
-    const description = (m[1] || '')
-      .split('\n')
-      .map((line) => line.replace(/^\s*\*\s?/, '').trim())
-      .filter((line) => line && !line.startsWith('@'))
-      .join(' ');
-    const valueStart = entryRegex.lastIndex;
-    if (body[valueStart] === '{') {
-      const close = matchBrace(body, valueStart);
-      if (close === -1) break;
-      entries.push({ name, description, definition: body.slice(valueStart + 1, close), shorthand: false });
-      entryRegex.lastIndex = close + 1;
-    } else {
-      const end = body.slice(valueStart).search(/,|\n|$/);
-      entries.push({ name, description, definition: body.slice(valueStart, valueStart + end), shorthand: true });
-      entryRegex.lastIndex = valueStart + Math.max(end, 1);
-    }
-  }
-  return entries;
-};
-
-const parseUploadedCode = (code) => {
-  let docs = '# Component Documentation\n\n';
-  
-  // Extract component name
-  const nameMatch = code.match(/name:\s*['"]([^'"]+)['"]/);
-  if (nameMatch) {
-    docs += `## ${nameMatch[1]}\n\n`;
-  }
-
-  // Extract JSDoc comments
-  const jsdocRegex = /\/\*\*([\s\S]*?)\*\//g;
-  let match;
-  while ((match = jsdocRegex.exec(code)) !== null) {
-    const jsdoc = match[1];
-    const descriptionMatch = jsdoc.match(/@description\s+(.+)/);
-    if (descriptionMatch) {
-      docs += `${descriptionMatch[1]}\n\n`;
-    }
-  }
-
-  // Extract props: the balanced { ... } after `props:` (or defineProps({ ... })),
-  // then each top-level `name: { ... }` / `name: Type` entry in it.
-  const propsBody = extractPropsBody(code);
-  if (propsBody !== null && options.value.includeProps) {
-    docs += `## Props\n\n`;
-    docs += `| Name | Type | Default | Required | Description |\n`;
-    docs += `|------|------|---------|----------|-------------|\n`;
-    for (const prop of parsePropEntries(propsBody)) {
-      const def = prop.definition;
-      const typeMatch = def.match(/type:\s*(\[[^\]]*\]|[\w.|]+)/) || (prop.shorthand ? [null, def.trim()] : null);
-      const defaultMatch = def.match(/default:\s*([^,\n]+)/);
-      const requiredMatch = def.match(/required:\s*(true|false)/);
-      docs += `| \`${prop.name}\` | \`${cell(typeMatch ? typeMatch[1] : 'any')}\` | ${defaultMatch ? `\`${cell(defaultMatch[1].trim())}\`` : '-'} | ${requiredMatch && requiredMatch[1] === 'true' ? 'Yes' : 'No'} | ${cell(prop.description)} |\n`;
-    }
-    docs += `\n`;
-  }
-
-  return docs;
-};
+// Changing what's included regenerates what's shown
+watch(options, generateDocumentation, { deep: true });
 
 // UiCodeBlock copies outputText; these report the result
 const onCopied = () => showNotice('Copied to clipboard.', 'success');
@@ -419,7 +269,8 @@ const onCopyFailed = () => showNotice('Could not copy to the clipboard.', 'error
 const downloadDocs = () => {
   if (!outputText.value) return;
   const extension = outputFormat.value === 'html' ? 'html' : 'md';
-  const filename = `${selectedComponent.value || 'component'}.${extension}`;
+  const base = (sourceDoc.value?.name || 'component').replace(/[^\w-]+/g, '-');
+  const filename = `${base}.${extension}`;
   const content = outputText.value;
 
   const blob = new Blob([content], { type: outputFormat.value === 'html' ? 'text/html' : 'text/markdown' });
@@ -432,6 +283,8 @@ const downloadDocs = () => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
+
+onMounted(loadComponents);
 </script>
 
 <style scoped>

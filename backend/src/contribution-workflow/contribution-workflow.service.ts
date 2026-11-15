@@ -1,5 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { DesignSystemService } from '../design-system/design-system.service';
+import { ScansService } from '../governance/scans.service';
+import {
+  CheckFinding,
+  CheckOutcome,
+  CheckRunner,
+  CheckStatus,
+  ContributionSubmission,
+  documentationOutcome,
+  governanceOutcome,
+  manualOutcome,
+  structureOutcome,
+  submissionToInput,
+  testsOutcome,
+} from './contribution-checks';
 
 export interface ContributionGuideline {
   id: string;
@@ -33,10 +47,42 @@ export interface ContributionCheck {
   id: string;
   name: string;
   description: string;
-  category: 'linting' | 'formatting' | 'testing' | 'documentation' | 'accessibility' | 'performance';
+  category: 'linting' | 'formatting' | 'testing' | 'documentation' | 'accessibility' | 'performance' | 'design-system' | 'structure';
   enabled: boolean;
+  /** How the check runs on a submission (contribution-checks.ts); set from the category and command */
+  runner: CheckRunner;
   command?: string;
   config?: Record<string, any>;
+}
+
+export interface ContributionCheckResult {
+  check: ContributionCheck;
+  status: CheckStatus;
+  /** true or false for a pass or a fail; null when a person has to decide */
+  passed: boolean | null;
+  summary: string;
+  findings: CheckFinding[];
+}
+
+/** Governance rule categories each governance-run check category uses */
+const GOVERNANCE_CATEGORIES: Partial<Record<ContributionCheck['category'], string[]>> = {
+  accessibility: ['accessibility'],
+  'design-system': ['design-system', 'ux-hcd'],
+};
+
+/**
+ * Rules for applications, not for the design system's own components: an
+ * application should import the design system, a contribution is part of it.
+ */
+const NOT_FOR_CONTRIBUTIONS = ['ds-component-import'];
+
+/** A check with a command runs in the contributor's repository, so a person confirms it; the rest run here */
+export function runnerFor(category: ContributionCheck['category'], command?: string): CheckRunner {
+  if (command?.trim()) return 'manual';
+  if (GOVERNANCE_CATEGORIES[category]) return 'governance';
+  if (category === 'structure' || category === 'documentation') return category;
+  if (category === 'testing') return 'tests';
+  return 'manual';
 }
 
 @Injectable()
@@ -47,6 +93,7 @@ export class ContributionWorkflowService {
 
   constructor(
     private readonly designSystemService: DesignSystemService,
+    private readonly scans: ScansService,
   ) {
     this.initializeDefaultGuidelines();
     this.initializeDefaultTemplates();
@@ -193,6 +240,41 @@ export const Component: React.FC<ComponentProps> = (props) => {
    */
   private initializeDefaultChecks(): void {
     this.createCheck({
+      name: 'Component structure',
+      description: 'The component has the parts its kind needs and a PascalCase name',
+      category: 'structure',
+      enabled: true,
+    });
+
+    this.createCheck({
+      name: 'Accessibility audit',
+      description: 'axe and the accessibility governance rules, run on the submitted markup',
+      category: 'accessibility',
+      enabled: true,
+    });
+
+    this.createCheck({
+      name: 'Design system rules',
+      description: 'Design-system and UX governance rules: tokens instead of hard-coded values, naming, no inline styles',
+      category: 'design-system',
+      enabled: true,
+    });
+
+    this.createCheck({
+      name: 'Documentation check',
+      description: 'A description, usage docs with an example, and every prop documented',
+      category: 'documentation',
+      enabled: true,
+    });
+
+    this.createCheck({
+      name: 'Unit tests',
+      description: 'A test file with test cases and assertions; a reviewer confirms it passes in CI',
+      category: 'testing',
+      enabled: true,
+    });
+
+    this.createCheck({
       name: 'ESLint',
       description: 'Run ESLint to check code quality',
       category: 'linting',
@@ -217,29 +299,6 @@ export const Component: React.FC<ComponentProps> = (props) => {
       category: 'linting',
       enabled: true,
       command: 'npm run type-check',
-    });
-
-    this.createCheck({
-      name: 'Unit Tests',
-      description: 'Run unit tests',
-      category: 'testing',
-      enabled: true,
-      command: 'npm run test',
-    });
-
-    this.createCheck({
-      name: 'Accessibility Audit',
-      description: 'Run accessibility checks',
-      category: 'accessibility',
-      enabled: true,
-      command: 'npm run a11y:check',
-    });
-
-    this.createCheck({
-      name: 'Documentation Check',
-      description: 'Verify documentation is complete',
-      category: 'documentation',
-      enabled: true,
     });
   }
 
@@ -334,6 +393,7 @@ export const Component: React.FC<ComponentProps> = (props) => {
     const check: ContributionCheck = {
       id,
       ...data,
+      runner: runnerFor(data.category, data.command),
     };
     this.checks.set(id, check);
     return check;
@@ -398,34 +458,59 @@ ${this.getAllChecks(undefined, true).map(check => `- [ ] ${check.name}: ${check.
   }
 
   /**
-   * Run automated checks (simulated - would actually run commands)
+   * Runs the enabled checks (or the ones in `checkIds`) on a submitted
+   * contribution. Governance checks run the governance rules engine on the
+   * code; structure, documentation and test checks inspect what was
+   * submitted; checks with a command, and anything only a person can judge,
+   * come back as `needs-review`. The same submission always gets the same results.
    */
-  async runAutomatedChecks(): Promise<Array<{
-    check: ContributionCheck;
-    passed: boolean;
-    output?: string;
-    error?: string;
-  }>> {
-    const enabledChecks = this.getAllChecks(undefined, true);
-    const results = [];
-
-    for (const check of enabledChecks) {
-      // In a real implementation, this would actually run the commands
-      // For now, we'll simulate the results
-      const passed = Math.random() > 0.2; // 80% pass rate simulation
-      results.push({
-        check,
-        passed,
-        output: passed ? 'Check passed successfully' : 'Check failed',
-        error: passed ? undefined : 'Some issues found',
-      });
+  async runAutomatedChecks(submission: ContributionSubmission, checkIds?: string[]): Promise<{
+    results: ContributionCheckResult[];
+    summary: { passed: number; failed: number; needsReview: number; total: number };
+  }> {
+    let checks = this.getAllChecks(undefined, true);
+    if (checkIds?.length) {
+      const unknown = checkIds.filter((id) => !this.checks.has(id));
+      if (unknown.length) throw new BadRequestException(`Unknown check ids: ${unknown.join(', ')}`);
+      checks = checkIds.map((id) => this.checks.get(id)!);
     }
 
-    return results;
+    const input = submissionToInput(submission);
+    // One governance run per set of rule categories, shared by checks that use the same set
+    const runs = new Map<string, Promise<CheckOutcome>>();
+    const governance = (check: ContributionCheck): Promise<CheckOutcome> => {
+      const categories = GOVERNANCE_CATEGORIES[check.category] ?? [];
+      const key = categories.join(',');
+      if (!runs.has(key)) {
+        const what = check.category === 'accessibility' ? 'accessibility' : 'design-system';
+        runs.set(key, this.scans.evaluate(input, categories, NOT_FOR_CONTRIBUTIONS).then(({ rules, run }) => governanceOutcome(rules, run, what)));
+      }
+      return runs.get(key)!;
+    };
+
+    const results: ContributionCheckResult[] = [];
+    for (const check of checks) {
+      let outcome: CheckOutcome;
+      switch (check.runner) {
+        case 'governance':
+          outcome = await governance(check);
+          break;
+        case 'structure':
+          outcome = structureOutcome(submission);
+          break;
+        case 'documentation':
+          outcome = documentationOutcome(submission);
+          break;
+        case 'tests':
+          outcome = testsOutcome(submission);
+          break;
+        default:
+          outcome = manualOutcome(check.command);
+      }
+      results.push({ check, ...outcome, passed: outcome.status === 'needs-review' ? null : outcome.status === 'pass' });
+    }
+
+    const count = (status: CheckStatus) => results.filter((r) => r.status === status).length;
+    return { results, summary: { passed: count('pass'), failed: count('fail'), needsReview: count('needs-review'), total: results.length } };
   }
 }
-
-
-
-
-

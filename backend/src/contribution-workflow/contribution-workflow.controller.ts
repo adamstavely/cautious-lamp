@@ -1,10 +1,12 @@
 import { Controller, Get, Post, Body, Param, Query, BadRequestException } from '@nestjs/common';
 import { ContributionWorkflowService, ContributionGuideline, ContributionTemplate, ContributionCheck } from './contribution-workflow.service';
 import { RequirePermission } from '../auth/principal';
+import { strictBody } from '../governance/governance.dto';
+import { RunContributionChecksDto } from './contribution-workflow.dto';
 import { Permission } from '../rbac/rbac.service';
 
 const GUIDELINE_CATEGORIES: ReadonlyArray<string> = ['component', 'token', 'pattern', 'documentation', 'bug-fix', 'enhancement'];
-const CHECK_CATEGORIES: ReadonlyArray<string> = ['linting', 'formatting', 'testing', 'documentation', 'accessibility', 'performance'];
+const CHECK_CATEGORIES: ReadonlyArray<string> = ['linting', 'formatting', 'testing', 'documentation', 'accessibility', 'performance', 'design-system', 'structure'];
 
 /** Lists sort on these fields, so nothing is stored without them */
 function assertFields(data: Record<string, unknown> | undefined, strings: string[], category: { allowed: ReadonlyArray<string> }): void {
@@ -158,9 +160,11 @@ export class ContributionWorkflowController {
     return this.contributionService.createCheck(data);
   }
 
+  /** Runs the checks on the submitted code (contribution-checks.ts); nothing is stored */
   @Post('checks/run')
   @RequirePermission(Permission.COMPONENT_CREATE)
-  runAutomatedChecks() {
-    return this.contributionService.runAutomatedChecks();
+  runAutomatedChecks(@Body(strictBody()) body: RunContributionChecksDto) {
+    const { checkIds, ...submission } = body;
+    return this.contributionService.runAutomatedChecks(submission, checkIds);
   }
 }

@@ -7,7 +7,7 @@ import { READ_SCOPE, ReadScopeResolver, SYSTEM_SCOPE, canReadApplicationEvidence
 import { SCAN_STORE } from './governance-stores';
 import { GovernanceRule, LIMITS, RuleDefinition, ScanActor, ScanInput, ScanRecord, ScanScope } from './governance.types';
 import { RegexRunner } from './regex-safety';
-import { runRules } from './rule-interpreter';
+import { RunResult, runRules } from './rule-interpreter';
 import { normalizeRuleDefinition } from './rule-validation';
 import { RulesService } from './rules.service';
 import { fetchPublicPage } from './safe-fetch';
@@ -170,6 +170,19 @@ export class ScansService implements OnModuleDestroy {
     const run = await runRules([rule], [input], { runner: this.runner, tokens });
     const result = run.ruleResults[0];
     return { outcome: result.outcome, reason: result.reason, checks: run.checks, summary: run.summary };
+  }
+
+  /**
+   * Runs the enabled rules in `categories` over submitted code without storing
+   * a scan (contribution checks), leaving out `excludeRuleIds`. Returns the
+   * rules that ran with the result; no rules when none are enabled in those categories.
+   */
+  async evaluate(input: ScanInput, categories: string[], excludeRuleIds: string[] = []): Promise<{ rules: GovernanceRule[]; run: RunResult | null }> {
+    this.assertCodebaseSize(input);
+    const rules = (await this.rules.list()).filter((rule) => rule.enabled && categories.includes(rule.category) && !excludeRuleIds.includes(rule.id));
+    if (rules.length === 0) return { rules, run: null };
+    const tokens = await this.designSystem.tokens();
+    return { rules, run: await runRules(rules, [input], { runner: this.runner, tokens }) };
   }
 
   /** Scan history the principal may read (`total` counts only those) */

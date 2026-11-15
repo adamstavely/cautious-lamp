@@ -9,6 +9,7 @@ import { ContributionWorkflowController } from '../contribution-workflow/contrib
 import { ContributionWorkflowService } from '../contribution-workflow/contribution-workflow.service';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { CHANGE_RECORDER, ChangeInput } from '../notifications/notification.types';
+import { ScansService } from '../governance/scans.service';
 import { Permission } from '../rbac/rbac.service';
 import { PatternsLibraryController } from './patterns-library.controller';
 import { PatternsLibraryService } from './patterns-library.service';
@@ -50,6 +51,7 @@ describe('Pattern library and contribution workflow permissions', () => {
         ContributionWorkflowService,
         { provide: DesignSystemService, useValue: { getAllComponents: async () => [] } },
         { provide: CHANGE_RECORDER, useValue: { record: async (change: ChangeInput) => void recorded.push(change) } },
+        { provide: ScansService, useValue: {} },
         { provide: AuthService, useValue: authStub },
         { provide: SecurityAuditService, useValue: { logPermissionDenied: jest.fn(async () => undefined) } },
         { provide: APP_GUARD, useClass: AuthGuard },
