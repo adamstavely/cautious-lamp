@@ -4,14 +4,13 @@
     <div v-if="showRuler" class="breakpoint-ruler">
       <div class="ruler-container">
         <div class="ruler-scale">
-          <div
+          <LoupeBox
             v-for="bp in sortedBreakpoints"
             :key="`ruler-${bp.id}`"
             class="ruler-marker"
-            :style="{
-              left: `${((bp.minWidth || 0) / maxBreakpoint) * 100}%`,
-              color: getBreakpointColor(bp.id)
-            }"
+            :class="`loupe-tone-${getBreakpointTone(bp.id)}`"
+            :left="`${((bp.minWidth || 0) / maxBreakpoint) * 100}%`"
+            top="0"
             role="button"
             tabindex="0"
             :title="`${bp.label || bp.id}: ${formatBreakpointRange(bp)} - open the page at this width`"
@@ -22,35 +21,34 @@
           >
             <div class="marker-line-vertical"></div>
             <div class="marker-label">{{ bp.minWidth || 0 }}px</div>
-          </div>
-          <div
+          </LoupeBox>
+          <LoupeBox
             v-for="bp in sortedBreakpoints.filter(b => b.maxWidth)"
             :key="`ruler-max-${bp.id}`"
             class="ruler-marker ruler-marker-max"
-            :style="{
-              left: `${(bp.maxWidth / maxBreakpoint) * 100}%`,
-              color: getBreakpointColor(bp.id)
-            }"
+            :class="`loupe-tone-${getBreakpointTone(bp.id)}`"
+            :left="`${(bp.maxWidth / maxBreakpoint) * 100}%`"
+            top="0"
             :title="`${bp.label || bp.id} max: ${bp.maxWidth}px`"
           >
             <div class="marker-line-vertical"></div>
-          </div>
+          </LoupeBox>
         </div>
-        <div class="ruler-viewport-indicator" :style="{ left: `${Math.min((viewportWidth / maxBreakpoint) * 100, 100)}%` }">
+        <LoupeBox class="ruler-viewport-indicator" :left="`${Math.min((viewportWidth / maxBreakpoint) * 100, 100)}%`" top="0">
           <div class="viewport-indicator-line"></div>
           <div class="viewport-indicator-label">{{ viewportWidth }}px</div>
-        </div>
+        </LoupeBox>
       </div>
     </div>
 
     <!-- Grid/Layout Overlays -->
     <div v-if="showLayoutInspector" class="layout-overlays">
-      <div
+      <LoupeBox
         v-for="(layout, index) in detectedLayouts"
         :key="getLayoutId(layout, index)"
         class="layout-overlay"
         :class="{ 'layout-highlighted': highlightedLayoutIndex === index }"
-        :style="getLayoutOverlayStyle(layout, index)"
+        v-bind="getLayoutBox(layout, index)"
         @click.stop="selectLayoutItem(index)"
         @mouseenter="highlightedLayoutIndex = index"
         @mouseleave="highlightedLayoutIndex = null"
@@ -58,41 +56,40 @@
         <div class="layout-label" v-if="highlightedLayoutIndex === index">
           {{ layout.type === 'grid' ? 'Grid' : 'Flex' }}
         </div>
-      </div>
+      </LoupeBox>
     </div>
 
     <!-- Overlay for highlighting components (toggleable) -->
-    <div
-      v-if="showComponentHighlights"
-      v-for="(component, index) in detectedComponents"
-      :key="`component-${index}-${component.element.id || component.name}`"
-      class="component-highlight"
-      :style="getHighlightStyle(component.element)"
-      @mouseenter="showInfo(component, $event)"
-      @mouseleave="hideInfo"
-      @mousemove="updateInfoPosition(component, $event)"
-    ></div>
+    <template v-if="showComponentHighlights">
+      <LoupeBox
+        v-for="(component, index) in detectedComponents"
+        :key="`component-${index}-${component.element.id || component.name}`"
+        class="component-highlight"
+        v-bind="getHighlightBox(component.element)"
+        @mouseenter="showInfo(component, $event)"
+        @mouseleave="hideInfo"
+        @mousemove="updateInfoPosition(component, $event)"
+      />
+    </template>
 
     <!-- Info Panel -->
-    <div
+    <LoupeBox
       v-if="activeComponent"
       class="info-panel"
-      :style="infoPosition ? {
-        left: `${infoPosition.x}px`,
-        top: `${infoPosition.y}px`,
-      } : {}"
-      @mouseenter="() => {}"
+      :left="infoPosition ? `${infoPosition.x}px` : 'auto'"
+      :top="infoPosition ? `${infoPosition.y}px` : 'auto'"
       @mouseleave="hideInfo"
     >
       <div class="info-header">
-        <div class="flex-1">
-          <h3 class="component-name flex items-center gap-2">
+        <div class="min-w-0 flex-1">
+          <h3 class="component-name">
             <AppIcon :name="activeComponent.icon" v-if="activeComponent.icon" class="component-name-icon" />
             {{ activeComponent.name }}
           </h3>
           <p class="component-path">{{ activeComponent.path }}</p>
         </div>
         <button
+          type="button"
           @click="closeLoupe"
           class="close-button"
           aria-label="Close Loupe"
@@ -100,7 +97,7 @@
           <AppIcon name="x" />
         </button>
       </div>
-      
+
       <div class="info-links">
         <a
           v-if="activeComponent.links.docs"
@@ -110,7 +107,7 @@
           class="info-link"
         >
           <AppIcon name="book-open" />
-          <span>View in Style Guide</span>
+          <span>View in style guide</span>
           <AppIcon name="external-link" class="open-icon" />
         </a>
         <a
@@ -120,9 +117,7 @@
           rel="noopener noreferrer"
           class="info-link"
         >
-          <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-          </svg>
+          <AppIcon name="github" />
           <span>View in GitHub</span>
           <AppIcon name="external-link" class="open-icon" />
         </a>
@@ -133,26 +128,25 @@
           rel="noopener noreferrer"
           class="info-link"
         >
-          <svg class="figma-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15.852 8.981h-4.588V0h4.588c2.476 0 4.375 1.717 4.375 4.49 0 2.775-1.899 4.491-4.375 4.491zM12.264 7.51h3.588c1.665 0 2.811-1.135 2.811-2.98 0-1.846-1.146-2.98-2.811-2.98H12.264V7.51zm0 1.471H8.26c-2.476 0-4.375-1.716-4.375-4.49C3.885 1.717 5.784 0 8.26 0h4.004v8.981zm-4.004-7.51c-1.665 0-2.811 1.134-2.811 2.98 0 1.845 1.146 2.98 2.811 2.98h4.004V1.471zm4.004 15.019H8.26c-2.476 0-4.375-1.716-4.375-4.49 0-2.774 1.899-4.49 4.375-4.49h4.004v8.98zm-4.004-7.509c-1.665 0-2.811 1.135-2.811 2.98 0 1.846 1.146 2.981 2.811 2.981h4.004v-5.961H8.26zm8.519 7.509c-2.476 0-4.375-1.716-4.375-4.49 0-2.774 1.899-4.49 4.375-4.49h4.588v8.98h-4.588zm-1.471-7.509c-1.665 0-2.811 1.135-2.811 2.98 0 1.846 1.146 2.981 2.811 2.981h3.117V9.45h-3.117z"/>
-          </svg>
+          <AppIcon name="figma" />
           <span>View in Figma</span>
           <AppIcon name="external-link" class="open-icon" />
         </a>
       </div>
-    </div>
+    </LoupeBox>
 
     <!-- Unified Control Panel -->
     <div class="control-panel">
       <div class="panel-header">
-        <div class="flex-1">
-          <h3 class="panel-title flex items-center gap-2">
-            <ScanEye :size="20" class="scan-eye-icon" />
+        <div class="min-w-0 flex-1">
+          <h3 class="panel-title">
+            <AppIcon name="scan-eye" class="panel-title-icon" />
             Loupe
           </h3>
           <p class="panel-subtitle">Viewport: {{ viewportWidth }} × {{ viewportHeight }}px • {{ currentBreakpointLabel }}</p>
         </div>
         <button
+          type="button"
           @click="closeLoupe"
           class="close-button"
           aria-label="Close Loupe"
@@ -162,40 +156,28 @@
       </div>
 
       <!-- Feature Toggles -->
-      <div class="features-section">
+      <div class="panel-section">
         <div class="section-label">Features</div>
         <div class="feature-toggles">
-          <label class="feature-toggle">
-            <input type="checkbox" v-model="showComponentHighlights" />
-            <span>Component Highlights</span>
-          </label>
-          <label class="feature-toggle">
-            <input type="checkbox" v-model="showRuler" />
-            <span>Breakpoint Ruler</span>
-          </label>
-          <label class="feature-toggle">
-            <input type="checkbox" v-model="showLayoutInspector" @change="onLayoutInspectorToggle" />
-            <span>Layout Inspector</span>
-          </label>
+          <UiCheckbox v-model="showComponentHighlights" label="Component highlights" />
+          <UiCheckbox v-model="showRuler" label="Breakpoint ruler" />
+          <UiCheckbox v-model="showLayoutInspector" label="Layout inspector" @update:model-value="onLayoutInspectorToggle" />
         </div>
       </div>
 
       <!-- Breakpoints Section -->
-      <div class="breakpoints-section">
+      <div class="panel-section">
         <div class="section-label">Breakpoints</div>
         <div class="breakpoints-list">
           <div
             v-for="bp in breakpointItems"
             :key="`${bp.id}-${viewportWidth}`"
             class="breakpoint-item"
-            :class="{ active: bp.isActive }"
-            :style="bp.isActive ? { borderColor: getBreakpointColor(bp.id) } : {}"
+            :class="[`loupe-tone-${getBreakpointTone(bp.id)}`, { active: bp.isActive }]"
           >
             <div class="breakpoint-item-header">
               <span class="breakpoint-name">{{ bp.label || bp.id }}</span>
-              <span class="breakpoint-status" :class="{ 'status-active': bp.isActive }">
-                {{ bp.isActive ? 'Active' : 'Inactive' }}
-              </span>
+              <UiChip :tone="bp.isActive ? 'accent' : 'neutral'">{{ bp.isActive ? 'Active' : 'Inactive' }}</UiChip>
             </div>
             <div class="breakpoint-range">{{ formatBreakpointRange(bp) }}</div>
             <button v-if="bp.minWidth !== undefined" type="button" class="breakpoint-open" @click="jumpToBreakpoint(bp)">
@@ -207,31 +189,14 @@
       </div>
 
       <!-- Layout Inspector Section -->
-      <div v-if="showLayoutInspector" class="layout-inspector-section">
+      <div v-if="showLayoutInspector" class="panel-section">
         <div class="section-label">
-          Layout Containers
-          <div class="section-actions">
-            <button
-              v-if="isScanning"
-              @click="cancelScan"
-              class="cancel-scan-button"
-              title="Cancel scan"
-            >
-              Cancel
-            </button>
-            <button
-              v-else
-              @click="refreshLayouts"
-              class="refresh-button"
-              title="Refresh layouts"
-            >
-              ↻ Refresh
-            </button>
-          </div>
+          Layout containers
+          <UiButton v-if="isScanning" size="sm" variant="secondary" @click="cancelScan">Cancel</UiButton>
+          <UiButton v-else size="sm" variant="secondary" icon="refresh-cw" @click="refreshLayouts">Refresh</UiButton>
         </div>
-        <div v-if="isScanning" class="scanning-indicator">
-          <div class="scanning-spinner"></div>
-          <span>Scanning for layouts...</span>
+        <div v-if="isScanning" class="scanning-indicator" role="status">
+          <UiSpinner label="Scanning for layouts…" />
         </div>
         <div class="layout-list" ref="layoutListRef">
           <div
@@ -245,9 +210,9 @@
             @mouseleave="highlightedLayoutIndex = null"
           >
             <div class="layout-item-header">
-              <span class="layout-type-badge" :class="`type-${layout.type}`">
+              <UiChip :tone="layout.type === 'grid' ? 'accent' : 'success'">
                 {{ layout.type === 'grid' ? 'Grid' : 'Flex' }}
-              </span>
+              </UiChip>
               <span class="layout-selector">{{ layout.selector }}</span>
             </div>
             <div class="layout-properties">
@@ -282,25 +247,14 @@
         </p>
       </div>
     </div>
-
-    <!-- Instructions overlay (simplified) -->
-    <div class="instructions-overlay">
-      <div class="instructions-content">
-          <h3 class="flex items-center gap-2">
-          <ScanEye :size="20" class="scan-eye-icon" />
-          Loupe Active
-        </h3>
-        <p v-if="showComponentHighlights">Hover over highlighted components to see details</p>
-        <p v-else>Toggle features in the control panel</p>
-        <p class="shortcut-hint">Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> to close</p>
-      </div>
-    </div>
   </div>
 </template>
 
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
-import { ScanEye } from 'lucide-vue-next';
+import LoupeBox from './loupe/LoupeBox.vue';
+import { UiButton, UiCheckbox, UiChip, UiSpinner } from './ui';
 import { componentMetadataService } from '../services/componentMetadataService';
 
 const isActive = ref(false);
@@ -375,17 +329,10 @@ const scanForComponents = () => {
   });
 };
 
-const getHighlightStyle = (element) => {
-  const rect = element.getBoundingClientRect();
-  return {
-    position: 'fixed',
-    left: `${rect.left}px`,
-    top: `${rect.top}px`,
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
-    zIndex: 9998,
-  };
-};
+const px = (n) => `${n}px`;
+const boxFor = (rect) => ({ left: px(rect.left), top: px(rect.top), width: px(rect.width), height: px(rect.height) });
+
+const getHighlightBox = (element) => boxFor(element.getBoundingClientRect());
 
 const showInfo = (component, event) => {
   console.log('Showing info for component:', component);
@@ -521,10 +468,10 @@ const formatBreakpointRange = (breakpoint) => {
   return 'All sizes';
 };
 
-const getBreakpointColor = (id) => {
-  const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
+// Each breakpoint keeps one of the six chart colours (loupe-tone-N in the styles)
+const getBreakpointTone = (id) => {
   const index = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return colors[index % colors.length];
+  return (index % 6) + 1;
 };
 
 const sortedBreakpoints = computed(() => {
@@ -838,15 +785,7 @@ const updateLayoutOverlayStyles = () => {
     detectedLayouts.value.forEach((layout, index) => {
       try {
         const id = getLayoutId(layout, index);
-        const rect = layout.element.getBoundingClientRect();
-        newStyles.set(id, {
-          position: 'fixed',
-          left: `${rect.left}px`,
-          top: `${rect.top}px`,
-          width: `${rect.width}px`,
-          height: `${rect.height}px`,
-          zIndex: 9997,
-        });
+        newStyles.set(id, boxFor(layout.element.getBoundingClientRect()));
       } catch (error) {
         console.warn('Layout element no longer available:', error);
       }
@@ -855,17 +794,7 @@ const updateLayoutOverlayStyles = () => {
   }, 100);
 };
 
-const getLayoutOverlayStyle = (layout, index) => {
-  const id = getLayoutId(layout, index);
-  return layoutOverlayStyles.value.get(id) || {
-    position: 'fixed',
-    left: `${layout.rect.left}px`,
-    top: `${layout.rect.top}px`,
-    width: `${layout.rect.width}px`,
-    height: `${layout.rect.height}px`,
-    zIndex: 9997,
-  };
-};
+const getLayoutBox = (layout, index) => layoutOverlayStyles.value.get(getLayoutId(layout, index)) || boxFor(layout.rect);
 
 const handleKeyDown = (event) => {
   // Ctrl+Shift+L or Cmd+Shift+L
@@ -927,800 +856,220 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* The Loupe floats over whatever page is open, above the app's own layers */
 .loupe-tool {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  @apply pointer-events-none fixed inset-0;
   z-index: 9999;
-  pointer-events: none;
 }
+
+/* A see-through accent wash, so highlights don't hide the page under them */
+.loupe-tool {
+  --loupe-wash: color-mix(in srgb, theme('colors.accent.DEFAULT') 12%, transparent);
+  --loupe-wash-strong: color-mix(in srgb, theme('colors.accent.DEFAULT') 22%, transparent);
+}
+
+/* Breakpoint colours: the chart palette, one per breakpoint */
+.loupe-tone-1 { --loupe-tone: theme('colors.chart.1'); }
+.loupe-tone-2 { --loupe-tone: theme('colors.chart.2'); }
+.loupe-tone-3 { --loupe-tone: theme('colors.chart.3'); }
+.loupe-tone-4 { --loupe-tone: theme('colors.chart.4'); }
+.loupe-tone-5 { --loupe-tone: theme('colors.chart.5'); }
+.loupe-tone-6 { --loupe-tone: theme('colors.chart.6'); }
 
 .component-highlight {
-  position: fixed;
-  border: 2px solid #6366f1;
-  background: rgba(99, 102, 241, 0.1);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
-  pointer-events: auto;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  @apply pointer-events-auto fixed cursor-pointer rounded-control border-2 border-accent transition-colors;
+  background: var(--loupe-wash);
   z-index: 9998;
 }
-
 .component-highlight:hover {
-  border-color: #818cf8;
-  background: rgba(129, 140, 248, 0.15);
-  box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.4);
+  @apply border-accent-hover;
+  background: var(--loupe-wash-strong);
 }
 
 .info-panel {
-  position: fixed;
-  width: 320px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  @apply pointer-events-auto fixed w-80 max-w-full overflow-hidden rounded-tile border border-line-faint bg-surface-raised shadow-overlay;
   z-index: 10000;
-  pointer-events: auto;
-  overflow: hidden;
 }
-
-.dark .info-panel {
-  background: #1e293b;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+.info-header,
+.panel-header {
+  @apply flex items-start justify-between gap-3 border-b border-line-faint p-4;
 }
-
-.info-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 16px;
-  border-bottom: 1px solid #e5e7eb;
+.component-name,
+.panel-title {
+  @apply mb-1 flex items-center gap-2 font-semibold text-ink-strong;
 }
-
-.dark .info-header {
-  border-bottom-color: #334155;
-}
-
 .component-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 4px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  @apply text-lg;
 }
-
-.component-name-icon {
-  color: #6366f1;
-  flex-shrink: 0;
+.panel-title {
+  @apply text-xl;
 }
-
-.dark .component-name {
-  color: #f1f5f9;
+.component-name-icon,
+.panel-title-icon {
+  @apply flex-shrink-0 text-accent-text;
 }
-
-.dark .component-name-icon {
-  color: #818cf8;
+.component-path,
+.panel-subtitle {
+  @apply font-code text-xs text-ink-secondary;
 }
-
-.component-path {
-  font-size: 12px;
-  color: #6b7280;
-  margin: 0;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+.panel-subtitle {
+  @apply text-sm;
 }
-
-.dark .component-path {
-  color: #94a3b8;
-}
-
 .close-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
+  @apply flex flex-shrink-0 items-center justify-center rounded-control p-1 text-ink-secondary transition-colors hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
 }
-
-.close-button:hover {
-  background: #f3f4f6;
-  color: #111827;
-}
-
-.dark .close-button {
-  color: #94a3b8;
-}
-
-.dark .close-button:hover {
-  background: #334155;
-  color: #f1f5f9;
-}
-
 .info-links {
-  padding: 8px;
+  @apply flex flex-col gap-1 p-2;
 }
-
 .info-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 6px;
-  text-decoration: none;
-  color: #374151;
-  transition: all 0.2s;
-  margin-bottom: 4px;
+  @apply flex items-center gap-3 rounded-control p-3 text-sm text-ink no-underline transition-colors hover:bg-fill-hover hover:text-ink-strong;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 outline-focus;
 }
-
-.info-link:hover {
-  background: #f3f4f6;
-  color: #111827;
-}
-
-.dark .info-link {
-  color: #cbd5e1;
-}
-
-.dark .info-link:hover {
-  background: #334155;
-  color: #f1f5f9;
-}
-
-.info-link .app-icon {
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
-}
-
-.github-icon,
-.figma-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
 .open-icon {
-  margin-left: auto;
-  font-size: 16px;
-  opacity: 0.6;
-}
-
-.instructions-overlay {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: white;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  z-index: 10001;
-  pointer-events: auto;
-  max-width: 280px;
-}
-
-.dark .instructions-overlay {
-  background: #1e293b;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-}
-
-.instructions-content h3 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.instructions-content h3 .scan-eye-icon {
-  color: #6366f1;
-  flex-shrink: 0;
-}
-
-.dark .instructions-content h3 {
-  color: #f1f5f9;
-}
-
-.dark .instructions-content h3 .scan-eye-icon {
-  color: #818cf8;
-}
-
-.instructions-content p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.dark .instructions-content p {
-  color: #94a3b8;
-}
-
-.shortcut-hint {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.dark .shortcut-hint {
-  border-top-color: #334155;
+  @apply ml-auto text-base text-ink-muted;
 }
 
 kbd {
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 12px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  color: #374151;
-}
-
-.dark kbd {
-  background: #334155;
-  border-color: #475569;
-  color: #cbd5e1;
+  @apply rounded border border-line-control bg-fill-subtle px-1.5 py-0.5 font-code text-xs text-ink;
 }
 
 /* Unified Control Panel */
 .control-panel {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 400px;
-  max-width: calc(100vw - 40px);
-  max-height: calc(100vh - 40px);
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  @apply pointer-events-auto fixed right-5 top-5 flex w-96 flex-col overflow-y-auto overflow-x-hidden rounded-card border border-line-faint bg-surface-raised shadow-overlay;
+  max-width: calc(100vw - 2.5rem);
+  max-height: calc(100vh - 2.5rem);
   z-index: 10002;
-  pointer-events: auto;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.dark .control-panel {
-  background: #1e293b;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 20px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.dark .panel-header {
-  border-bottom-color: #334155;
-}
-
-.panel-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 4px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.panel-title .scan-eye-icon {
-  color: #6366f1;
-  flex-shrink: 0;
-}
-
-.dark .panel-title {
-  color: #f1f5f9;
-}
-
-.dark .panel-title .scan-eye-icon {
-  color: #818cf8;
-}
-
-.panel-subtitle {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-}
-
-.dark .panel-subtitle {
-  color: #94a3b8;
 }
 
 /* Breakpoint Ruler */
 .breakpoint-ruler {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border-bottom: 2px solid #e5e7eb;
+  @apply pointer-events-none fixed inset-x-0 top-0 h-16 border-b-2 border-line-faint bg-surface-raised shadow-raised backdrop-blur;
   z-index: 9998;
-  pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-
-.dark .breakpoint-ruler {
-  background: rgba(30, 41, 59, 0.95);
-  border-bottom-color: #334155;
-}
-
-.ruler-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
+.ruler-container,
 .ruler-scale {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  @apply relative h-full w-full;
 }
-
 .ruler-marker {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  pointer-events: auto;
-  cursor: pointer;
-  transition: all 0.2s;
+  @apply pointer-events-auto absolute bottom-0 cursor-pointer transition-opacity hover:opacity-80;
+  color: var(--loupe-tone);
 }
-
-.ruler-marker:hover {
-  opacity: 0.8;
+.ruler-marker:focus-visible {
+  @apply outline outline-2 outline-offset-2 outline-focus;
 }
-
 .marker-line-vertical {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: currentColor;
-  opacity: 0.6;
+  @apply absolute inset-y-0 left-0 w-0.5 bg-current opacity-60;
 }
-
 .ruler-marker-max .marker-line-vertical {
-  opacity: 0.3;
-  width: 1px;
+  @apply w-px opacity-30;
 }
-
 .marker-label {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 2px 4px;
-  border-radius: 3px;
-  white-space: nowrap;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  pointer-events: none;
+  @apply pointer-events-none absolute left-1 top-1 whitespace-nowrap rounded bg-surface-raised px-1 py-0.5 font-code text-xs font-semibold;
 }
-
-.dark .marker-label {
-  background: rgba(30, 41, 59, 0.9);
-  color: #f1f5f9;
-}
-
 .ruler-viewport-indicator {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  transform: translateX(-50%);
-  z-index: 10;
-  pointer-events: none;
+  @apply pointer-events-none absolute bottom-0 z-10 w-0.5 -translate-x-1/2;
 }
-
 .viewport-indicator-line {
-  width: 2px;
-  height: 100%;
-  background: #ef4444;
-  box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+  @apply h-full w-0.5 bg-danger;
 }
-
 .viewport-indicator-label {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ef4444;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  @apply absolute bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-danger px-1.5 py-0.5 font-code text-xs font-semibold text-ink-on-accent;
 }
 
 /* Layout Overlays */
 .layout-overlays {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  @apply pointer-events-none fixed inset-0;
   z-index: 9996;
-  pointer-events: none;
 }
-
 .layout-overlay {
-  border: 2px solid #6366f1;
-  background: rgba(99, 102, 241, 0.1);
-  pointer-events: auto;
-  cursor: pointer;
-  transition: all 0.2s;
+  @apply pointer-events-auto fixed cursor-pointer border-2 border-chart-2 transition-colors;
+  z-index: 9997;
 }
-
 .layout-overlay:hover,
 .layout-overlay.layout-highlighted {
-  border-color: #818cf8;
-  background: rgba(129, 140, 248, 0.2);
-  box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.3);
+  @apply border-accent shadow-raised;
+  background: var(--loupe-wash-strong);
 }
-
 .layout-label {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  background: #6366f1;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  pointer-events: none;
+  @apply pointer-events-none absolute left-1 top-1 rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-ink-on-accent;
 }
 
 /* Sections */
-.features-section,
-.breakpoints-section,
-.layout-inspector-section {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e5e7eb;
+.panel-section {
+  @apply border-b border-line-faint px-5 py-4;
 }
-
-.dark .features-section,
-.dark .breakpoints-section,
-.dark .layout-inspector-section {
-  border-bottom-color: #334155;
-}
-
 .section-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  @apply mb-3 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-ink-secondary;
 }
-
-.dark .section-label {
-  color: #94a3b8;
+.feature-toggles,
+.breakpoints-list,
+.layout-list {
+  @apply flex flex-col gap-2;
 }
-
-.feature-toggles {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.feature-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #111827;
-}
-
-.dark .feature-toggle {
-  color: #f1f5f9;
-}
-
-.feature-toggle input[type="checkbox"] {
-  cursor: pointer;
-}
-
-.breakpoints-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .breakpoint-item {
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  transition: all 0.2s;
+  @apply rounded-control border border-line-faint bg-surface-sunken p-3 transition-colors;
 }
-
-.dark .breakpoint-item {
-  border-color: #334155;
-  background: #0f172a;
-}
-
 .breakpoint-item.active {
-  border-width: 2px;
-  background: rgba(99, 102, 241, 0.1);
+  @apply border-2 bg-accent-subtle;
+  border-color: var(--loupe-tone);
 }
-
 .breakpoint-item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
+  @apply mb-1 flex items-center justify-between;
 }
-
 .breakpoint-name {
-  font-weight: 600;
-  color: #111827;
-  font-size: 14px;
+  @apply text-sm font-semibold text-ink-strong;
 }
-
-.dark .breakpoint-name {
-  color: #f1f5f9;
-}
-
 .breakpoint-open {
   @apply mt-2 text-xs font-medium text-accent-text underline underline-offset-2 rounded-control;
   @apply focus-visible:outline focus-visible:outline-2 outline-focus;
 }
-
 .breakpoint-message {
   @apply mt-2 text-xs text-ink-secondary;
 }
-
 .breakpoint-range {
-  font-size: 12px;
-  color: #6b7280;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  @apply font-code text-xs text-ink-secondary;
 }
 
-.dark .breakpoint-range {
-  color: #94a3b8;
-}
-
-.breakpoint-status {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background: #e5e7eb;
-  color: #6b7280;
-  text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.dark .breakpoint-status {
-  background: #334155;
-  color: #94a3b8;
-}
-
-.breakpoint-status.status-active {
-  background: #6366f1;
-  color: white;
-}
-
-/* Layout Inspector Styles */
-.section-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.cancel-scan-button,
-.refresh-button {
-  padding: 4px 8px;
-  background: #6366f1;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.cancel-scan-button {
-  background: #ef4444;
-}
-
-.cancel-scan-button:hover {
-  background: #dc2626;
-}
-
-.refresh-button:hover {
-  background: #818cf8;
-}
-
+/* Layout Inspector */
 .scanning-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: #f3f4f6;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  font-size: 13px;
-  color: #6b7280;
+  @apply mb-3 rounded-control bg-surface-sunken p-3 text-sm text-ink-secondary;
 }
-
-.dark .scanning-indicator {
-  background: #0f172a;
-  color: #94a3b8;
-}
-
-.scanning-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #e5e7eb;
-  border-top-color: #6366f1;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-.dark .scanning-spinner {
-  border-color: #334155;
-  border-top-color: #818cf8;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .layout-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
+  @apply max-h-52 overflow-y-auto;
 }
-
 .layout-item {
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  cursor: pointer;
-  transition: all 0.2s;
+  @apply cursor-pointer rounded-control border border-line-faint bg-surface-sunken p-3 transition-colors;
 }
-
-.dark .layout-item {
-  border-color: #334155;
-  background: #0f172a;
-}
-
 .layout-item:hover,
 .layout-item.active {
-  border-color: #6366f1;
-  background: rgba(99, 102, 241, 0.1);
+  @apply border-accent bg-accent-subtle;
 }
-
 .layout-item-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  @apply mb-2 flex items-center gap-2;
 }
-
-.layout-type-badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.layout-type-badge.type-grid {
-  background: #6366f1;
-  color: white;
-}
-
-.layout-type-badge.type-flex {
-  background: #10b981;
-  color: white;
-}
-
 .layout-selector {
-  font-size: 11px;
-  color: #6b7280;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  @apply flex-1 truncate font-code text-xs text-ink-secondary;
 }
-
-.dark .layout-selector {
-  color: #94a3b8;
-}
-
 .layout-properties {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 11px;
+  @apply flex flex-wrap gap-2 text-xs;
 }
-
 .layout-prop {
-  display: flex;
-  gap: 4px;
+  @apply flex gap-1;
 }
-
 .prop-label {
-  color: #6b7280;
-  font-weight: 600;
+  @apply font-semibold text-ink-secondary;
 }
-
-.dark .prop-label {
-  color: #94a3b8;
-}
-
 .prop-value {
-  color: #111827;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  @apply font-code text-ink-strong;
 }
-
-.dark .prop-value {
-  color: #f1f5f9;
-}
-
 .no-layouts {
-  padding: 12px;
-  text-align: center;
-  color: #9ca3af;
-  font-size: 14px;
-  font-style: italic;
+  @apply p-3 text-center text-sm italic text-ink-muted;
 }
-
-.dark .no-layouts {
-  color: #64748b;
-}
-
 .instructions-section {
-  padding: 16px 20px;
+  @apply px-5 py-4;
 }
-
 .instruction-text {
-  font-size: 12px;
-  color: #6b7280;
-  text-align: center;
-  margin: 0;
+  @apply text-center text-xs text-ink-secondary;
 }
-
-.dark .instruction-text {
-  color: #94a3b8;
-}
-
-.flex-1 {
-  flex: 1;
-}
-
 </style>
-
