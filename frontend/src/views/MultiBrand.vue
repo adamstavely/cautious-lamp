@@ -1,406 +1,278 @@
 <template>
-  <div class="w-full h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative flex">
-    <!-- Drawer -->
-    <DocumentationDrawer :isOpen="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" />
-    
-    <!-- Main Content Area -->
-    <div 
-      class="flex-1 h-full transition-all duration-300 relative overflow-hidden"
-      :style="drawerOpen ? 'margin-left: 256px;' : 'margin-left: 48px;'"
-    >
-      <!-- Breadcrumbs -->
-      <Breadcrumbs />
-      
-      <div class="h-full overflow-y-auto">
-        <div class="p-8">
-        <!-- Hero Section -->
-        <div class="max-w-7xl mx-auto mb-8">
-          <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-            <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-            
-            <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-              <div class="flex-1">
-                <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-                  Multi-Brand Support
-                </h1>
-                <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">
-                  Manage multiple brands and white-label systems. Create brand-specific themes, tokens, and components.
-                </p>
-              </div>
-            </div>
-          </div>
+  <PageShell width="wide">
+    <PageHero
+      eyebrow="Tokens"
+      title="Multi-brand"
+      lead="Brands share the design system's components and override the design tokens that make them their own."
+      spot="foundations/design-themes"
+    />
+
+    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+
+    <UiSpinner v-if="loading" label="Loading brands…" />
+
+    <UiCallout v-else-if="loadError" tone="danger" title="Brands couldn't be loaded" role="alert">
+      {{ apiErrorMessage(loadError) }}
+      <template #actions>
+        <UiButton size="sm" icon="refresh-cw" @click="load">Try again</UiButton>
+      </template>
+    </UiCallout>
+
+    <template v-else>
+      <PageSection title="Brands" description="Each brand's token overrides; tokens it doesn't override keep their base value.">
+        <div v-if="canCreate" class="mb-6">
+          <UiButton variant="primary" icon="plus" @click="openEditor()">Add brand</UiButton>
         </div>
 
-        <div class="max-w-7xl mx-auto grid lg:grid-cols-3 gap-6">
-          <!-- Left Column: Brand Management -->
-          <div class="lg:col-span-1 space-y-6">
-            <!-- Brand List -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  Brands
-                </h3>
-                <button
-                  @click="showAddBrand = true"
-                  class="px-3 py-1 rounded-lg text-sm font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                >
-                  + Add
-                </button>
-              </div>
-              <div class="space-y-2">
-                <div
-                  v-for="brand in brands"
-                  :key="brand.id"
-                  @click="selectedBrand = brand"
-                  class="p-3 rounded-lg cursor-pointer transition-colors"
-                  :class="selectedBrand?.id === brand.id
-                    ? (isDarkMode ? 'bg-indigo-900/30 border border-indigo-700' : 'bg-indigo-50 border border-indigo-200')
-                    : (isDarkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100')"
-                >
-                  <div class="flex items-center gap-3">
-                    <div 
-                      class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                      :style="{ backgroundColor: brand.primaryColor }"
-                    >
-                      {{ brand.name.charAt(0) }}
-                    </div>
-                    <div class="flex-1">
-                      <div class="text-sm font-medium" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        {{ brand.name }}
-                      </div>
-                      <div class="text-xs" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                        {{ brand.components }} components
-                      </div>
-                    </div>
-                  </div>
+        <UiTable v-if="brands.length" caption="Brands" bordered>
+          <thead>
+            <tr>
+              <th scope="col">Brand</th>
+              <th scope="col">Overrides</th>
+              <th scope="col">Last changed</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="brand in brands" :key="brand.id">
+              <th scope="row">
+                <span class="font-medium text-ink-strong">{{ brand.name }}</span>
+                <span v-if="brand.description" class="block text-sm font-normal text-ink-secondary">{{ brand.description }}</span>
+              </th>
+              <td class="whitespace-nowrap">
+                <span class="inline-flex items-center gap-2">
+                  <UiSwatch v-for="o in colourOverrides(brand).slice(0, 4)" :key="o.token" :color="o.value" :label="`${o.token}: ${o.value}`" size="sm" />
+                  {{ brand.tokenOverrides.length }} {{ brand.tokenOverrides.length === 1 ? 'token' : 'tokens' }}
+                </span>
+              </td>
+              <td class="whitespace-nowrap text-ink-secondary">{{ formatDate(brand.updatedAt) }} by {{ brand.updatedBy?.name }}</td>
+              <td class="whitespace-nowrap">
+                <div class="flex gap-2">
+                  <UiButton size="sm" icon="eye" :aria-pressed="selectedId === brand.id" @click="selectedId = brand.id">View<span class="sr-only"> {{ brand.name }}</span></UiButton>
+                  <UiButton v-if="canEdit" size="sm" icon="pencil" @click="openEditor(brand)">Edit<span class="sr-only"> {{ brand.name }}</span></UiButton>
+                  <UiButton v-if="canDelete" size="sm" variant="danger" icon="trash-2" @click="removeBrand(brand)">Delete<span class="sr-only"> {{ brand.name }}</span></UiButton>
                 </div>
-              </div>
-            </div>
+              </td>
+            </tr>
+          </tbody>
+        </UiTable>
 
-            <!-- Brand Settings -->
-            <div 
-              v-if="selectedBrand"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Brand Settings
-              </h3>
-              <div class="space-y-3">
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Brand Name
-                  </label>
-                  <input
-                    v-model="selectedBrand.name"
-                    type="text"
-                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                    :class="isDarkMode 
-                      ? 'border-gray-600 bg-slate-700 text-white' 
-                      : 'border-gray-300 bg-white text-gray-900'"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Primary Color
-                  </label>
-                  <div class="flex items-center gap-2">
-                    <input
-                      v-model="selectedBrand.primaryColor"
-                      type="color"
-                      class="w-12 h-10 rounded border"
-                      :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                    />
-                    <input
-                      v-model="selectedBrand.primaryColor"
-                      type="text"
-                      class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                    Secondary Color
-                  </label>
-                  <div class="flex items-center gap-2">
-                    <input
-                      v-model="selectedBrand.secondaryColor"
-                      type="color"
-                      class="w-12 h-10 rounded border"
-                      :class="isDarkMode ? 'border-gray-600' : 'border-gray-300'"
-                    />
-                    <input
-                      v-model="selectedBrand.secondaryColor"
-                      type="text"
-                      class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono text-sm"
-                      :class="isDarkMode 
-                        ? 'border-gray-600 bg-slate-700 text-white' 
-                        : 'border-gray-300 bg-white text-gray-900'"
-                    />
-                  </div>
-                </div>
-                <button
-                  @click="saveBrand"
-                  class="w-full px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                >
-                  Save Brand
-                </button>
-              </div>
-            </div>
+        <UiEmptyState
+          v-else
+          title="No brands yet"
+          :body="canCreate ? 'Add a brand to give it its own values for the design tokens.' : 'People who can create tokens add brands here.'"
+          spot="foundations/design-themes"
+        />
+      </PageSection>
+
+      <PageSection v-if="selected" :title="selected.name" description="Its token values next to the base values." divided>
+        <UiTable v-if="selected.tokenOverrides.length" :caption="`Token overrides for ${selected.name}`" bordered>
+          <thead>
+            <tr>
+              <th scope="col">Token</th>
+              <th scope="col">Base value</th>
+              <th scope="col">{{ selected.name }} value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="override in selected.tokenOverrides" :key="override.token">
+              <th scope="row" class="font-mono text-sm text-ink-strong">{{ override.token }}</th>
+              <td><TokenValue :value="tokensByName.get(override.token)?.value ?? 'Not in the token set'" /></td>
+              <td><TokenValue :value="override.value" /></td>
+            </tr>
+          </tbody>
+        </UiTable>
+        <UiEmptyState v-else title="No overrides" :body="`${selected.name} uses every base token value.`" />
+      </PageSection>
+    </template>
+
+    <UiDialog :open="!!editor" :title="editor?.id ? `Edit ${editor.originalName}` : 'Add brand'" size="lg" @update:open="(open) => { if (!open) editor = null; }">
+      <form v-if="editor" id="brand-form" class="space-y-5" @submit.prevent="saveBrand">
+        <UiInput id="brand-name" v-model="editor.name" label="Name" required :error="editor.errors.name" />
+        <UiTextarea id="brand-description" v-model="editor.description" label="Description" :rows="2" />
+
+        <fieldset class="space-y-3">
+          <legend class="font-medium text-ink-strong mb-2">Token overrides</legend>
+          <p v-if="!editor.overrides.length" class="text-sm text-ink-secondary">No overrides: the brand uses every base value.</p>
+          <div v-for="(override, index) in editor.overrides" :key="override.key" class="override-row">
+            <UiSelect
+              :id="`override-token-${override.key}`"
+              v-model="override.token"
+              label="Token"
+              :hide-label="index > 0"
+              size="sm"
+              placeholder="Choose a token"
+              :options="tokenOptions"
+            />
+            <UiInput
+              :id="`override-value-${override.key}`"
+              v-model="override.value"
+              label="Value"
+              :hide-label="index > 0"
+              size="sm"
+              mono
+              :placeholder="tokensByName.get(override.token)?.value ?? ''"
+            />
+            <UiButton size="sm" variant="ghost" icon="trash-2" icon-only :label="`Remove override ${index + 1}`" @click="editor.overrides.splice(index, 1)" />
           </div>
+          <UiButton size="sm" icon="plus" @click="addOverride">Add override</UiButton>
+        </fieldset>
 
-          <!-- Right Column: Brand Preview & Components -->
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Brand Preview -->
-            <div 
-              v-if="selectedBrand"
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Brand Preview
-              </h3>
-              <div 
-                class="rounded-lg p-8"
-                :style="{ backgroundColor: selectedBrand.primaryColor }"
-              >
-                <div class="text-white">
-                  <h2 class="text-2xl font-bold mb-4">{{ selectedBrand.name }}</h2>
-                  <p class="mb-6 opacity-90">Brand preview with primary color</p>
-                  <button 
-                    class="px-6 py-2 rounded-lg font-medium"
-                    :style="{ backgroundColor: selectedBrand.secondaryColor, color: '#fff' }"
-                  >
-                    Action Button
-                  </button>
-                </div>
-              </div>
-            </div>
+        <UiCallout v-if="editor.error" tone="danger" role="alert">{{ editor.error }}</UiCallout>
+      </form>
+      <template #footer>
+        <UiButton @click="editor = null">Cancel</UiButton>
+        <UiButton type="submit" form="brand-form" variant="primary" :loading="saving">{{ editor?.id ? 'Save changes' : 'Add brand' }}</UiButton>
+      </template>
+    </UiDialog>
 
-            <!-- Brand Components -->
-            <div 
-              class="rounded-lg shadow-sm border p-6"
-              :class="isDarkMode 
-                ? 'bg-slate-900 border-gray-700' 
-                : 'bg-white border-gray-200'"
-            >
-              <h3 class="text-lg font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                Brand Components
-              </h3>
-              <div class="grid md:grid-cols-2 gap-4">
-                <div
-                  v-for="component in brandComponents"
-                  :key="component.id"
-                  class="p-4 rounded-lg border"
-                  :class="isDarkMode 
-                    ? 'bg-slate-800 border-gray-700' 
-                    : 'bg-gray-50 border-gray-200'"
-                >
-                  <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    {{ component.name }}
-                  </div>
-                  <div class="text-xs mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ component.brand }}
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span 
-                      class="text-xs px-2 py-1 rounded"
-                      :class="component.status === 'active'
-                        ? (isDarkMode ? 'bg-green-900/50 text-green-300' : 'bg-green-100 text-green-700')
-                        : (isDarkMode ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600')"
-                    >
-                      {{ component.status }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Add Brand Modal -->
-        <div
-          v-if="showAddBrand"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          @click.self="showAddBrand = false"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div 
-            class="relative w-full max-w-md rounded-lg shadow-xl border p-6"
-            :class="isDarkMode 
-              ? 'bg-slate-900 border-gray-700' 
-              : 'bg-white border-gray-200'"
-          >
-            <h2 class="text-xl font-bold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              Add New Brand
-            </h2>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm mb-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
-                  Brand Name
-                </label>
-                <input
-                  v-model="newBrand.name"
-                  type="text"
-                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  :class="isDarkMode 
-                    ? 'border-gray-600 bg-slate-700 text-white' 
-                    : 'border-gray-300 bg-white text-gray-900'"
-                />
-              </div>
-              <div class="flex items-center gap-4">
-                <button
-                  @click="createBrand"
-                  class="flex-1 px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'"
-                >
-                  Create
-                </button>
-                <button
-                  @click="showAddBrand = false; newBrand = { name: '', primaryColor: '#4f46e5', secondaryColor: '#6366f1' }"
-                  class="flex-1 px-4 py-2 rounded-lg font-medium transition-colors"
-                  :class="isDarkMode 
-                    ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <ConfirmDialog :state="confirmState" />
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import DocumentationDrawer from '../components/DocumentationDrawer.vue';
-import Breadcrumbs from '../components/Breadcrumbs.vue';
-import { useDrawer } from '../composables/useDrawer.js';
+import { computed, defineComponent, h, ref } from 'vue';
+import InlineNotice from '../components/InlineNotice.vue';
+import ConfirmDialog from '../components/workspaces/ConfirmDialog.vue';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiDialog, UiEmptyState, UiInput, UiSelect, UiSpinner, UiSwatch, UiTable, UiTextarea } from '../components/ui';
+import { useAuth } from '../composables/useAuth.js';
+import { useConfirmDialog } from '../composables/useConfirmDialog.js';
+import { useNotice } from '../composables/useNotice.js';
+import apiClient, { apiErrorMessage } from '../services/api.js';
 
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
-const selectedBrand = ref(null);
-const showAddBrand = ref(false);
-const newBrand = ref({ name: '', primaryColor: '#4f46e5', secondaryColor: '#6366f1' });
+/**
+ * Brands and their design-token overrides (GET/POST/PUT/DELETE /api/v1/brands,
+ * stored in Elasticsearch). Overrides name tokens from GET /api/v1/tokens.
+ * Changing brands needs token:create, token:edit or token:delete; the server
+ * checks again.
+ */
+const { hasPermission } = useAuth();
+const { notice, showNotice, clearNotice } = useNotice();
+const { confirmState, askConfirm } = useConfirmDialog();
 
-const brands = ref([
-  {
-    id: 1,
-    name: 'Primary Brand',
-    primaryColor: '#4f46e5',
-    secondaryColor: '#6366f1',
-    components: 24
-  },
-  {
-    id: 2,
-    name: 'Enterprise',
-    primaryColor: '#059669',
-    secondaryColor: '#10b981',
-    components: 18
-  },
-  {
-    id: 3,
-    name: 'Consumer',
-    primaryColor: '#dc2626',
-    secondaryColor: '#ef4444',
-    components: 15
-  }
-]);
+const canCreate = computed(() => hasPermission('token:create'));
+const canEdit = computed(() => hasPermission('token:edit'));
+const canDelete = computed(() => hasPermission('token:delete'));
 
-const brandComponents = computed(() => {
-  if (!selectedBrand) return [];
-  return [
-    { id: 1, name: 'Button', brand: selectedBrand.name, status: 'active' },
-    { id: 2, name: 'Card', brand: selectedBrand.name, status: 'active' },
-    { id: 3, name: 'Input', brand: selectedBrand.name, status: 'active' }
-  ];
+const brands = ref([]);
+const tokens = ref([]);
+const loading = ref(true);
+const loadError = ref(null);
+const selectedId = ref('');
+
+const tokensByName = computed(() => new Map(tokens.value.map((t) => [t.name, t])));
+const tokenOptions = computed(() => tokens.value.map((t) => ({ value: t.name, label: t.name })));
+const selected = computed(() => brands.value.find((b) => b.id === selectedId.value) ?? null);
+
+const isColour = (value) => /^(#[0-9a-f]{3,8}|rgba?\(|hsla?\()/i.test(String(value).trim());
+const colourOverrides = (brand) => brand.tokenOverrides.filter((o) => isColour(o.value));
+
+/** A token value, with a swatch when it is a colour */
+const TokenValue = defineComponent({
+  props: { value: { type: String, required: true } },
+  setup: (props) => () =>
+    h('span', { class: 'inline-flex items-center gap-2 font-mono text-sm' }, [
+      isColour(props.value) ? h(UiSwatch, { color: props.value, size: 'sm' }) : null,
+      props.value,
+    ]),
 });
 
-const createBrand = () => {
-  if (!newBrand.value.name.trim()) return;
-  
-  brands.value.push({
-    id: brands.value.length + 1,
-    name: newBrand.value.name,
-    primaryColor: newBrand.value.primaryColor,
-    secondaryColor: newBrand.value.secondaryColor,
-    components: 0
-  });
-  
-  showAddBrand.value = false;
-  newBrand.value = { name: '', primaryColor: '#4f46e5', secondaryColor: '#6366f1' };
+const formatDate = (iso) => new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+const load = async () => {
+  loading.value = true;
+  loadError.value = null;
+  try {
+    const [brandRes, tokenRes] = await Promise.all([apiClient.get('/api/v1/brands'), apiClient.get('/api/v1/tokens')]);
+    brands.value = brandRes.data.brands ?? [];
+    tokens.value = tokenRes.data.tokens ?? [];
+    if (!selected.value) selectedId.value = brands.value[0]?.id ?? '';
+  } catch (error) {
+    loadError.value = error;
+  } finally {
+    loading.value = false;
+  }
 };
 
-const saveBrand = () => {
-  // Save brand logic
-  console.log('Saving brand:', selectedBrand.value);
-};
+const editor = ref(null);
+const saving = ref(false);
+let nextKey = 0;
 
-
-
-
-
-let darkModeObserver = null;
-let darkModeInterval = null;
-
-onMounted(() => {
-  selectedBrand.value = brands.value[0];
-  
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
-  });
-  
-  darkModeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-  
-  const checkDarkMode = () => {
-    isDarkMode.value = document.documentElement.classList.contains('dark');
+const openEditor = (brand) => {
+  editor.value = {
+    id: brand?.id ?? null,
+    originalName: brand?.name ?? '',
+    name: brand?.name ?? '',
+    description: brand?.description ?? '',
+    overrides: (brand?.tokenOverrides ?? []).map((o) => ({ ...o, key: nextKey++ })),
+    errors: {},
+    error: '',
   };
-  
-  checkDarkMode();
-  darkModeInterval = setInterval(checkDarkMode, 100);
-});
+};
 
-onBeforeUnmount(() => {
-  if (darkModeObserver) {
-    darkModeObserver.disconnect();
+const addOverride = () => {
+  editor.value.overrides.push({ token: '', value: '', key: nextKey++ });
+};
+
+const saveBrand = async () => {
+  const current = editor.value;
+  current.errors = {};
+  current.error = '';
+  if (!current.name.trim()) {
+    current.errors.name = 'Enter a name.';
+    return;
   }
-  if (darkModeInterval) {
-    clearInterval(darkModeInterval);
+  const overrides = current.overrides.filter((o) => o.token || o.value.trim());
+  if (overrides.some((o) => !o.token || !o.value.trim())) {
+    current.error = 'Each override needs a token and a value.';
+    return;
   }
-});
+  const body = {
+    name: current.name.trim(),
+    description: current.description.trim(),
+    tokenOverrides: overrides.map((o) => ({ token: o.token, value: o.value.trim() })),
+  };
+  saving.value = true;
+  try {
+    const { data } = current.id ? await apiClient.put(`/api/v1/brands/${current.id}`, body) : await apiClient.post('/api/v1/brands', body);
+    brands.value = [...brands.value.filter((b) => b.id !== data.id), data].sort((a, b) => a.name.localeCompare(b.name));
+    selectedId.value = data.id;
+    showNotice(current.id ? `Saved ${data.name}.` : `Added ${data.name}.`, 'success');
+    editor.value = null;
+  } catch (error) {
+    current.error = apiErrorMessage(error, "The brand couldn't be saved.");
+  } finally {
+    saving.value = false;
+  }
+};
+
+const removeBrand = async (brand) => {
+  const confirmed = await askConfirm({
+    title: `Delete ${brand.name}?`,
+    message: 'Its token overrides are deleted with it. This can’t be undone.',
+    confirmText: 'Delete brand',
+    danger: true,
+  });
+  if (!confirmed) return;
+  try {
+    await apiClient.delete(`/api/v1/brands/${brand.id}`);
+    brands.value = brands.value.filter((b) => b.id !== brand.id);
+    if (selectedId.value === brand.id) selectedId.value = brands.value[0]?.id ?? '';
+    showNotice(`Deleted ${brand.name}.`, 'success');
+  } catch (error) {
+    showNotice(apiErrorMessage(error, `${brand.name} couldn't be deleted.`), 'error');
+  }
+};
+
+load();
 </script>
 
 <style scoped>
-.texture-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+.override-row {
+  @apply flex flex-col sm:flex-row sm:items-end gap-3;
+}
+
+.override-row > :not(:last-child) {
+  @apply flex-1;
 }
 </style>
-

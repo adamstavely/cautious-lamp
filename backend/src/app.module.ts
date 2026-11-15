@@ -36,6 +36,7 @@ import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/auth.guard';
 import { ApplicationsModule } from './applications/applications.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { BrandsModule } from './brands/brands.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     ReviewsModule,
     ApplicationsModule,
     WorkspacesModule,
+    BrandsModule,
   ],
   // Global guards run in this order: rate limiting first, then authentication
   providers: [

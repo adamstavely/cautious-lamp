@@ -8,7 +8,7 @@
       size="tool"
     >
       <template #actions>
-        <UiChip :tone="componentStatusTone(componentStatus)">{{ componentStatus || 'Production Ready' }}</UiChip>
+        <UiChip v-if="componentStatus" :tone="componentStatus.tone">{{ componentStatus.label }}</UiChip>
       </template>
     </PageHero>
 
@@ -387,7 +387,7 @@ import ColorPicker from '../components/ColorPicker.vue';
 import Dropdown from '../components/Dropdown.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
 import BreakingChangeAlert from '../components/BreakingChangeAlert.vue';
-import { useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
+import { useComponentStatus } from '../composables/useComponentPatternStatus.js';
 import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
 import InlineNotice from '../components/InlineNotice.vue';
@@ -398,7 +398,6 @@ import {
 import apiClient from '../services/api.js';
 
 const route = useRoute();
-const { getComponent } = useComponentPatternStatus();
 // The ColorPicker popover takes the theme as a prop; the usage examples follow the app's theme
 const appDark = useDarkMode();
 const { notice, showNotice, clearNotice } = useNotice();
@@ -407,11 +406,8 @@ const codeFormat = ref('vue');
 const selectedColor = ref('#4f46e5');
 const pickerPosition = ref({ left: 400, top: 200 });
 
-// Get component status from shared store
-const componentStatus = computed(() => {
-  const component = getComponent('Color Picker');
-  return component?.status || 'Production Ready';
-});
+// Lifecycle status from the component library (GET /api/v1/components/color-picker)
+const componentStatus = useComponentStatus('color-picker');
 
 // Performance data
 const performanceData = ref(null);
@@ -600,8 +596,6 @@ const formatDate = (dateString) => {
 
 const versionTone = (status) => ({ Current: 'success', Stable: 'info', Deprecated: 'danger', Beta: 'warning' })[status] || 'neutral';
 
-const componentStatusTone = (status) =>
-  ({ 'Production Ready': 'success', 'In Progress': 'warning', Planned: 'info', Deprecated: 'danger', Beta: 'warning' })[status] || 'neutral';
 
 const getChangeTypeIcon = (type) => {
   const icons = {

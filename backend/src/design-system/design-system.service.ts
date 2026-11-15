@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException, Optional, Inject } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException, Optional, Inject } from '@nestjs/common';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { EncryptionService } from '../common/security/encryption.service';
@@ -49,23 +49,46 @@ export interface ComponentVariant {
   };
 }
 
+/** A component's lifecycle stage, from planned to deprecated */
+export const COMPONENT_STATUSES = ['production', 'in-progress', 'planned', 'deprecated'] as const;
+export type ComponentStatus = (typeof COMPONENT_STATUSES)[number];
+
+/** Why and how a deprecated component goes away; kept on the component while its status is 'deprecated' */
+export interface ComponentDeprecation {
+  /** Id of the component to use instead */
+  replacement?: string;
+  /** Day the component stops being supported (YYYY-MM-DD) */
+  sunsetDate?: string;
+  reason?: string;
+  migrationGuide?: string;
+  /** When the component was first marked deprecated, and by whom */
+  deprecatedAt: string;
+  deprecatedBy?: string;
+}
+
 export interface Component {
   id: string;
   name: string;
   description: string;
-  status: 'production' | 'in-progress' | 'planned' | 'deprecated';
+  status: ComponentStatus;
   props: ComponentProp[];
   code: {
     vue: string;
     react: string;
     html?: string;
   };
+  /** Ids of the components this one is built from (PUT /components/:id/dependencies) */
   dependencies?: string[];
   examples?: string[];
   accessibility?: {
     wcag: string;
     notes?: string;
   };
+  /** Present while status is 'deprecated' */
+  deprecation?: ComponentDeprecation;
+  /** Last lifecycle change (status, deprecation or dependencies) through the API; absent if never changed */
+  updatedAt?: string;
+  updatedBy?: string;
   variants?: ComponentVariant[]; // Custom variants created via builder
   workspaceId?: string; // Workspace/team this component belongs to
   sharedWith?: string[]; // Workspace IDs this component is shared with
@@ -1816,6 +1839,90 @@ export const Table = ({
   }
 
   /**
+   * Lifecycle changes. Callers authorize first (ComponentAccessService.getForWrite)
+   * and pass `visibleIds`, the components the caller may read, so a replacement
+   * or dependency can only name a component the caller can see.
+   */
+  setComponentStatus(id: string, status: ComponentStatus, actorId: string): Component {
+    const component = this.requireComponent(id);
+    component.status = status;
+    if (status === 'deprecated') {
+      component.deprecation ??= { deprecatedAt: new Date().toISOString(), deprecatedBy: actorId };
+    } else {
+      delete component.deprecation;
+    }
+    return this.touch(component, actorId);
+  }
+
+  /** Marks the component deprecated with its replacement, sunset date, reason and migration guide */
+  deprecateComponent(
+    id: string,
+    details: Omit<ComponentDeprecation, 'deprecatedAt' | 'deprecatedBy'>,
+    visibleIds: ReadonlySet<string>,
+    actorId: string,
+  ): Component {
+    const component = this.requireComponent(id);
+    if (details.replacement !== undefined) {
+      if (details.replacement === id) throw new BadRequestException('A component cannot replace itself');
+      if (!visibleIds.has(details.replacement)) throw new BadRequestException(`Replacement component '${details.replacement}' not found`);
+    }
+    const deprecatedAt = component.deprecation?.deprecatedAt ?? new Date().toISOString();
+    const deprecatedBy = component.deprecation?.deprecatedBy ?? actorId;
+    component.status = 'deprecated';
+    component.deprecation = {
+      replacement: details.replacement,
+      sunsetDate: details.sunsetDate,
+      reason: details.reason,
+      migrationGuide: details.migrationGuide,
+      deprecatedAt,
+      deprecatedBy,
+    };
+    return this.touch(component, actorId);
+  }
+
+  /**
+   * Replaces the component's dependencies. Each must be another component the
+   * caller can see, and the graph must stay acyclic.
+   */
+  setComponentDependencies(id: string, dependencies: string[], visibleIds: ReadonlySet<string>, actorId: string): Component {
+    const component = this.requireComponent(id);
+    const unique = [...new Set(dependencies)];
+    for (const dep of unique) {
+      if (dep === id) throw new BadRequestException('A component cannot depend on itself');
+      if (!visibleIds.has(dep)) throw new BadRequestException(`Dependency '${dep}' not found`);
+      if (this.dependsOn(dep, id)) throw new BadRequestException(`'${dep}' already depends on '${id}', so this would create a cycle`);
+    }
+    component.dependencies = unique;
+    return this.touch(component, actorId);
+  }
+
+  /** Whether `from` reaches `target` through recorded dependencies */
+  private dependsOn(from: string, target: string): boolean {
+    const seen = new Set<string>();
+    const stack = [from];
+    while (stack.length) {
+      const current = stack.pop()!;
+      if (current === target) return true;
+      if (seen.has(current)) continue;
+      seen.add(current);
+      stack.push(...(this.getComponentById(current)?.dependencies ?? []));
+    }
+    return false;
+  }
+
+  private requireComponent(id: string): Component {
+    const component = this.getComponentById(id);
+    if (!component) throw new BadRequestException(`Component '${id}' not found`);
+    return component;
+  }
+
+  private touch(component: Component, actorId: string): Component {
+    component.updatedAt = new Date().toISOString();
+    component.updatedBy = actorId;
+    return component;
+  }
+
+  /**
    * Test coverage for a component.
    *
    * The design system stores no test runs or coverage reports for its
@@ -1885,7 +1992,7 @@ export const Table = ({
     id: string;
     name: string;
     description: string;
-    status?: 'production' | 'in-progress' | 'planned' | 'deprecated';
+    status?: ComponentStatus;
     props?: ComponentProp[];
     code?: { vue?: string; react?: string; html?: string };
     dependencies?: string[];

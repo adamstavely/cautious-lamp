@@ -6,8 +6,8 @@
           v-if="!currentComponent || componentDependencies.length === 0"
           :bordered="false"
           spot="foundations/component-dependency-graph"
-          :title="!currentComponent ? 'Component not found' : 'No dependencies'"
-          :body="!currentComponent ? 'Unable to load dependency information.' : 'This component has no dependencies.'"
+          :title="!loaded ? 'Loading dependencies…' : !currentComponent ? 'Not in the component library' : 'No dependencies recorded'"
+          :body="!loaded ? '' : !currentComponent ? 'This component has no library record, so no dependencies are recorded for it.' : 'The library records nothing this component depends on.'"
         />
         <svg
           v-else
@@ -39,10 +39,10 @@
             v-for="node in filteredNodes"
             :key="node.id"
             class="graph-node"
-            :class="{ 'graph-node-link': node.id !== componentId }"
-            :role="node.id !== componentId ? 'link' : undefined"
-            :tabindex="node.id !== componentId ? 0 : undefined"
-            :aria-label="node.id !== componentId ? `Open ${node.name}` : undefined"
+            :class="{ 'graph-node-link': isLink(node.id) }"
+            :role="isLink(node.id) ? 'link' : undefined"
+            :tabindex="isLink(node.id) ? 0 : undefined"
+            :aria-label="isLink(node.id) ? `Open ${node.name}` : undefined"
             @click="handleNodeClick(node.id)"
             @keydown.enter="handleNodeClick(node.id)"
           >
@@ -78,13 +78,13 @@
     <UiPanel v-if="componentDependencies.length > 0" :title="`Dependencies (${componentDependencies.length})`" class="mt-6">
       <ul class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
         <li v-for="dep in componentDependencies" :key="dep.id">
-          <router-link :to="`/components/${dep.id}`" class="dependency-link">
+          <component :is="componentPage(dep.id) ? 'router-link' : 'div'" :to="componentPage(dep.id) || undefined" class="dependency-link">
             <span class="w-3 h-3 rounded-pill flex-shrink-0 mt-1" :class="statusBg(dep.status)" aria-hidden="true"></span>
             <span class="flex-1 min-w-0">
               <span class="block font-medium text-ink-strong truncate">{{ dep.name }}</span>
               <span class="block text-xs mt-1 text-ink-muted">{{ dep.description }} · {{ statusLabel(dep.status) }}</span>
             </span>
-          </router-link>
+          </component>
         </li>
       </ul>
     </UiPanel>
@@ -95,6 +95,8 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { PageSection, UiEmptyState, UiPanel } from './ui';
+import { componentPage } from '../composables/useComponentPatternStatus.js';
+import apiClient from '../services/api.js';
 
 /** A "Component dependencies" page section for a component detail page: a graph of the component and what it depends on, and links to each dependency. */
 
@@ -109,25 +111,20 @@ const props = defineProps({
 const router = useRouter();
 const graphSvg = ref(null);
 
-// Component data with dependencies - this should match the data from ComponentDependencyGraph.vue
-const allComponents = ref([
-  { id: 'button', name: 'Button', status: 'production', description: 'Primary action component', dependencies: [] },
-  { id: 'card', name: 'Card', status: 'production', description: 'Container component', dependencies: ['button'] },
-  { id: 'input', name: 'Input', status: 'production', description: 'Text input field', dependencies: [] },
-  { id: 'select', name: 'Select', status: 'production', description: 'Dropdown select', dependencies: ['input'] },
-  { id: 'checkbox', name: 'Checkbox', status: 'production', description: 'Checkbox input', dependencies: ['input'] },
-  { id: 'radio', name: 'Radio', status: 'production', description: 'Radio button group', dependencies: ['input'] },
-  { id: 'textarea', name: 'Textarea', status: 'production', description: 'Multi-line text input', dependencies: ['input'] },
-  { id: 'badge', name: 'Badge', status: 'production', description: 'Status badge', dependencies: [] },
-  { id: 'alert', name: 'Alert', status: 'production', description: 'Alert notification', dependencies: ['button'] },
-  { id: 'form', name: 'Form', status: 'in-progress', description: 'Form container', dependencies: ['input', 'select', 'checkbox', 'radio', 'textarea', 'button'] },
-  { id: 'modal', name: 'Modal', status: 'production', description: 'Modal dialog', dependencies: ['button', 'card'] },
-  { id: 'dropdown', name: 'Dropdown', status: 'production', description: 'Dropdown menu', dependencies: ['button', 'card'] },
-  { id: 'tabs', name: 'Tabs', status: 'production', description: 'Tab navigation', dependencies: ['button'] },
-  { id: 'table', name: 'Table', status: 'production', description: 'Data table', dependencies: ['button', 'badge'] },
-  { id: 'pagination', name: 'Pagination', status: 'production', description: 'Page navigation', dependencies: ['button'] },
-  { id: 'color-picker', name: 'Color Picker', status: 'production', description: 'Color selection component', dependencies: [] },
-]);
+// The library's components, with the dependencies recorded on each (GET /api/v1/components)
+const allComponents = ref([]);
+const loaded = ref(false);
+apiClient
+  .get('/api/v1/components')
+  .then(({ data }) => {
+    allComponents.value = (data.components ?? []).map((c) => ({ ...c, dependencies: c.dependencies ?? [] }));
+  })
+  .catch(() => {
+    allComponents.value = [];
+  })
+  .finally(() => {
+    loaded.value = true;
+  });
 
 // Get the current component
 const currentComponent = computed(() => {
@@ -224,10 +221,11 @@ const legend = ['production', 'in-progress', 'planned'].map((status) => ({ statu
 const statusFill = (status) => STATUS[status]?.fill || 'fill-chart-neutral';
 const statusBg = (status) => STATUS[status]?.bg || 'bg-chart-neutral';
 const statusLabel = (status) => STATUS[status]?.label || status;
+const isLink = (id) => id !== props.componentId && !!componentPage(id);
 
 const handleNodeClick = (nodeId) => {
-  if (nodeId !== props.componentId) {
-    router.push(`/components/${nodeId}`);
+  if (nodeId !== props.componentId && componentPage(nodeId)) {
+    router.push(componentPage(nodeId));
   }
 };
 </script>

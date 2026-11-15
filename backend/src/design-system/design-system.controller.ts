@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Put, Delete, Query, Param, Body, BadRequestException, Inject } from '@nestjs/common';
-import { Component, DesignSystemService } from './design-system.service';
+import { Controller, Get, Post, Put, Delete, Query, Param, Body, BadRequestException, ConflictException, Inject } from '@nestjs/common';
+import { COMPONENT_STATUSES, Component, DesignSystemService } from './design-system.service';
+import { COMPONENT_ID_PATTERN, ComponentDependenciesDto, DeprecateComponentDto, UpdateComponentStatusDto } from './design-system.dto';
+import { strictBody } from '../auth/auth.dto';
 import { ComponentRequestService } from './component-request.service';
 import { ComponentAccessService } from './component-access.service';
 import { AuthPrincipal, Principal, Public, RequirePermission } from '../auth/principal';
@@ -606,6 +608,79 @@ export class DesignSystemController {
     return { success: true };
   }
 
+  // Lifecycle: status, deprecation and dependencies. Same rule as variants:
+  // component:edit, and write access to the component.
+  @RequirePermission(Permission.COMPONENT_EDIT)
+  @Put('components/:id/status')
+  async updateComponentStatus(
+    @Param('id') componentId: string,
+    @Body(strictBody()) body: UpdateComponentStatusDto,
+    @Principal() principal: AuthPrincipal,
+  ) {
+    const previous = (await this.componentAccess.getForWrite(principal, componentId)).status;
+    const component = this.designSystemService.setComponentStatus(componentId, body.status, principal.id);
+    if (component.status !== previous) {
+      await this.changes.record(
+        {
+          ...componentChange(component),
+          action: component.status === 'deprecated' ? 'deprecated' : 'status-changed',
+          changes: [{ field: 'status', description: `Status changed from ${previous} to ${component.status}` }],
+        },
+        principal,
+      );
+    }
+    return component;
+  }
+
+  @RequirePermission(Permission.COMPONENT_EDIT)
+  @Put('components/:id/deprecation')
+  async deprecateComponent(
+    @Param('id') componentId: string,
+    @Body(strictBody()) body: DeprecateComponentDto,
+    @Principal() principal: AuthPrincipal,
+  ) {
+    const wasDeprecated = (await this.componentAccess.getForWrite(principal, componentId)).status === 'deprecated';
+    const component = this.designSystemService.deprecateComponent(componentId, body, await this.visibleComponentIds(principal), principal.id);
+    const details = [
+      body.replacement && `Use ${body.replacement} instead`,
+      body.sunsetDate && `Sunset on ${body.sunsetDate}`,
+      body.reason,
+    ].filter((text): text is string => !!text);
+    await this.changes.record(
+      {
+        ...componentChange(component),
+        action: wasDeprecated ? 'updated' : 'deprecated',
+        changes: details.map((description) => ({ field: 'deprecation', description })),
+      },
+      principal,
+    );
+    return component;
+  }
+
+  @RequirePermission(Permission.COMPONENT_EDIT)
+  @Put('components/:id/dependencies')
+  async updateComponentDependencies(
+    @Param('id') componentId: string,
+    @Body(strictBody()) body: ComponentDependenciesDto,
+    @Principal() principal: AuthPrincipal,
+  ) {
+    await this.componentAccess.getForWrite(principal, componentId);
+    const component = this.designSystemService.setComponentDependencies(componentId, body.dependencies, await this.visibleComponentIds(principal), principal.id);
+    await this.changes.record(
+      {
+        ...componentChange(component),
+        action: 'updated',
+        changes: [{ field: 'dependencies', description: component.dependencies?.length ? `Depends on ${component.dependencies.join(', ')}` : 'No dependencies' }],
+      },
+      principal,
+    );
+    return component;
+  }
+
+  private async visibleComponentIds(principal: AuthPrincipal): Promise<Set<string>> {
+    return new Set((await this.componentAccess.list(principal)).map((c) => c.id));
+  }
+
   // Component creation with auto-linking
   @RequirePermission(Permission.COMPONENT_CREATE)
   @Post('components')
@@ -625,6 +700,19 @@ export class DesignSystemController {
     },
     @Principal() principal: AuthPrincipal,
   ) {
+    if (typeof data?.id !== 'string' || !COMPONENT_ID_PATTERN.test(data.id)) {
+      throw new BadRequestException('id must be a kebab-case component id');
+    }
+    for (const field of ['name', 'description'] as const) {
+      if (typeof data[field] !== 'string' || !data[field].trim()) throw new BadRequestException(`${field} is required`);
+    }
+    if (data.status !== undefined && !(COMPONENT_STATUSES as readonly string[]).includes(data.status)) {
+      throw new BadRequestException(`status must be one of ${COMPONENT_STATUSES.join(', ')}`);
+    }
+    // Ids are global, so a clash with a component the caller can't see still conflicts
+    if (this.designSystemService.getComponentById(data.id)) {
+      throw new ConflictException(`A component with id '${data.id}' already exists`);
+    }
     // Only a workspace's editors add components to it; sharing is set through the workspace routes
     if (data.workspaceId !== undefined) {
       await this.workspaceAccess.require(principal, data.workspaceId, 'editor');
