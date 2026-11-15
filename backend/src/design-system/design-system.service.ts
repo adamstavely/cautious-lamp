@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -12,6 +13,7 @@ import {
 import { ElasticsearchService } from '@nestjs/elasticsearch';
 import { randomUUID } from 'crypto';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { AuthPrincipal } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
 import { NotFoundException as BundleComponentNotFound } from '@nestjs/common';
 import { DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
@@ -191,9 +193,18 @@ function toIsoDate(value: string | undefined): string | undefined {
  * the stamp and reloads when another server has written since. Roadmap items, banners and
  * performance budgets are read from their indices on every request.
  */
+/** Links new components to the component requests they fulfil */
+export interface ComponentRequestLinker {
+  /** Throws unless the principal may fulfil this request by creating a component */
+  authorize(principal: AuthPrincipal, requestId: string): Promise<void>;
+  /** Links the new component as its creator; failures are logged, not thrown */
+  componentCreated(principal: AuthPrincipal, componentId: string, componentName: string, linkedRequestId?: string): void;
+}
+
 @Injectable()
 export class DesignSystemService implements OnModuleInit {
   private readonly logger = new Logger(DesignSystemService.name);
+  private requestLinker?: ComponentRequestLinker;
 
   private analyticsService?: AnalyticsService;
 
@@ -1185,8 +1196,13 @@ export class DesignSystemService implements OnModuleInit {
     linkedRequestId?: string; // Optional: explicitly link to a specific request
     workspaceId?: string; // Optional: workspace this component belongs to
     isGlobal?: boolean; // Optional: make component available to all workspaces
-  }): Promise<Component> {
+  }, createdBy?: AuthPrincipal): Promise<Component> {
     await this.ready();
+    // Fulfilling a request is a workflow change, so the creator must be allowed to make it
+    if (data.linkedRequestId) {
+      if (!createdBy || !this.requestLinker) throw new ForbiddenException('Only a signed-in creator can link a component to a request');
+      await this.requestLinker.authorize(createdBy, data.linkedRequestId);
+    }
     const component: Component = {
       id: data.id,
       name: data.name,
@@ -1220,21 +1236,18 @@ export class DesignSystemService implements OnModuleInit {
     this.cacheComponent(doc);
     await this.bumpContentVersion();
 
-    // Auto-link to matching component requests
-    // This will be called via ComponentRequestsService if available
-    // We'll use a callback pattern to avoid circular dependency
-    if (typeof (this as any).onComponentCreatedCallback === 'function') {
-      (this as any).onComponentCreatedCallback(component.id, component.name, data.linkedRequestId);
+    // Requests are linked as the creator, never as the system; components seeded
+    // or created without a person behind them fulfil nothing
+    if (createdBy && this.requestLinker) {
+      this.requestLinker.componentCreated(createdBy, component.id, component.name, data.linkedRequestId);
     }
 
     return component;
   }
 
-  /**
-   * Set callback for component creation (called from ComponentRequestsService)
-   */
-  setComponentCreatedCallback(callback: (componentId: string, componentName: string, linkedRequestId?: string) => void) {
-    (this as any).onComponentCreatedCallback = callback;
+  /** Registered by ComponentRequestsService, which depends on this service */
+  setComponentRequestLinker(linker: ComponentRequestLinker): void {
+    this.requestLinker = linker;
   }
 
   // Performance Budgets, oldest first
@@ -1296,20 +1309,21 @@ export class DesignSystemService implements OnModuleInit {
   }
 
   // Bundle Size Analysis: raw, gzip and brotli sizes measured from the stored
-  // component source with zlib (see bundle-analysis.service.ts)
-  getBundleAnalysis() {
-    return analyzeAllBundles(this.components);
+  // component source with zlib (see bundle-analysis.service.ts). Callers pass the
+  // components the viewer can read; anything else counts as missing.
+  getBundleAnalysis(components: Component[] = this.components) {
+    return analyzeAllBundles(components);
   }
 
-  analyzeBundle(componentId?: string, includeDependencies: boolean = true) {
+  analyzeBundle(componentId?: string, includeDependencies: boolean = true, components: Component[] = this.components) {
     if (componentId) {
-      const component = this.components.find(c => c.id === componentId);
+      const component = components.find(c => c.id === componentId);
       if (!component) {
         throw new BundleComponentNotFound(`Component '${componentId}' not found`);
       }
-      return analyzeComponentBundle(component, this.components, includeDependencies !== false);
+      return analyzeComponentBundle(component, components, includeDependencies !== false);
     }
-    return this.getBundleAnalysis();
+    return this.getBundleAnalysis(components);
   }
 
   // Roadmap: only the items people have added, oldest first

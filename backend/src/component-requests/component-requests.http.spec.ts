@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, INestApplication, NotFoundException } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { AuthGuard } from '../auth/auth.guard';
@@ -57,6 +57,9 @@ const usersStub = {
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
 
+/** The principal the guard would build for a test person */
+const as = async (name: string) => (await authStub.resolve(`tok-${name}`))!;
+
 /**
  * Component requests over HTTP with the real guard and services on in-memory
  * stores (the same compare-and-swap semantics as Elasticsearch).
@@ -84,7 +87,7 @@ describe('Component requests HTTP API', () => {
   /** Starts the API on the given stores, so a restart can be simulated */
   const start = async () => {
     const workspaces = new InMemoryQueryableStore<WorkspaceDoc>();
-    registrations = jest.spyOn(DesignSystemService.prototype, 'setComponentCreatedCallback');
+    registrations = jest.spyOn(DesignSystemService.prototype, 'setComponentRequestLinker');
     const moduleRef = await Test.createTestingModule({
       controllers: [ComponentRequestsController],
       providers: [
@@ -378,28 +381,77 @@ describe('Component requests HTTP API', () => {
       expect(detail.body.comments.map((c: RequestComment) => c.content)).toEqual(['Still wanted']);
     });
 
-    it('registers the component-created callback once and links new components to matching approved requests', async () => {
+    it('registers the linker once and links a triager\'s new component to the matching approved request', async () => {
       expect(registrations).toHaveBeenCalledTimes(1);
       const request = await submit();
       await approve(request.id);
       const other = await submit('bob', { ...NEW_REQUEST, title: 'Toast notification' });
 
-      await designSystem.createComponent({ id: 'data-table', name: 'Data Table', description: 'Tables' });
+      await designSystem.createComponent({ id: 'data-table', name: 'Data Table', description: 'Tables' }, await as('rita'));
       await settle();
       await settle();
       expect(await stored(request.id)).toMatchObject({ componentId: 'data-table', status: 'in-progress' });
-      expect((await stored(request.id))!.statusHistory.at(-1)).toMatchObject({ userId: 'system' });
+      expect((await stored(request.id))!.statusHistory.at(-1)).toMatchObject({ userId: 'usr_rita' });
       expect((await stored(other.id))!.componentId).toBeUndefined();
     });
 
-    it('links the request a new component names, completing an in-progress one', async () => {
+    it('links the request a new component names, completing an in-progress one as its creator', async () => {
       const request = await submit();
       await approve(request.id);
       await call('rita', 'PATCH', `/${request.id}/status`, { status: 'in-progress' });
-      await designSystem.createComponent({ id: 'unrelated', name: 'Unrelated', description: 'x', linkedRequestId: request.id });
+      await designSystem.createComponent({ id: 'unrelated', name: 'Unrelated', description: 'x', linkedRequestId: request.id }, await as('rita'));
       await settle();
       await settle();
       expect(await stored(request.id)).toMatchObject({ componentId: 'unrelated', status: 'completed' });
+      expect((await stored(request.id))!.statusHistory.at(-1)).toMatchObject({ userId: 'usr_rita' });
+    });
+
+    it('refuses a creator without triage rights who names someone else\'s request, and creates nothing', async () => {
+      const request = await submit();
+      await approve(request.id);
+      await call('rita', 'PATCH', `/${request.id}/status`, { status: 'in-progress' });
+
+      await expect(
+        designSystem.createComponent({ id: 'dummy-link', name: 'Dummy', description: 'x', linkedRequestId: request.id }, await as('bob')),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(
+        designSystem.createComponent({ id: 'dummy-anon', name: 'Dummy', description: 'x', linkedRequestId: request.id }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(designSystem.getComponentById('dummy-link')).toBeUndefined();
+      expect(await stored(request.id)).toMatchObject({ status: 'in-progress' });
+      expect((await stored(request.id))!.componentId).toBeUndefined();
+    });
+
+    it('does not match a crafted name to a request the creator may not fulfil', async () => {
+      const request = await submit();
+      await approve(request.id);
+      await designSystem.createComponent({ id: 'data-table', name: 'Data Table', description: 'Tables' }, await as('bob'));
+      await designSystem.createComponent({ id: 'data-table-2', name: 'Data Table', description: 'Tables' });
+      await settle();
+      await settle();
+      expect(await stored(request.id)).toMatchObject({ status: 'approved' });
+      expect((await stored(request.id))!.componentId).toBeUndefined();
+    });
+
+    it('lets the assignee fulfil their own request', async () => {
+      const request = await submit();
+      await approve(request.id);
+      await call('rita', 'POST', `/${request.id}/assign`, { userId: 'usr_carol' });
+      await designSystem.createComponent({ id: 'carol-table', name: 'Anything', description: 'x', linkedRequestId: request.id }, await as('carol'));
+      await settle();
+      await settle();
+      expect(await stored(request.id)).toMatchObject({ componentId: 'carol-table', status: 'in-progress' });
+      expect((await stored(request.id))!.statusHistory.at(-1)).toMatchObject({ userId: 'usr_carol' });
+    });
+
+    it('rejects a link to a request that is missing or not yet approved', async () => {
+      const request = await submit();
+      await expect(
+        designSystem.createComponent({ id: 'early', name: 'Early', description: 'x', linkedRequestId: request.id }, await as('rita')),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        designSystem.createComponent({ id: 'ghost', name: 'Ghost', description: 'x', linkedRequestId: 'nope' }, await as('rita')),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

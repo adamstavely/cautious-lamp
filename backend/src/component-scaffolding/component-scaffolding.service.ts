@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { AuthPrincipal } from '../auth/principal';
 import { Component, DesignSystemService } from '../design-system/design-system.service';
 
 export interface ComponentTemplate {
@@ -738,7 +739,7 @@ export const config: Config = {
    * list (DesignSystemService.createComponent). Returns the generated files
    * for the client to download; nothing is written to the server filesystem.
    */
-  async createComponentFromScaffold(rawInput: ComponentScaffoldInput): Promise<CreatedComponentResult> {
+  async createComponentFromScaffold(rawInput: ComponentScaffoldInput, createdBy?: AuthPrincipal): Promise<CreatedComponentResult> {
     const input = this.normalizeInput(rawInput);
     const componentId = this.toKebabCase(input.name);
     await this.designSystemService.ready();
@@ -779,7 +780,7 @@ export const config: Config = {
             ].filter(Boolean).join(', '),
           }
         : undefined,
-    });
+    }, createdBy);
 
     return { success: true, componentId, component, files };
   }

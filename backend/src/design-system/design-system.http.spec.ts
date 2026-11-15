@@ -152,6 +152,31 @@ describe('Design system HTTP API', () => {
       expect((await call('POST', '/components/alpha-secret/variants', { as: 'bob', body: { name: 'x' } })).status).toBe(400);
     });
 
+    it('measures only visible components in bundle analysis, and never a hidden dependency\'s size', async () => {
+      await designSystem.setComponentDependencies('alpha-shared', ['alpha-secret'], new Set(['alpha-secret']), 'usr_alice');
+      try {
+        const outsider = await call('GET', '/performance/bundle-analysis', { as: 'bob' });
+        const ids = outsider.body.components.map((c: { componentId: string }) => c.componentId);
+        expect(ids).not.toContain('alpha-secret');
+        expect(ids).toContain('alpha-shared');
+        expect(JSON.stringify(outsider.body)).not.toContain('AlphaSecret');
+        expect(outsider.body.summary.totalComponents).toBe(ids.length);
+
+        const insider = await call('GET', '/performance/bundle-analysis', { as: 'alice' });
+        expect(insider.body.components.map((c: { componentId: string }) => c.componentId)).toContain('alpha-secret');
+
+        const hidden = await call('POST', '/performance/bundle-analysis/analyze', { as: 'bob', body: { componentId: 'alpha-secret' } });
+        const missing = await call('POST', '/performance/bundle-analysis/analyze', { as: 'bob', body: { componentId: 'no-such-component' } });
+        expect(hidden.status).toBe(missing.status);
+        expect(hidden.status).toBe(404);
+
+        const shared = await call('POST', '/performance/bundle-analysis/analyze', { as: 'bob', body: { componentId: 'alpha-shared' } });
+        expect(shared.body).toMatchObject({ dependencies: [], missingDependencies: ['alpha-secret'], dependenciesSize: 0 });
+      } finally {
+        await designSystem.setComponentDependencies('alpha-shared', [], new Set(), 'usr_alice');
+      }
+    });
+
     // AI chat context: ai-assistant.http.spec.ts
     it('leaves hidden components out of the Loupe metadata', async () => {
       const metadata = await call('GET', '/component-metadata', { as: 'bob' });
