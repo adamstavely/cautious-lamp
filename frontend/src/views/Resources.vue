@@ -49,10 +49,10 @@ const groups = [
     items: [
       { title: 'GitHub repository', spot: 'site/contribute', pending: true, body: 'Access the source code, file issues and contribute to the design system.' },
       { title: 'npm package', spot: 'site/installation', command: 'npm install @design-system/core', body: 'Install the design system package from npm.' },
-      { title: 'CLI tool', spot: 'foundations/component-scaffolding-wizard', command: 'npm install -g @design-system/cli', body: 'Use our CLI tool to scaffold components, validate code and manage design tokens.' },
+      { title: 'CLI tool', spot: 'foundations/component-scaffolding-wizard', command: 'npm install -g @adamstavely/design-system-cli', body: 'Use our CLI tool to scaffold components, validate code and manage design tokens.' },
       { title: 'SDK and API', spot: 'site/design-system-api', to: '/api', body: 'Integrate with our REST API or use the JavaScript SDK for programmatic access.' },
       { title: 'VS Code extension', spot: 'foundations/pattern-code-snippet', pending: true, body: 'Enhance your development workflow with autocomplete, hover info and snippets.' },
-      { title: 'ESLint plugin', spot: 'admin/governance', command: 'npm install eslint-plugin-design-system', body: 'Enforce design system rules and best practices in your code with our ESLint plugin.' },
+      { title: 'ESLint plugin', spot: 'admin/governance', command: 'npm install --save-dev @adamstavely/eslint-plugin-design-system', body: 'Enforce design system rules and best practices in your code with our ESLint plugin.' },
     ],
   },
   {

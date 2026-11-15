@@ -51,8 +51,7 @@ describe('Compliance Tool', () => {
   });
 
   describe('scanComponent', () => {
-    it('should scan the design system and keep only checks for the component', async () => {
-      mockApiClient.get.mockResolvedValue({ id: 'button', name: 'Button' });
+    it('asks the backend to scan just this component', async () => {
       mockApiClient.post.mockResolvedValue({
         scope: 'design-system',
         passed: 1,
@@ -60,19 +59,23 @@ describe('Compliance Tool', () => {
         failed: 0,
         checks: [
           { id: 'check1', rule: 'rule1', status: 'pass', message: 'OK', component: 'Button' },
-          { id: 'check2', rule: 'rule1', status: 'warning', message: 'Hmm', component: 'Card' },
+          { id: 'check2', rule: 'rule2', status: 'warning', message: 'Hmm', component: 'Button' },
         ],
       });
 
       const result = await scanComponent({ componentId: 'button' });
 
-      expect(result).toEqual({
-        checks: [{ id: 'check1', rule: 'rule1', status: 'pass', message: 'OK', component: 'Button' }],
-        summary: { total: 1, pass: 1, warning: 0, error: 0 },
-      });
-      expect(mockApiClient.get).toHaveBeenCalledWith('/components/button', { id: 'button' }, 'components');
-      // The backend requires a scope and has no per-component scan
-      expect(mockApiClient.post).toHaveBeenCalledWith('/compliance/scan', { scope: 'design-system' });
+      expect(result.summary).toEqual({ total: 2, pass: 1, warning: 1, error: 0 });
+      expect(result.checks.map((c) => c.id)).toEqual(['check1', 'check2']);
+      expect(mockApiClient.post).toHaveBeenCalledWith('/compliance/scan', { scope: 'design-system', componentIds: ['button'] });
+      // No whole-design-system scan and no component lookup first
+      expect(mockApiClient.get).not.toHaveBeenCalled();
+    });
+
+    it('passes on the backend error for an unknown component', async () => {
+      mockApiClient.post.mockRejectedValue(new Error('API Error 404: Not Found - {"message":"Components not found: nope"}'));
+
+      await expect(scanComponent({ componentId: 'nope' })).rejects.toThrow('Components not found: nope');
     });
   });
 

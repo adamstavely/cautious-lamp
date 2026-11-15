@@ -157,7 +157,7 @@ export async function fetchRules(config: DesignSystemConfig): Promise<DesignSyst
   }
 }
 
-/** ESLint rule id (without the `design-system/` prefix) for a Rules Engine rule name. */
+/** ESLint rule id (without the `@adamstavely/design-system/` prefix) for a Rules Engine rule name. */
 export function toRuleId(name: string): string {
   return String(name ?? '')
     .toLowerCase()

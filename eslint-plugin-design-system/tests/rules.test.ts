@@ -213,3 +213,91 @@ describe('typography-scale', () => {
     ]
   });
 });
+
+describe('autofix with the tokens option', () => {
+  const tokens = {
+    'color-primary': '#3B82F6',
+    'color-white': '#fff',
+    'color-black': '#000000',
+    'color-ink': '#000',
+    'spacing-sm': '8px',
+    'spacing-md': '16px',
+    'font-size-md': '1rem',
+    'line-height-body': '24px'
+  };
+  const withTokens = [{ tokens }];
+
+  it('marks the token rules fixable and the others not', () => {
+    for (const id of ['hardcoded-design-tokens', 'spacing-consistency', 'typography-scale']) {
+      expect(builtInRules[id].meta?.fixable).toBe('code');
+    }
+    expect(builtInRules['component-naming'].meta?.fixable).toBeUndefined();
+    expect(builtInRules['accessibility-attributes'].meta?.fixable).toBeUndefined();
+  });
+
+  ruleTester.run('hardcoded-design-tokens (fix)', builtInRules['hardcoded-design-tokens'], {
+    valid: [{ code: 'const c = tokens.primary;', options: withTokens }],
+    invalid: [
+      // Exactly one token has the value (case and short hex don't matter)
+      { code: "const c = '#3b82f6';", options: withTokens, output: "const c = 'var(--color-primary)';", errors: 1 },
+      { code: "const c = '#ffffff';", options: withTokens, output: "const c = 'var(--color-white)';", errors: 1 },
+      // Inside a longer value and in templates, only the color is replaced
+      {
+        code: "const b = '1px solid #3b82f6';",
+        options: withTokens,
+        output: "const b = '1px solid var(--color-primary)';",
+        errors: 1
+      },
+      {
+        code: 'const css = `color: #3b82f6; background: ${bg}; border-color: #123456;`;',
+        options: withTokens,
+        output: 'const css = `color: var(--color-primary); background: ${bg}; border-color: #123456;`;',
+        errors: 2
+      },
+      { code: '<div data-c="#fff" />', options: withTokens, output: '<div data-c="var(--color-white)" />', errors: 1 },
+      // A custom reference format
+      {
+        code: "const c = '#3b82f6';",
+        options: [{ tokens, replacement: '{name}' }],
+        output: "const c = 'color-primary';",
+        errors: 1
+      },
+      // Two tokens share #000: ambiguous, so nothing is fixed
+      { code: "const c = '#000';", options: withTokens, output: null, errors: 1 },
+      // No token has the value
+      { code: "const c = '#123456';", options: withTokens, output: null, errors: 1 },
+      // No tokens option: report only
+      { code: "const c = '#3b82f6';", output: null, errors: 1 },
+      // A reference that would break out of the string is never written
+      { code: "const c = '#3b82f6';", options: [{ tokens, replacement: "x'{name}" }], output: null, errors: 1 }
+    ]
+  });
+
+  ruleTester.run('spacing-consistency (fix)', builtInRules['spacing-consistency'], {
+    valid: [],
+    invalid: [
+      { code: "const s = { margin: '16px' };", options: withTokens, output: "const s = { margin: 'var(--spacing-md)' };", errors: 1 },
+      {
+        code: "const s = { margin: '8px 16px' };",
+        options: withTokens,
+        output: "const s = { margin: 'var(--spacing-sm) var(--spacing-md)' };",
+        errors: 1
+      },
+      { code: '<Box padding="8px" />', options: withTokens, output: '<Box padding="var(--spacing-sm)" />', errors: 1 },
+      // One part has no token: the whole value is left alone
+      { code: "const s = { margin: '8px 12px' };", options: withTokens, output: null, errors: 1 },
+      { code: "const s = { margin: '16px' };", output: null, errors: 1 }
+    ]
+  });
+
+  ruleTester.run('typography-scale (fix)', builtInRules['typography-scale'], {
+    valid: [],
+    invalid: [
+      { code: "const s = { fontSize: '1rem' };", options: withTokens, output: "const s = { fontSize: 'var(--font-size-md)' };", errors: 1 },
+      { code: "const s = { lineHeight: '24px' };", options: withTokens, output: "const s = { lineHeight: 'var(--line-height-body)' };", errors: 1 },
+      // A number would become a string: not fixed
+      { code: 'const s = { fontSize: 16 };', options: [{ tokens: { 'font-size-md': '16' } }], output: null, errors: 1 },
+      { code: "const s = { fontSize: '13px' };", options: withTokens, output: null, errors: 1 }
+    ]
+  });
+});

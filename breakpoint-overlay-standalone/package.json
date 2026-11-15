@@ -1,5 +1,5 @@
 {
-  "name": "@designsystem/breakpoint-overlay",
+  "name": "@adamstavely/breakpoint-overlay",
   "version": "1.0.0",
   "description": "Standalone Breakpoint Overlay for visualizing active breakpoints and viewport metrics in any application",
   "main": "dist/breakpoint-overlay.umd.js",
@@ -22,6 +22,7 @@
   ],
   "scripts": {
     "build": "vite build",
+    "test": "vitest run",
     "test:pack": "npm run build && node scripts/check-pack.mjs",
     "prepublishOnly": "npm run build && node scripts/check-pack.mjs"
   },
@@ -35,6 +36,15 @@
   ],
   "author": "",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamstavely/cautious-lamp.git",
+    "directory": "breakpoint-overlay-standalone"
+  },
+  "homepage": "https://github.com/adamstavely/cautious-lamp/tree/main/breakpoint-overlay-standalone#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {},
   "peerDependencies": {
     "vue": "^3.3.0"

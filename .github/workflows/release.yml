@@ -1,0 +1,149 @@
+name: Release
+
+# Publishes one package to GitHub Packages (npm.pkg.github.com) under the @adamstavely scope. Nothing publishes on
+# its own: push a tag `<package>-v<version>` (the version must match that package's package.json), or run this
+# workflow by hand and pick the package. The package is built and tested first, and a version that is already on the
+# registry is skipped.
+#
+#   Tag prefix            Directory                       Package
+#   sdk-v                 sdk/                            @adamstavely/design-system-sdk
+#   cli-v                 cli/                            @adamstavely/design-system-cli (needs the SDK published first)
+#   mcp-server-v          mcp-server/                     @adamstavely/design-system-mcp-server
+#   eslint-plugin-v       eslint-plugin-design-system/    @adamstavely/eslint-plugin-design-system
+#   loupe-tool-v          loupe-tool-standalone/          @adamstavely/loupe-tool
+#   breakpoint-overlay-v  breakpoint-overlay-standalone/  @adamstavely/breakpoint-overlay
+on:
+  push:
+    tags:
+      - "sdk-v*"
+      - "cli-v*"
+      - "mcp-server-v*"
+      - "eslint-plugin-v*"
+      - "loupe-tool-v*"
+      - "breakpoint-overlay-v*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish (its package.json version)
+        required: true
+        type: choice
+        options:
+          - sdk
+          - cli
+          - mcp-server
+          - eslint-plugin
+          - loupe-tool
+          - breakpoint-overlay
+
+concurrency:
+  group: release-${{ github.ref }}-${{ inputs.package }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: "@adamstavely"
+
+      # Which package, from the tag prefix or the input; a tag must match the package.json version
+      - name: Package to publish
+        id: pkg
+        env:
+          INPUT_PACKAGE: ${{ inputs.package }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            key="${GITHUB_REF_NAME%-v*}"
+          else
+            key="$INPUT_PACKAGE"
+          fi
+          case "$key" in
+            sdk) dir=sdk ;;
+            cli) dir=cli ;;
+            mcp-server) dir=mcp-server ;;
+            eslint-plugin) dir=eslint-plugin-design-system ;;
+            loupe-tool) dir=loupe-tool-standalone ;;
+            breakpoint-overlay) dir=breakpoint-overlay-standalone ;;
+            *) echo "::error::unknown package '$key'"; exit 1 ;;
+          esac
+          name="$(node -p "require('./$dir/package.json').name")"
+          version="$(node -p "require('./$dir/package.json').version")"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$key-v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME doesn't match $dir/package.json version $version"
+            exit 1
+          fi
+          {
+            echo "key=$key"
+            echo "dir=$dir"
+            echo "name=$name"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+          echo "Publishing $name@$version from $dir/"
+
+      # A 404 means the version isn't on the registry yet
+      - name: Not published yet
+        id: check
+        env:
+          NAME: ${{ steps.pkg.outputs.name }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          if out="$(npm view "$NAME@$VERSION" version 2>&1)"; then
+            if [ "$out" = "$VERSION" ]; then
+              echo "$NAME@$VERSION is already published; nothing to do"
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          elif echo "$out" | grep -q "E404"; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "$out"
+            echo "::error::couldn't check the registry for $NAME@$VERSION"
+            exit 1
+          fi
+
+      - if: steps.check.outputs.publish == 'true'
+        run: npm ci
+
+      # The same build and tests as ci.yml's packages job, for this package only
+      - name: Build and test
+        if: steps.check.outputs.publish == 'true'
+        env:
+          KEY: ${{ steps.pkg.outputs.key }}
+        run: |
+          case "$KEY" in
+            sdk)
+              npm run build --workspace sdk
+              npm test --workspace sdk ;;
+            cli)
+              # The CLI depends on the SDK, so the SDK builds first
+              npm run build --workspace sdk
+              npm run build --workspace cli
+              npm test --workspace cli ;;
+            mcp-server)
+              npm run build --workspace mcp-server
+              npm test --workspace mcp-server ;;
+            eslint-plugin)
+              npm run build --workspace eslint-plugin-design-system
+              npm test --workspace eslint-plugin-design-system ;;
+            loupe-tool)
+              (cd loupe-tool-standalone && npm test && npm run test:pack) ;;
+            breakpoint-overlay)
+              (cd breakpoint-overlay-standalone && npm test && npm run test:pack) ;;
+          esac
+
+      # prepublishOnly / prepack build the package again (the MCP server also bundles its docs)
+      - name: Publish
+        if: steps.check.outputs.publish == 'true'
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        run: npm publish

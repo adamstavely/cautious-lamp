@@ -12,7 +12,7 @@ export interface DesignSystemPlugin {
   meta: { name: string; version: string };
   rules: Record<string, Rule.RuleModule>;
   configs: {
-    /** eslintrc: `extends: ['plugin:design-system/recommended']` */
+    /** eslintrc: `extends: ['plugin:@adamstavely/design-system/recommended']` */
     recommended: LegacyConfig;
     /** Alias of `recommended` (eslintrc). */
     'legacy-recommended': LegacyConfig;

@@ -11,8 +11,52 @@ import {
   isNonValueLiteral,
   isTypographyName
 } from './checks';
+import {
+  TOKEN_FIX_SCHEMA,
+  TokenFixOptions,
+  ValueKind,
+  locateInSource,
+  quoteOf,
+  readOptions,
+  safeInside,
+  tokenReference,
+  uniqueToken
+} from './token-fix';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** The fix that swaps `range` for the one token whose value is `value`, if there is exactly one and it fits the quotes */
+function tokenFix(options: TokenFixOptions, value: string, kind: ValueKind, range: [number, number] | undefined, quote: string) {
+  if (!range) return undefined;
+  const name = uniqueToken(options, value, kind);
+  if (!name) return undefined;
+  const reference = tokenReference(options, name);
+  if (!safeInside(reference, quote)) return undefined;
+  return (fixer: Rule.RuleFixer) => fixer.replaceTextRange(range, reference);
+}
+
+/**
+ * For spacing and typography: a fix that replaces a whole string value
+ * (`'8px 16px'`) when every part of it is one token's value.
+ */
+function wholeValueFix(context: Rule.RuleContext, node: any, kind: ValueKind) {
+  const options = readOptions(context);
+  if (!options.tokens || typeof node.value !== 'string' || !Array.isArray(node.range)) return undefined;
+  const raw = context.getSourceCode().getText(node);
+  const quote = quoteOf(node, raw);
+  // Only plain literals whose source is exactly quote + value + quote
+  if (raw !== `${quote}${node.value}${quote}`) return undefined;
+  const parts = node.value.trim().split(/\s+/);
+  const references: string[] = [];
+  for (const part of parts) {
+    const name = uniqueToken(options, part, kind);
+    if (!name) return undefined;
+    const reference = tokenReference(options, name);
+    if (!safeInside(reference, quote)) return undefined;
+    references.push(reference);
+  }
+  return (fixer: Rule.RuleFixer) => fixer.replaceText(node, `${quote}${references.join(' ')}${quote}`);
+}
 
 const hardcodedDesignTokens: Rule.RuleModule = {
   meta: {
@@ -24,21 +68,31 @@ const hardcodedDesignTokens: Rule.RuleModule = {
     messages: {
       hardcodedColor: 'Found hardcoded color: {{value}}. Use design token instead.'
     },
-    schema: []
+    fixable: 'code',
+    schema: TOKEN_FIX_SCHEMA
   },
   create(context) {
+    const options = readOptions(context);
+    const sourceCode = context.getSourceCode();
+    // Reports each color in `text`; with `tokens`, fixes those that are exactly one token's value
+    const reportColors = (node: any, text: string) => {
+      const values = findColors(text);
+      if (values.length === 0) return;
+      const source = Array.isArray(node.range) ? sourceCode.getText(node) : '';
+      const located = options.tokens && source ? locateInSource(source, node.range[0], values) : [];
+      values.forEach((value, i) => {
+        const fix = options.tokens ? tokenFix(options, value, 'color', located[i]?.range, quoteOf(node, source)) : undefined;
+        context.report({ node, messageId: 'hardcodedColor', data: { value }, ...(fix ? { fix } : {}) });
+      });
+    };
     return {
       Literal(node: any) {
         if (typeof node.value !== 'string' || isNonValueLiteral(node)) return;
-        for (const value of findColors(node.value)) {
-          context.report({ node, messageId: 'hardcodedColor', data: { value } });
-        }
+        reportColors(node, node.value);
       },
       TemplateLiteral(node: any) {
         for (const quasi of node.quasis ?? []) {
-          for (const value of findColors(quasi?.value?.raw ?? '')) {
-            context.report({ node: quasi, messageId: 'hardcodedColor', data: { value } });
-          }
+          reportColors(quasi, quasi?.value?.raw ?? '');
         }
       }
     };
@@ -106,14 +160,16 @@ const spacingConsistency: Rule.RuleModule = {
     messages: {
       inconsistentSpacing: 'Use design system spacing tokens instead of hardcoded value {{value}}'
     },
-    schema: []
+    fixable: 'code',
+    schema: TOKEN_FIX_SCHEMA
   },
   create(context) {
     return {
       Literal(node: any) {
         if (typeof node.value !== 'string' || isNonValueLiteral(node)) return;
         if (isHardcodedSpacing(node.value, getPropertyName(node))) {
-          context.report({ node, messageId: 'inconsistentSpacing', data: { value: node.value.trim() } });
+          const fix = wholeValueFix(context, node, 'length');
+          context.report({ node, messageId: 'inconsistentSpacing', data: { value: node.value.trim() }, ...(fix ? { fix } : {}) });
         }
       }
     };
@@ -130,7 +186,8 @@ const typographyScale: Rule.RuleModule = {
     messages: {
       invalidTypography: 'Use design system typography tokens instead of hardcoded font size {{value}}'
     },
-    schema: []
+    fixable: 'code',
+    schema: TOKEN_FIX_SCHEMA
   },
   create(context) {
     return {
@@ -140,7 +197,9 @@ const typographyScale: Rule.RuleModule = {
         if (!isTypographyName(name)) return;
         const value = getTypographyValue(node.value, name);
         if (value !== undefined) {
-          context.report({ node, messageId: 'invalidTypography', data: { value } });
+          // Numbers (`fontSize: 16`) aren't fixed: a token reference is a string
+          const fix = typeof node.value === 'string' ? wholeValueFix(context, node, 'length') : undefined;
+          context.report({ node, messageId: 'invalidTypography', data: { value }, ...(fix ? { fix } : {}) });
         }
       }
     };

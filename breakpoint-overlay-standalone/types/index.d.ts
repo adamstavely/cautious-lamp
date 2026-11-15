@@ -12,13 +12,23 @@ export interface Breakpoint {
 export interface BreakpointOverlayProps {
   /** Default: Tailwind's sm/md/lg/xl/2xl */
   breakpoints?: Breakpoint[];
-  /** modifier+...+key, default 'alt+shift+o' */
+  /** modifier+...+key, default 'alt+shift+o'; '' disables the shortcut */
   hotkey?: string;
   /** Resize debounce in ms, default 150 */
   debounceMs?: number;
 }
 
+/** Sent when a ruler marker is clicked: its media query has been copied to the clipboard if `copied` */
+export interface BreakpointSelection {
+  breakpoint: Breakpoint;
+  /** e.g. '@media (min-width: 768px)' */
+  mediaQuery: string;
+  copied: boolean;
+}
+
 export interface BreakpointOverlayOptions extends BreakpointOverlayProps {
+  /** Called when a ruler marker is clicked (the component's `select` event) */
+  onSelect?: (selection: BreakpointSelection) => void;
   /** Where the overlay is mounted, default document.body */
   container?: HTMLElement;
 }
@@ -29,7 +39,9 @@ export interface BreakpointOverlayHandle {
 
 export declare function initBreakpointOverlay(options?: BreakpointOverlayOptions): BreakpointOverlayHandle;
 
-export declare const BreakpointOverlay: DefineComponent<BreakpointOverlayProps>;
+export declare const BreakpointOverlay: DefineComponent<
+  BreakpointOverlayProps & { onSelect?: (selection: BreakpointSelection) => void }
+>;
 export default BreakpointOverlay;
 
 declare global {

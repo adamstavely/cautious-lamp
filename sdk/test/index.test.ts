@@ -65,13 +65,18 @@ describe('DesignSystemAPI', () => {
       ['components with status', (api) => api.components('production'), '/components', { params: { status: 'production' } }],
       ['component', (api) => api.component('button'), '/components/button', undefined],
       ['componentsByStatus', (api) => api.componentsByStatus('in-progress'), '/components/status/in-progress', undefined],
-      ['health', (api) => api.health(), '/health', undefined],
       ['getApplications', (api) => api.getApplications(), '/applications', { params: {} }],
       [
         'getApplications with filters',
         (api) => api.getApplications({ teamId: 't1', capability: 'governance' }),
         '/applications',
         { params: { teamId: 't1', capability: 'governance' } },
+      ],
+      [
+        'getApplications with workspace, search and paging',
+        (api) => api.getApplications({ workspaceId: 'ws1', environment: 'production', search: 'shop', limit: 20, offset: 40 }),
+        '/applications',
+        { params: { workspaceId: 'ws1', environment: 'production', search: 'shop', limit: 20, offset: 40 } },
       ],
     ];
 
@@ -113,6 +118,18 @@ describe('DesignSystemAPI', () => {
         { scope: 'applications', applicationId: 'app-1', categories: ['accessibility'] },
       ],
       [
+        'scanCompliance for some components and rules',
+        (api) => api.scanCompliance('design-system', undefined, undefined, { componentIds: ['button'], ruleIds: ['ds-hardcoded-colors'] }),
+        '/compliance/scan',
+        { scope: 'design-system', applicationId: undefined, categories: undefined, componentIds: ['button'], ruleIds: ['ds-hardcoded-colors'] },
+      ],
+      [
+        'registerApplication in a workspace',
+        (api) => api.registerApplication('app', undefined, undefined, { workspaceId: 'ws1', designSystemVersion: '2.1.0' }),
+        '/applications/register',
+        { name: 'app', workspaceId: 'ws1', designSystemVersion: '2.1.0' },
+      ],
+      [
         'scanApplicationCodebase',
         (api) => api.scanApplicationCodebase('app-1', undefined, ['ux-hcd']),
         '/compliance/scan-application',
@@ -133,6 +150,19 @@ describe('DesignSystemAPI', () => {
       expect(client.post).toHaveBeenCalledTimes(1);
       expect(client.post).toHaveBeenCalledWith(url, body);
       expect(result).toEqual({ ok: 'post' });
+    });
+  });
+
+  describe('health', () => {
+    it('resolves with the report for 200 and for 503 (the server answers 503 when Elasticsearch is down)', async () => {
+      const report = { status: 'unavailable', version: '1.2.0', timestamp: 'now', elasticsearch: { status: 'down' } };
+      client.get.mockResolvedValueOnce({ data: report });
+      await expect(make().health()).resolves.toEqual(report);
+
+      const [url, config] = client.get.mock.calls[0];
+      expect(url).toBe('/health');
+      expect([200, 503].map((status) => config.validateStatus(status))).toEqual([true, true]);
+      expect([401, 500].map((status) => config.validateStatus(status))).toEqual([false, false]);
     });
   });
 

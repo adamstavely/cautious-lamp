@@ -30,6 +30,8 @@ export interface CodebaseInput {
 export interface ScanRequest {
   scope: ScanScope;
   applicationId?: string;
+  /** design-system scope only: these components rather than every readable one */
+  componentIds?: string[];
   codebase?: CodebaseInput;
   url?: string;
   ruleIds?: string[];
@@ -128,11 +130,19 @@ export class ScansService implements OnModuleDestroy {
       if (request.codebase || request.url) throw new BadRequestException('The design-system scope scans the design system itself; codebase and url are not used');
       // Only what the caller could read anyway: private workspace components stay out of an outsider's results
       const scope = options.system ? SYSTEM_SCOPE : await this.readScope.scopeFor(principal);
-      const components = (await this.designSystem.components()).filter((component) => canReadComponent(scope, component));
+      let components = (await this.designSystem.components()).filter((component) => canReadComponent(scope, component));
+      if (request.componentIds?.length) {
+        // A component the caller can't read is reported missing, like one that doesn't exist
+        const wanted = new Set(request.componentIds);
+        const missing = [...wanted].filter((id) => !components.some((component) => component.id === id));
+        if (missing.length) throw new NotFoundException(`Components not found: ${missing.join(', ')}`);
+        components = components.filter((component) => wanted.has(component.id));
+      }
       if (components.length === 0) throw new BadRequestException('The design system has no components to scan');
       record.access = { componentAudiences: componentAudiences(components) };
       inputs = components.map(componentToInput);
     } else {
+      if (request.componentIds?.length) throw new BadRequestException('componentIds is for the design-system scope');
       if (!request.applicationId) throw new BadRequestException('applicationId is required for an application scan');
       if (!application) throw new NotFoundException(`Application ${request.applicationId} not found`);
       record.applicationId = application.id;

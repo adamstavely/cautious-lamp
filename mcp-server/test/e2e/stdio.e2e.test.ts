@@ -1,4 +1,7 @@
 import { spawn, execFileSync, ChildProcessWithoutNullStreams } from 'child_process';
+import * as http from 'http';
+import { AddressInfo } from 'net';
+import * as os from 'os';
 import * as path from 'path';
 
 /**
@@ -37,17 +40,32 @@ describe('MCP server over stdio', () => {
   let child: ChildProcessWithoutNullStreams;
   const stdoutLines: string[] = [];
   const stderrLines: string[] = [];
+  let backend: http.Server;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    // A stand-in backend: just the kinds list get_asset_types reads
+    backend = http.createServer((req, res) => {
+      if (req.url === '/api/v1/resources') {
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify([{ kind: 'assets', titleField: 'name', filterField: 'type', filterValues: ['image', 'icon'] }]));
+        return;
+      }
+      res.statusCode = 404;
+      res.end('{}');
+    });
+    await new Promise<void>((resolve) => backend.listen(0, '127.0.0.1', resolve));
+    const { port } = backend.address() as AddressInfo;
+
     // Test the real compiled entry point
     execFileSync(process.execPath, [require.resolve('typescript/bin/tsc'), '-p', PACKAGE_DIR], { stdio: 'pipe' });
 
     child = spawn(process.execPath, [SERVER_ENTRY], {
-      cwd: PACKAGE_DIR,
+      // Somewhere else entirely: nothing may depend on the working directory
+      cwd: os.tmpdir(),
       env: {
         ...process.env,
         MCP_API_KEY: 'test-api-key',
-        MCP_API_BASE_URL: 'http://127.0.0.1:9/api/v1',
+        MCP_API_BASE_URL: `http://127.0.0.1:${port}/api/v1`,
         // Most verbose level, so any log written to stdout would show up
         LOG_LEVEL: 'debug',
         LOG_FORMAT: 'json',
@@ -59,6 +77,7 @@ describe('MCP server over stdio', () => {
 
   afterAll(() => {
     child?.kill();
+    backend?.close();
   });
 
   function send(message: object): void {
@@ -103,5 +122,21 @@ describe('MCP server over stdio', () => {
     expect(JSON.parse(byId.get(2).result.content[0].text)).toContain('icon');
     expect(byId.get(3).result.isError).toBe(true);
     expect(byId.get(3).result.content[0].text).toContain('Invalid arguments for tool get_token');
+  });
+
+  it('serves the advertised docs from the repository, whatever the working directory', async () => {
+    send({ jsonrpc: '2.0', id: 4, method: 'resources/list' });
+    send({ jsonrpc: '2.0', id: 5, method: 'resources/read', params: { uri: 'design-system://docs/GETTING_STARTED' } });
+    send({ jsonrpc: '2.0', id: 6, method: 'resources/read', params: { uri: 'design-system://docs/index' } });
+
+    const byId = await waitFor(() => {
+      const messages = new Map(stdoutLines.map((line) => JSON.parse(line)).map((m) => [m.id, m]));
+      return [4, 5, 6].every((id) => messages.has(id)) ? messages : undefined;
+    });
+
+    const uris = byId.get(4).result.resources.map((r: { uri: string }) => r.uri);
+    expect(uris).toEqual(expect.arrayContaining(['design-system://docs/GETTING_STARTED', 'design-system://docs/API_REFERENCE', 'design-system://docs/index']));
+    expect(byId.get(5).result.contents[0].text).toMatch(/^# /m);
+    expect(byId.get(6).result.contents[0].text.length).toBeGreaterThan(0);
   });
 });

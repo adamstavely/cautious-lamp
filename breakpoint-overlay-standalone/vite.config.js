@@ -3,6 +3,10 @@ import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
   plugins: [vue()],
+  test: {
+    environment: 'jsdom',
+    include: ['test/**/*.test.js'],
+  },
   build: {
     lib: {
       entry: 'src/index.js',

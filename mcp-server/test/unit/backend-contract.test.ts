@@ -122,8 +122,8 @@ const TOOL_CALLS: Record<string, Record<string, unknown>[]> = {
   add_review_comment: [{ reviewId: 'r1', text: 'Looks good' }],
 };
 
-/** Tools that answer locally without calling the backend */
-const LOCAL_ONLY = new Set(['get_asset_types']);
+/** Tools that answer locally without calling the backend (none: every tool asks the backend) */
+const LOCAL_ONLY = new Set<string>();
 
 interface SentRequest {
   method: string;

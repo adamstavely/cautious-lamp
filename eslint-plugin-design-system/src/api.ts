@@ -10,7 +10,7 @@ import {
 } from './rule-converter';
 
 export interface LoadRulesResult {
-  /** Rule ids (without the `design-system/` prefix) that are now registered. */
+  /** Rule ids (without the `@adamstavely/design-system/` prefix) that are now registered. */
   loaded: string[];
   /** Rule names that were skipped (disabled, unnamed, clashing with a built-in rule, or not checkable by ESLint). */
   skipped: string[];

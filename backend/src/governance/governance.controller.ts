@@ -199,6 +199,14 @@ export class GovernanceController {
     if (scope === 'application' && !hasPermission(principal, Permission.ADMIN_GOVERNANCE)) {
       throw new ForbiddenException(`Requires ${Permission.ADMIN_GOVERNANCE}`);
     }
-    return { scope, applicationId: body.applicationId, codebase: body.codebase, url: body.url, ruleIds: body.ruleIds, categories: body.categories };
+    return {
+      scope,
+      applicationId: body.applicationId,
+      componentIds: body.componentIds,
+      codebase: body.codebase,
+      url: body.url,
+      ruleIds: body.ruleIds,
+      categories: body.categories,
+    };
   }
 }

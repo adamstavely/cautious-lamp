@@ -21,8 +21,13 @@
             left: `${((bp.minWidth || 0) / maxBreakpoint) * 100}%`,
             color: getBreakpointColor(bp.id)
           }"
-          :title="`${bp.label || bp.id}: ${formatBreakpointRange(bp)} - Click to jump`"
-          @click.stop="jumpToBreakpoint(bp)"
+          role="button"
+          tabindex="0"
+          :aria-label="`Copy ${mediaQueryFor(bp)} (${bp.label || bp.id})`"
+          :title="`${bp.label || bp.id}: ${formatBreakpointRange(bp)} - Click to copy ${mediaQueryFor(bp)}`"
+          @click.stop="selectBreakpoint(bp)"
+          @keydown.enter.prevent.stop="selectBreakpoint(bp)"
+          @keydown.space.prevent.stop="selectBreakpoint(bp)"
         >
           <div class="marker-line-vertical"></div>
           <div class="marker-label">{{ bp.minWidth || 0 }}px</div>
@@ -35,7 +40,13 @@
             left: `${(bp.maxWidth / maxBreakpoint) * 100}%`,
             color: getBreakpointColor(bp.id)
           }"
-          :title="`${bp.label || bp.id} max: ${bp.maxWidth}px`"
+          role="button"
+          tabindex="0"
+          :aria-label="`Copy ${mediaQueryFor(bp)} (${bp.label || bp.id})`"
+          :title="`${bp.label || bp.id} max: ${bp.maxWidth}px - Click to copy ${mediaQueryFor(bp)}`"
+          @click.stop="selectBreakpoint(bp)"
+          @keydown.enter.prevent.stop="selectBreakpoint(bp)"
+          @keydown.space.prevent.stop="selectBreakpoint(bp)"
         >
           <div class="marker-line-vertical"></div>
         </div>
@@ -45,6 +56,7 @@
         <div class="viewport-indicator-label">{{ viewportWidth }}px</div>
       </div>
     </div>
+    <p class="ruler-status" role="status" aria-live="polite">{{ selectionStatus }}</p>
   </div>
 
   <!-- Grid/Layout Overlays -->
@@ -226,27 +238,35 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import {
+  DEFAULT_DEBOUNCE_MS,
+  DEFAULT_HOTKEY,
+  defaultBreakpoints,
+  formatBreakpointRange,
+  isBreakpointActive as isActiveAt,
+  isEditableTarget,
+  matchesHotkey,
+  mediaQueryFor,
+  parseHotkey,
+} from './breakpoint-core.mjs';
 
 const props = defineProps({
   breakpoints: {
     type: Array,
-    default: () => [
-      { id: 'sm', label: 'Small', minWidth: 640 },
-      { id: 'md', label: 'Medium', minWidth: 768 },
-      { id: 'lg', label: 'Large', minWidth: 1024 },
-      { id: 'xl', label: 'Extra Large', minWidth: 1280 },
-      { id: '2xl', label: '2X Large', minWidth: 1536 },
-    ],
+    default: defaultBreakpoints,
   },
   hotkey: {
     type: String,
-    default: 'alt+shift+o',
+    default: DEFAULT_HOTKEY,
   },
   debounceMs: {
     type: Number,
-    default: 150,
+    default: DEFAULT_DEBOUNCE_MS,
   },
 });
+
+// `select` fires with { breakpoint, mediaQuery, copied } when a ruler marker is clicked
+const emit = defineEmits(['select']);
 
 const isExpanded = ref(false);
 const viewportWidth = ref(window.innerWidth);
@@ -265,6 +285,7 @@ const layoutItemRefs = ref(new Map()); // Store refs to layout items for scrolli
 
 // Parse hotkey string to display format
 const hotkeyDisplay = computed(() => {
+  if (!hotkeyConfig.value) return '';
   return props.hotkey
     .split('+')
     .map(key => key.charAt(0).toUpperCase() + key.slice(1))
@@ -279,40 +300,13 @@ const currentBreakpointLabel = computed(() => {
   return 'Base';
 });
 
-// Determine if a breakpoint is active
-const isBreakpointActive = (breakpoint) => {
-  const width = viewportWidth.value;
-  
-  if (breakpoint.minWidth !== undefined && breakpoint.maxWidth !== undefined) {
-    // Range: both min and max
-    return width >= breakpoint.minWidth && width <= breakpoint.maxWidth;
-  } else if (breakpoint.minWidth !== undefined) {
-    // Min-width: viewport >= minWidth
-    return width >= breakpoint.minWidth;
-  } else if (breakpoint.maxWidth !== undefined) {
-    // Max-width: viewport <= maxWidth
-    return width <= breakpoint.maxWidth;
-  }
-  
-  return false;
-};
+// Determine if a breakpoint is active at the current viewport width
+const isBreakpointActive = (breakpoint) => isActiveAt(breakpoint, viewportWidth.value);
 
 // Get all active breakpoints
 const activeBreakpoints = computed(() => {
   return props.breakpoints.filter(bp => isBreakpointActive(bp));
 });
-
-// Format breakpoint range for display
-const formatBreakpointRange = (breakpoint) => {
-  if (breakpoint.minWidth !== undefined && breakpoint.maxWidth !== undefined) {
-    return `${breakpoint.minWidth}px - ${breakpoint.maxWidth}px`;
-  } else if (breakpoint.minWidth !== undefined) {
-    return `≥ ${breakpoint.minWidth}px`;
-  } else if (breakpoint.maxWidth !== undefined) {
-    return `≤ ${breakpoint.maxWidth}px`;
-  }
-  return 'All sizes';
-};
 
 // Get color for breakpoint (consistent color based on ID)
 const getBreakpointColor = (id) => {
@@ -390,9 +384,7 @@ const handleResize = () => {
 
 // Toggle expanded state
 const toggleExpanded = () => {
-  console.log('Toggle expanded called, current state:', isExpanded.value);
   isExpanded.value = !isExpanded.value;
-  console.log('New state:', isExpanded.value);
   
   // Prevent body scroll when expanded (like loupe tool)
   if (isExpanded.value) {
@@ -403,80 +395,32 @@ const toggleExpanded = () => {
     }
   } else {
     document.body.style.overflow = '';
-    // Stop layout scanning
-    if (layoutScanInterval) {
-      clearInterval(layoutScanInterval);
-      layoutScanInterval = null;
+    // Stop a layout scan that is still running
+    if (scanCancelToken.value) {
+      scanCancelToken.value.cancelled = true;
+      isScanning.value = false;
     }
     highlightedLayoutIndex.value = null;
   }
 };
 
-// Parse hotkey string to event matcher
-const parseHotkey = (hotkeyString) => {
-  const parts = hotkeyString.toLowerCase().split('+').map(s => s.trim());
-  const modifiers = {
-    alt: false,
-    ctrl: false,
-    shift: false,
-    meta: false,
-  };
-  let key = '';
-  
-  parts.forEach(part => {
-    if (part === 'alt') modifiers.alt = true;
-    else if (part === 'ctrl' || part === 'control') modifiers.ctrl = true;
-    else if (part === 'shift') modifiers.shift = true;
-    else if (part === 'meta' || part === 'cmd' || part === 'command') modifiers.meta = true;
-    else key = part;
-  });
-  
-  return { modifiers, key };
-};
-
-// Handle keyboard shortcuts
+// Handle keyboard shortcuts. The listener is on window in the capture phase, so it sees the
+// shortcut before the page does; a handled shortcut is stopped there and the page never gets it.
 const hotkeyConfig = computed(() => parseHotkey(props.hotkey));
 
 const handleKeyDown = (event) => {
-  // Skip if hotkey is disabled
-  if (!props.hotkey || props.hotkey.trim() === '') {
-    return;
-  }
-  
-  // Check for configured hotkey
-  const { modifiers, key } = hotkeyConfig.value;
-  const keyMatches = 
-    event.key.toLowerCase() === key.toLowerCase() ||
-    event.code.toLowerCase() === `key${key.toLowerCase()}`;
-  
-  const modifiersMatch = 
-    event.altKey === modifiers.alt &&
-    event.ctrlKey === modifiers.ctrl &&
-    event.shiftKey === modifiers.shift &&
-    event.metaKey === modifiers.meta;
-  
-  const matchesHotkey = modifiersMatch && keyMatches;
-  
-  if (matchesHotkey && !isEditableTarget(event.target)) {
+  if (matchesHotkey(event, hotkeyConfig.value) && !isEditableTarget(event.target)) {
     event.preventDefault();
     event.stopPropagation();
     toggleExpanded();
+    return;
   }
-  
+
   // Escape to close
   if (event.key === 'Escape' && isExpanded.value) {
     event.preventDefault();
-    isExpanded.value = false;
+    toggleExpanded();
   }
-};
-
-// Check if target is an editable element
-const isEditableTarget = (target) => {
-  if (!target) return false;
-  const tagName = target.tagName?.toLowerCase();
-  const isInput = tagName === 'input' || tagName === 'textarea' || tagName === 'select';
-  const isContentEditable = target.contentEditable === 'true';
-  return isInput || isContentEditable;
 };
 
 onMounted(() => {
@@ -484,7 +428,6 @@ onMounted(() => {
   window.addEventListener('resize', handleResize);
   window.addEventListener('keydown', handleKeyDown, true);
   
-  console.log('Breakpoint Overlay mounted and listening for keyboard shortcuts');
 });
 
 onBeforeUnmount(() => {
@@ -493,6 +436,12 @@ onBeforeUnmount(() => {
   if (resizeTimeout) {
     clearTimeout(resizeTimeout);
   }
+  if (selectionStatusTimeout) {
+    clearTimeout(selectionStatusTimeout);
+  }
+  if (isExpanded.value) {
+    document.body.style.overflow = '';
+  }
 });
 
 // Watch for breakpoints changes
@@ -500,15 +449,32 @@ watch(() => props.breakpoints, () => {
   updateViewport();
 }, { deep: true });
 
-// Visual Breakpoint Ruler - Jump to breakpoint
-const jumpToBreakpoint = (breakpoint) => {
-  if (breakpoint.minWidth !== undefined) {
-    // Resize window to breakpoint (note: this may not work in all browsers due to security)
-    // As a fallback, we'll just log it and show a message
-    console.log(`Would jump to breakpoint: ${breakpoint.minWidth}px`);
-    // In a real implementation, you might use browser dev tools API or show instructions
-    alert(`To test at ${breakpoint.minWidth}px, resize your browser window or use dev tools.`);
+// Visual Breakpoint Ruler - a marker copies its media query and emits `select`. A page can't
+// resize the browser window, so the overlay hands over the query instead.
+const selectionStatus = ref('');
+let selectionStatusTimeout = null;
+
+const copyText = async (text) => {
+  try {
+    if (!navigator.clipboard?.writeText) return false;
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
   }
+};
+
+const selectBreakpoint = async (breakpoint) => {
+  const mediaQuery = mediaQueryFor(breakpoint);
+  const copied = await copyText(mediaQuery);
+  selectionStatus.value = copied
+    ? `Copied ${mediaQuery}`
+    : `Couldn't copy to the clipboard: ${mediaQuery}`;
+  if (selectionStatusTimeout) clearTimeout(selectionStatusTimeout);
+  selectionStatusTimeout = setTimeout(() => {
+    selectionStatus.value = '';
+  }, 4000);
+  emit('select', { breakpoint, mediaQuery, copied });
 };
 
 // Layout Inspector - Scan for grid/flex containers (optimized async version)
@@ -1194,6 +1160,23 @@ kbd {
 
 .ruler-marker:hover {
   opacity: 0.8;
+}
+
+.ruler-marker:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.ruler-status {
+  min-height: 1.25em;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #374151;
+  text-align: center;
+}
+
+.dark .ruler-status {
+  color: #cbd5e1;
 }
 
 .marker-line-vertical {

@@ -1,161 +1,45 @@
-# ESLint Plugin - Implementation Complete ✅
+# ESLint plugin status
 
-## Status: Fully Implemented
+What `@adamstavely/eslint-plugin-design-system` does today. Usage is in [README.md](./README.md).
 
-The ESLint plugin is now **fully implemented** and ready for use.
+## Source
 
-## What's Included
+| File | What it is |
+| --- | --- |
+| `src/index.ts` | The plugin: `rules`, the `recommended` / `legacy-recommended` (eslintrc) and `flat/recommended` configs, `loadRulesFromAPI` |
+| `src/rules.ts` | The five built-in rules and the token autofix they share |
+| `src/checks.ts` | Detection helpers (colors, spacing, typography, component names, JSX accessible names) |
+| `src/token-fix.ts` | The `tokens` / `replacement` options: finds the one token with a value and writes its reference |
+| `src/rule-converter.ts`, `src/api.ts` | Fetching `GET /api/v1/governance/rules/export` and turning the rule types ESLint can check into rules |
 
-### 1. Core Plugin Files
+## Built-in rules
 
-- ✅ **`src/index.ts`** - Main plugin with 5 built-in rules
-- ✅ **`src/rule-converter.ts`** - Converts Rules Engine scanner code to ESLint rules
-- ✅ **`src/processor.ts`** - ESLint processor for async rule loading
-- ✅ **`package.json`** - Plugin configuration and dependencies
-- ✅ **`tsconfig.json`** - TypeScript configuration
-- ✅ **`README.md`** - Complete usage documentation
-- ✅ **`.eslintrc.example.js`** - Example ESLint configuration
+| Rule | Recommended | Autofix |
+| --- | --- | --- |
+| `hardcoded-design-tokens` | error | With `tokens`: a color that is exactly one token's value |
+| `accessibility-attributes` | error | No |
+| `component-naming` | warn | No |
+| `spacing-consistency` | warn | With `tokens`: a value whose every part is exactly one token's value |
+| `typography-scale` | warn | With `tokens`: a string value that is exactly one token's value |
 
-### 2. Built-in Rules (Work Without API)
+Without the `tokens` option no rule changes code.
 
-1. **`hardcoded-design-tokens`** - Detects hardcoded colors, spacing, typography
-2. **`component-naming`** - Enforces PascalCase component naming
-3. **`accessibility-attributes`** - Requires ARIA attributes on interactive elements
-4. **`spacing-consistency`** - Validates spacing usage
-5. **`typography-scale`** - Validates typography scale usage
+## API rules
 
-### 3. API Integration
+- `loadRulesFromAPI(config)` must be awaited before linting (ESLint rules are synchronous). Nothing is fetched at require time, and ESLint `settings` are not read.
+- Mapped rule types: `regex-absent` / `regex-present` on JavaScript, `token-usage` on CSS-in-JS, `selector-attribute` on JSX with a plain tag selector, and the `component-naming` builtin. Everything else is skipped and listed with a reason.
+- API rules report only; they have no autofix.
+- Cached per API URL (5 minutes by default). A failed or slow request logs one warning and keeps what loaded.
 
-- ✅ Fetches declarative rules from `/api/v1/governance/rules/export`
-- ✅ Maps the rule types ESLint can check (regex on JavaScript, token-usage on CSS-in-JS, selector-attribute on JSX, builtin component-naming); skips the rest with a warning (see README)
-- ✅ Caches rules for performance (5-minute default)
-- Loaded by awaiting `loadRulesFromAPI(config)` before linting (see README); `settings` are not read
+## Not included
 
-### 4. Backend Integration
+- No processor: the earlier pass-through processor and `initializePlugin` were removed, since nothing used them and ESLint can't load rules asynchronously through a processor.
+- `accessibility-attributes` understands JSX only, not Vue `<template>` markup.
 
-- ✅ Backend endpoint: `GET /api/v1/governance/rules/export`
-- ✅ Returns declarative rule definitions (no code; docs/GOVERNANCE.md)
+## Tests
 
-## How to Use
+`npm test` builds, then runs the RuleTester suites (including the autofix cases), the load test, the API and converter tests, and ESLint integration tests for eslintrc and flat config.
 
-### Step 1: Build the Plugin
+## Releases
 
-```bash
-cd eslint-plugin-design-system
-npm install
-npm run build
-```
-
-### Step 2: Install in Your Project
-
-```bash
-# From your project root
-npm install ./eslint-plugin-design-system
-```
-
-### Step 3: Configure ESLint
-
-Create or update `.eslintrc.js`:
-
-```javascript
-module.exports = {
-  plugins: ['design-system'],
-  extends: ['plugin:design-system/recommended'],
-  settings: {
-    'design-system': {
-      apiUrl: 'http://localhost:3000/api/v1',
-      apiKey: process.env.DS_API_KEY || 'test-api-key-123',
-      cacheRules: true,
-      cacheTimeout: 300000 // 5 minutes
-    }
-  },
-  rules: {
-    'design-system/hardcoded-design-tokens': 'error',
-    'design-system/component-naming': 'warn',
-    'design-system/accessibility-attributes': 'error',
-    'design-system/spacing-consistency': 'warn',
-    'design-system/typography-scale': 'warn'
-  }
-};
-```
-
-### Step 4: Run ESLint
-
-```bash
-# Lint files
-npx eslint . --plugin design-system
-
-# Fix auto-fixable issues
-npx eslint . --plugin design-system --fix
-```
-
-## Architecture
-
-```
-Rules Engine (Backend)
-  ↓ GET /api/v1/governance/rules/export
-ESLint Plugin
-  ↓ Maps declarative rule types to AST visitors
-ESLint
-  ↓ Runs in IDE/CLI
-Developer sees real-time violations
-```
-
-## Features
-
-- ✅ **Synchronous Built-in Rules**: Work immediately without API
-- ✅ **Asynchronous API Rules**: Load additional rules from Rules Engine
-- ✅ **Rule Conversion**: Scanner code → ESLint AST visitors
-- **Auto-fix**: not supported; rules report only
-- ✅ **VS Code Integration**: Works via ESLint extension
-- ✅ **Caching**: Rules cached for performance
-
-## Rule Conversion Patterns
-
-The plugin recognizes these scanner patterns:
-
-1. **Hardcoded Colors**: `/#[0-9a-fA-F]{6}/` → Checks `Literal` and `TemplateLiteral` nodes
-2. **Hardcoded Spacing**: `/\d+px/` → Checks `Literal` nodes
-3. **Component Naming**: PascalCase validation → Checks `Identifier` nodes
-4. **ARIA Attributes**: Missing accessibility → Checks `JSXOpeningElement` nodes
-5. **Design Tokens**: Token usage validation → Checks various node types
-
-## Testing
-
-To test the plugin:
-
-1. **Build**: `npm run build` in `eslint-plugin-design-system/`
-2. **Install**: `npm install ./eslint-plugin-design-system` in a test project
-3. **Configure**: Add to `.eslintrc.js` as shown above
-4. **Test**: Create a test file with violations:
-   ```javascript
-   const color = '#3b82f6'; // Should trigger hardcoded-design-tokens
-   const spacing = '16px';  // Should trigger spacing-consistency
-   ```
-5. **Run**: `npx eslint test-file.js`
-
-## Next Steps
-
-1. ✅ Plugin is ready to use
-2. ✅ Can be published to npm (optional)
-3. ✅ Can be integrated into CI/CD pipelines
-4. ✅ Works with VS Code ESLint extension
-
-## Notes
-
-- Built-in rules work **immediately** without API connection
-- API rules are loaded **asynchronously** when `apiUrl` is configured
-- Rules are **cached** for 5 minutes by default
-- Plugin follows **ESLint plugin conventions**
-- Compatible with **ESLint 8+**
-
-## Documentation
-
-- [README.md](./README.md) - Usage guide
-- [IMPLEMENTATION.md](./IMPLEMENTATION.md) - Implementation details
-- [../docs/LINTER_INTEGRATION.md](../docs/LINTER_INTEGRATION.md) - Integration guide
-
----
-
-**Status**: ✅ **Fully Implemented and Ready for Use**
-
+Published to GitHub Packages by `.github/workflows/release.yml` (`eslint-plugin-v<version>` tag or a manual run). Nothing has been published yet.

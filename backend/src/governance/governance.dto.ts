@@ -83,6 +83,8 @@ export class CodebaseDto {
 export class ScanDto {
   @IsIn(['design-system', 'application', 'applications']) scope: 'design-system' | 'application' | 'applications';
   @IsOptional() @IsString() @MaxLength(200) applicationId?: string;
+  /** design-system scope: scan only these components (by id) instead of every one the caller can read */
+  @IsOptional() @IsArray() @ArrayMaxSize(200) @IsString({ each: true }) @MaxLength(200, { each: true }) componentIds?: string[];
   @IsOptional() @ValidateNested() @Type(() => CodebaseDto) codebase?: CodebaseDto;
   @IsOptional() @IsString() @MaxLength(2048) url?: string;
   @IsOptional() @IsArray() @ArrayMaxSize(200) @IsString({ each: true }) ruleIds?: string[];

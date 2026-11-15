@@ -77,10 +77,10 @@
 
     <PageSection title="SDK and CLI" description="Both live in this repository and call the routes above." divided>
       <div class="grid md:grid-cols-2 gap-4">
-        <UiPanel title="JavaScript SDK" description="@designsystem/api, in sdk/" heading-tag="h3">
+        <UiPanel title="JavaScript SDK" description="@adamstavely/design-system-sdk, in sdk/" heading-tag="h3">
           <UiCodeBlock :code="sdkExample" label="JavaScript" />
         </UiPanel>
-        <UiPanel title="Command line" description="@designsystem/cli (the ds command), in cli/" heading-tag="h3">
+        <UiPanel title="Command line" description="@adamstavely/design-system-cli (the ds command), in cli/" heading-tag="h3">
           <UiCodeBlock :code="cliExample" label="Shell" />
         </UiPanel>
       </div>
@@ -206,7 +206,7 @@ const endpoints = [
   { path: '/components/status/:status', description: 'The components with one status, e.g. /components/status/deprecated.' },
 ];
 
-const sdkExample = computed(() => `import { DesignSystemAPI } from '@designsystem/api';
+const sdkExample = computed(() => `import { DesignSystemAPI } from '@adamstavely/design-system-sdk';
 
 const api = new DesignSystemAPI({
   apiKey: process.env.DS_API_KEY,
