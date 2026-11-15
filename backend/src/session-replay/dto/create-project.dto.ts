@@ -1,4 +1,7 @@
-import { IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { CaptureConfigDto, PrivacySettingsDto } from './capture-settings.dto';
+import { IsOpenReplayProjectId, IsOpenReplayProjectKey } from './project-keys';
 
 export class CreateProjectDto {
   @IsString()
@@ -15,8 +18,10 @@ export class CreateProjectDto {
   @IsString()
   workspaceId?: string | null;
 
+  /** Organization API key, for listing sessions; checked against OpenReplay and stored encrypted */
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   openreplayApiKey?: string;
 
   @IsOptional()
@@ -27,8 +32,14 @@ export class CreateProjectDto {
   @IsString()
   applicationUrl?: string;
 
-  @IsString()
+  /** The tracker's project key; the public API addresses the project by it too */
+  @IsOpenReplayProjectKey()
   openreplayProjectKey: string;
+
+  /** Numeric project id, for links into OpenReplay (session player, heatmaps). Looked up when an API key is given. */
+  @IsOptional()
+  @IsOpenReplayProjectId()
+  openreplayProjectId?: number;
 
   /** Self-hosted OpenReplay instance URL */
   @IsOptional()
@@ -36,20 +47,12 @@ export class CreateProjectDto {
   openreplayBaseUrl?: string;
 
   @IsOptional()
-  @IsObject()
-  privacySettings?: {
-    maskAllInputs?: boolean;
-    maskAllText?: boolean;
-    maskTextSelector?: string[];
-    blockSelector?: string[];
-    respectDoNotTrack?: boolean;
-  };
+  @ValidateNested()
+  @Type(() => PrivacySettingsDto)
+  privacySettings?: PrivacySettingsDto;
 
   @IsOptional()
-  @IsObject()
-  config?: {
-    captureConsole?: boolean;
-    captureNetwork?: boolean;
-    captureIFrames?: boolean;
-  };
+  @ValidateNested()
+  @Type(() => CaptureConfigDto)
+  config?: CaptureConfigDto;
 }

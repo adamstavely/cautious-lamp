@@ -1,4 +1,7 @@
-import { IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsOptional, IsString, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
+import { CaptureConfigDto, PrivacySettingsDto } from './capture-settings.dto';
+import { IsOpenReplayProjectId, IsOpenReplayProjectKey } from './project-keys';
 
 export class UpdateProjectDto {
   @IsOptional()
@@ -15,33 +18,34 @@ export class UpdateProjectDto {
   applicationUrl?: string;
 
   @IsOptional()
-  @IsString()
+  @IsOpenReplayProjectKey()
   openreplayProjectKey?: string;
+
+  /** null clears it */
+  @IsOptional()
+  @ValidateIf((o) => o.openreplayProjectId !== null)
+  @IsOpenReplayProjectId()
+  openreplayProjectId?: number | null;
 
   /** Write-only: replaces the stored key when sent */
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   openreplayApiKey?: string;
 
   @IsOptional()
   @IsString()
   openreplayBaseUrl?: string;
 
+  /** Merged into the current settings */
   @IsOptional()
-  @IsObject()
-  privacySettings?: {
-    maskAllInputs?: boolean;
-    maskAllText?: boolean;
-    maskTextSelector?: string[];
-    blockSelector?: string[];
-    respectDoNotTrack?: boolean;
-  };
+  @ValidateNested()
+  @Type(() => PrivacySettingsDto)
+  privacySettings?: PrivacySettingsDto;
 
+  /** Merged into the current settings */
   @IsOptional()
-  @IsObject()
-  config?: {
-    captureConsole?: boolean;
-    captureNetwork?: boolean;
-    captureIFrames?: boolean;
-  };
+  @ValidateNested()
+  @Type(() => CaptureConfigDto)
+  config?: CaptureConfigDto;
 }

@@ -1,4 +1,12 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { AuthPrincipal } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
@@ -7,8 +15,18 @@ import { DuplicateDocumentError, VersionConflictError } from '../reviews/documen
 import { ProjectAccessService, ProjectAction, ProjectCreator, ProjectOwnership } from '../visual-regression/project-access';
 import { QueryableStore } from '../workspaces/queryable-store';
 import { isSafeId } from '../workspaces/workspace-access.service';
-import { OpenReplayApiClient } from './openreplay-api.client';
-import { resolveOpenReplayBaseUrl } from './openreplay-url';
+import {
+  CaptureConfig,
+  PrivacySettings,
+  assertValidSelectors,
+  normalizeCaptureConfig,
+  normalizePrivacySettings,
+  translateLegacyPrivacy,
+} from './capture-settings';
+import { PROJECT_KEY_LOOKS_NUMERIC, PROJECT_KEY_MAX_LENGTH, PROJECT_KEY_MESSAGE, PROJECT_KEY_PATTERN } from './dto/project-keys';
+import { OpenReplayApiClient, OpenReplayError, OpenReplayWindow } from './openreplay-api.client';
+import { IntegrationSnippets, integrationSnippets } from './openreplay-snippet';
+import { DEFAULT_OPENREPLAY_BASE_URL, openReplayHeatmapsUrl, openReplaySessionUrl, resolveOpenReplayBaseUrl } from './openreplay-url';
 
 export const SR_PROJECTS_INDEX = 'design-system-session-replay-projects';
 export const SR_PROJECT_STORE = Symbol('SR_PROJECT_STORE');
@@ -20,6 +38,8 @@ export const SR_PROJECT_PROPERTIES = {
   teamId: keyword,
   workspaceId: keyword,
   applicationId: keyword,
+  openreplayProjectKey: keyword,
+  openreplayProjectId: { type: 'long' },
   createdBy: { properties: { type: keyword, id: keyword } },
   createdAt: { type: 'date' },
   updatedAt: { type: 'date' },
@@ -43,60 +63,92 @@ export class ProjectExistsError extends ConflictException {
   }
 }
 
-/** As stored in design-system-session-replay-projects; `openreplayApiKey` is encrypted and never returned */
+/**
+ * As stored in design-system-session-replay-projects; `openreplayApiKey` is
+ * encrypted and never returned. OpenReplay names a project two ways: the
+ * project key (the tracker and the public API use it) and the numeric project
+ * id (its dashboard links use it), so both are kept.
+ */
 export interface Project extends ProjectOwnership {
   id: string;
   teamId: string;
   name: string;
   description?: string;
   applicationUrl?: string;
-  openreplayProjectKey: string;
+  /** Missing only on projects saved before the two were kept apart, whose key was the numeric id */
+  openreplayProjectKey?: string;
+  openreplayProjectId?: number;
   openreplayBaseUrl?: string;
   openreplayApiKey?: string; // Encrypted API key (not returned in responses)
-  privacySettings?: {
-    maskAllInputs?: boolean;
-    maskAllText?: boolean;
-    maskTextSelector?: string[];
-    blockSelector?: string[];
-    respectDoNotTrack?: boolean;
-  };
-  config?: {
-    captureConsole?: boolean;
-    captureNetwork?: boolean;
-    captureIFrames?: boolean;
-  };
+  privacySettings: PrivacySettings;
+  config: CaptureConfig;
   createdAt: string;
   updatedAt: string;
 }
 
+/** A session as OpenReplay's public API lists it */
 export interface Session {
   sessionId: string;
   projectId: string;
-  userId?: string;
-  userEmail?: string;
-  userDisplayName?: string;
-  startTime: Date;
-  duration: number;
-  pagesCount: number;
-  eventsCount: number;
-  errorsCount: number;
-  issueScore: number;
-  issueTypes: string[];
-  favorite: boolean;
-  viewed: boolean;
-  live: boolean;
-  replayUrl: string;
-  metadata?: Record<string, any>;
+  userId: string;
+  startTime: string;
+  endTime: string | null;
+  /** Seconds, when OpenReplay gave an end time */
+  duration: number | null;
+  eventsCount: number | null;
+  /** OpenReplay's player; null until the project has its numeric id */
+  replayUrl: string | null;
 }
+
+export interface SessionEvent {
+  id: string;
+  name: string;
+  time: string;
+  autoCaptured: boolean;
+  properties: Record<string, unknown>;
+}
+
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  startDate: string;
+  endDate: string;
+}
+
+export interface SessionSearch {
+  userId: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface EventSearch {
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_SESSION_WINDOW_MS = 7 * DAY_MS;
+const DEFAULT_EVENT_WINDOW_MS = 30 * DAY_MS;
+const DEFAULT_PAGE_SIZE = 20;
+/** The public API's limits */
+const MAX_PAGE_SIZE = 200;
+const EARLIEST_TIMESTAMP = 946684800000;
+const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{1,256}$/;
 
 const UPDATABLE_PROJECT_FIELDS = [
   'name',
   'description',
   'applicationUrl',
   'openreplayProjectKey',
+  'openreplayProjectId',
   'openreplayBaseUrl',
-  'privacySettings',
-  'config',
 ] as const;
 
 /** The project without its API key; `hasApiKey` says whether one is set */
@@ -110,24 +162,76 @@ function stripUndefined<T extends object>(value: T): T {
 }
 
 /**
+ * A stored project in the current shape. Before the project key and id were
+ * kept apart, `openreplayProjectKey` had to hold the numeric id: such a value
+ * moves to `openreplayProjectId`, and the project needs its key entered again
+ * (the integration code says so). Privacy settings in the older shape are
+ * translated. Written back on the next change.
+ */
+export function migrateProject(stored: Project): Project {
+  const project = { ...stored };
+  const legacyKey = project.openreplayProjectKey?.trim();
+  if (legacyKey && /^\d+$/.test(legacyKey)) {
+    const id = Number(legacyKey);
+    if (project.openreplayProjectId === undefined && Number.isSafeInteger(id) && id > 0) project.openreplayProjectId = id;
+    delete project.openreplayProjectKey;
+  }
+  project.privacySettings = normalizePrivacySettings(project.privacySettings);
+  project.config = normalizeCaptureConfig(project.config);
+  return project;
+}
+
+/** Throws 400 unless `key` is an OpenReplay project key (not the numeric id) */
+export function assertProjectKey(key: unknown): asserts key is string {
+  if (typeof key !== 'string' || !key.trim() || key.length > PROJECT_KEY_MAX_LENGTH || !PROJECT_KEY_PATTERN.test(key)) {
+    throw new BadRequestException(PROJECT_KEY_MESSAGE);
+  }
+  if (/^\d+$/.test(key)) throw new BadRequestException(PROJECT_KEY_LOOKS_NUMERIC);
+}
+
+/** Throws 400 unless `id` is a positive whole number */
+export function assertProjectId(id: unknown): asserts id is number {
+  if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) {
+    throw new BadRequestException('openreplayProjectId must be the numeric project id from OpenReplay');
+  }
+}
+
+/** An ISO date or date-time as epoch ms; a bare date as the end of that day when `endOfDay` */
+function parseDate(value: string | undefined, field: string, endOfDay = false): number | undefined {
+  if (!value) return undefined;
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) throw new BadRequestException(`${field} must be an ISO date`);
+  return endOfDay && /^\d{4}-\d{2}-\d{2}$/.test(value) ? ms + DAY_MS - 1 : ms;
+}
+
+/** The time window and page for a public-API list, checked against its limits */
+function listWindow(params: { startDate?: string; endDate?: string; page?: number; limit?: number }, defaultSpan: number) {
+  const end = parseDate(params.endDate, 'endDate', true) ?? Date.now();
+  const start = parseDate(params.startDate, 'startDate') ?? end - defaultSpan;
+  if (start >= end) throw new BadRequestException('startDate must be before endDate');
+  if (start < EARLIEST_TIMESTAMP) throw new BadRequestException('startDate must be in 2000 or later');
+  const page = params.page ?? 1;
+  const limit = params.limit ?? DEFAULT_PAGE_SIZE;
+  if (!Number.isInteger(page) || page < 1) throw new BadRequestException('page must be 1 or more');
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_PAGE_SIZE) {
+    throw new BadRequestException(`limit must be between 1 and ${MAX_PAGE_SIZE}`);
+  }
+  return { startTimestamp: start, endTimestamp: end, page, limit };
+}
+
+/** An OpenReplay failure as our answer: 502, with OpenReplay's reason */
+function upstream(error: unknown): Error {
+  if (error instanceof OpenReplayError) {
+    return new BadGatewayException({ statusCode: 502, code: 'OPENREPLAY_ERROR', message: error.message });
+  }
+  return error as Error;
+}
+
+/**
  * Session-replay projects (backed by OpenReplay), stored in Elasticsearch.
  * Access is per project (ProjectAccessService); the controller calls
  * `authorizeProject` before anything else.
  */
-const DEFAULT_OPENREPLAY_URL = 'https://api.openreplay.com';
-
-/**
- * OpenReplay's API addresses projects by their numeric id. A key that isn't
- * one used to fall back to project 1, which could show another project's sessions.
- */
-function numericOpenReplayId(projectKey: string | undefined): number {
-  const id = Number(projectKey);
-  if (!projectKey || !Number.isInteger(id) || id <= 0) {
-    throw new BadRequestException("The OpenReplay project id must be the numeric id from OpenReplay's project settings");
-  }
-  return id;
-}
-
 @Injectable()
 export class SessionReplayService {
   constructor(
@@ -158,21 +262,16 @@ export class SessionReplayService {
 
   async createProject(teamId: string, dto: any, options: CreateProjectOptions): Promise<Project> {
     if (options.id && (await this.projects.get(options.id))) throw new ProjectExistsError(options.id);
+    assertProjectKey(dto.openreplayProjectKey);
+    if (dto.openreplayProjectId !== undefined && dto.openreplayProjectId !== null) assertProjectId(dto.openreplayProjectId);
+    const privacySettings = normalizePrivacySettings(dto.privacySettings);
+    assertValidSelectors(privacySettings);
     // SSRF guard: the base URL is fetched later, so it is checked before it is stored
     const openreplayBaseUrl = await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl);
-    // Verify OpenReplay connection if API key provided
-    if (dto.openreplayApiKey) {
-      const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, dto.openreplayApiKey);
-      try {
-        const isValid = await openreplayClient.verifyConnection();
-        if (!isValid) {
-          throw new BadRequestException('Unable to connect to OpenReplay instance. Please check your base URL and API key.');
-        }
-      } catch (error: any) {
-        if (error instanceof BadRequestException) throw error;
-        throw new BadRequestException(`Failed to verify OpenReplay connection: ${error.message}`);
-      }
-    }
+    // With an API key, OpenReplay confirms the key and project, and supplies the numeric id
+    const openreplayProjectId = dto.openreplayApiKey
+      ? await this.confirmOpenReplayProject(openreplayBaseUrl, dto.openreplayApiKey, dto.openreplayProjectKey, dto.openreplayProjectId ?? undefined)
+      : (dto.openreplayProjectId ?? undefined);
 
     const now = new Date().toISOString();
     const project: Project = stripUndefined({
@@ -185,11 +284,12 @@ export class SessionReplayService {
       description: dto.description,
       applicationUrl: dto.applicationUrl,
       openreplayProjectKey: dto.openreplayProjectKey,
+      openreplayProjectId,
       openreplayBaseUrl,
       // Encrypted at rest
       openreplayApiKey: dto.openreplayApiKey ? this.encryptionService.encrypt(dto.openreplayApiKey) : undefined,
-      privacySettings: dto.privacySettings || {},
-      config: dto.config || {},
+      privacySettings,
+      config: normalizeCaptureConfig(dto.config),
       createdAt: now,
       updatedAt: now,
     });
@@ -208,7 +308,7 @@ export class SessionReplayService {
     if (filters.teamId) clause.teamId = filters.teamId;
     if (filters.workspaceId) clause.workspaceId = filters.workspaceId;
     const all = Object.keys(clause).length ? await this.projects.findAny([clause]) : await this.projects.list();
-    return (await this.access.readable(principal, all)).map(redact);
+    return (await this.access.readable(principal, all)).map((p) => redact(migrateProject(p)));
   }
 
   /** The project without its API key. No access check: for other modules (applications). */
@@ -223,23 +323,34 @@ export class SessionReplayService {
   async updateProject(id: string, dto: any): Promise<Project> {
     const project = await this.requireProject(id);
 
+    if (dto.openreplayProjectKey !== undefined) assertProjectKey(dto.openreplayProjectKey);
+    if (dto.openreplayProjectId !== undefined && dto.openreplayProjectId !== null) assertProjectId(dto.openreplayProjectId);
+    // Partial settings are merged into the current ones
+    const privacySettings =
+      dto.privacySettings !== undefined
+        ? normalizePrivacySettings({ ...project.privacySettings, ...translateLegacyPrivacy(dto.privacySettings) })
+        : undefined;
+    if (privacySettings) assertValidSelectors(privacySettings);
+    const config = dto.config !== undefined ? normalizeCaptureConfig({ ...project.config, ...dto.config }) : undefined;
+
     // SSRF guard: check a new base URL before it is stored
     if (dto.openreplayBaseUrl !== undefined) {
       dto = { ...dto, openreplayBaseUrl: await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl) };
     }
 
-    // If updating OpenReplay connection details, verify them
-    if (dto.openreplayProjectKey || dto.openreplayApiKey || dto.openreplayBaseUrl) {
-      const openreplayBaseUrl = await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl || project.openreplayBaseUrl);
-      const openreplayApiKey = dto.openreplayApiKey || this.decryptToken(project.openreplayApiKey);
-      if (openreplayApiKey) {
-        const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, openreplayApiKey);
-        try {
-          await openreplayClient.verifyConnection();
-        } catch (error: any) {
-          throw new BadRequestException(`Failed to verify OpenReplay connection: ${error.message}`);
-        }
-      }
+    // Changed connection details are confirmed with OpenReplay when there is an API key to ask with
+    let confirmedProjectId: number | undefined;
+    const connectionChanged = ['openreplayProjectKey', 'openreplayProjectId', 'openreplayApiKey', 'openreplayBaseUrl'].some(
+      (key) => dto[key] !== undefined,
+    );
+    const projectKey = dto.openreplayProjectKey ?? project.openreplayProjectKey;
+    const apiKey = dto.openreplayApiKey || this.decryptToken(project.openreplayApiKey);
+    if (connectionChanged && apiKey && projectKey) {
+      const baseUrl = await resolveOpenReplayBaseUrl(dto.openreplayBaseUrl || project.openreplayBaseUrl);
+      const expectedId = dto.openreplayProjectId === undefined ? project.openreplayProjectId : (dto.openreplayProjectId ?? undefined);
+      // A new key belongs to whichever project OpenReplay says, unless an id was given with it
+      const checkId = dto.openreplayProjectKey !== undefined && dto.openreplayProjectId === undefined ? undefined : expectedId;
+      confirmedProjectId = await this.confirmOpenReplayProject(baseUrl, apiKey, projectKey, checkId);
     }
 
     // Only fields a client may change; id, ownership, timestamps and the like can't be overwritten
@@ -247,11 +358,40 @@ export class SessionReplayService {
     for (const key of UPDATABLE_PROJECT_FIELDS) {
       if (dto[key] !== undefined) (changes as Record<string, unknown>)[key] = dto[key];
     }
+    if (confirmedProjectId !== undefined) changes.openreplayProjectId = confirmedProjectId;
+    if (privacySettings) changes.privacySettings = privacySettings;
+    if (config) changes.config = config;
     const updated = await this.mutate(id, (doc) => {
       Object.assign(doc, changes);
+      if (doc.openreplayProjectId === null) delete doc.openreplayProjectId;
       if (dto.openreplayApiKey) doc.openreplayApiKey = this.encryptionService.encrypt(dto.openreplayApiKey);
     });
     return redact(updated);
+  }
+
+  /**
+   * Asks OpenReplay for the project with this key: throws 400 when the API key
+   * is refused, OpenReplay can't be reached, it has no such project, or the
+   * project's numeric id isn't `expectedId`. Returns the numeric id.
+   */
+  private async confirmOpenReplayProject(baseUrl: string, apiKey: string, projectKey: string, expectedId?: number): Promise<number | undefined> {
+    const client = new OpenReplayApiClient(baseUrl, apiKey);
+    let remote;
+    try {
+      await client.checkConnection();
+      remote = await client.getProject(projectKey);
+    } catch (error: any) {
+      throw new BadRequestException(`Could not check the OpenReplay connection: ${error.message}`);
+    }
+    if (!remote) throw new BadRequestException(`OpenReplay has no project with the key "${projectKey}"`);
+    const remoteId = Number(remote.projectId);
+    if (!Number.isSafeInteger(remoteId) || remoteId <= 0) return expectedId;
+    if (expectedId !== undefined && remoteId !== expectedId) {
+      throw new BadRequestException(
+        `In OpenReplay, the project key "${projectKey}" belongs to project ${remoteId}, not ${expectedId}`,
+      );
+    }
+    return remoteId;
   }
 
   /** Moves the project to another workspace (when its application moves) */
@@ -269,7 +409,8 @@ export class SessionReplayService {
 
   private async findProject(id: string): Promise<Project | null> {
     if (!isSafeId(id)) return null;
-    return (await this.projects.get(id))?.doc ?? null;
+    const stored = (await this.projects.get(id))?.doc;
+    return stored ? migrateProject(stored) : null;
   }
 
   private async requireProject(id: string): Promise<Project> {
@@ -283,7 +424,8 @@ export class SessionReplayService {
     for (let attempt = 0; attempt < MAX_WRITE_ATTEMPTS; attempt++) {
       const stored = await this.projects.get(id);
       if (!stored) throw new NotFoundException(`Project with ID ${id} not found`);
-      const doc = stored.doc;
+      // Older documents are written back in the current shape
+      const doc = migrateProject(stored.doc);
       fn(doc);
       doc.updatedAt = new Date().toISOString();
       try {
@@ -297,31 +439,65 @@ export class SessionReplayService {
     throw new ConflictException('The project was changed by someone else at the same time, please try again');
   }
 
-  // Integration Code Generation
-  async getIntegrationCode(projectId: string): Promise<string> {
+  // ---------- Integration code and links ----------
+
+  /** The tracker setup for the script tag and the npm package, with the project's privacy and capture settings */
+  async getIntegrationCode(projectId: string): Promise<IntegrationSnippets> {
     const project = await this.requireProject(projectId);
-
-    const decryptedApiKey = this.decryptToken(project.openreplayApiKey) || '';
-    // Only builds a snippet (no request); the base URL was checked when it was saved
-    const openreplayBaseUrl = project.openreplayBaseUrl || 'https://api.openreplay.com';
-    const openreplayClient = new OpenReplayApiClient(openreplayBaseUrl, decryptedApiKey);
-
-    return openreplayClient.getIntegrationCode(
-      project.openreplayProjectKey,
-      project.openreplayBaseUrl,
-      {
-        privacySettings: project.privacySettings,
-        config: project.config,
-      }
-    );
+    const projectKey = this.requireProjectKey(project);
+    return integrationSnippets({
+      projectKey,
+      // Only builds code (no request); the base URL was checked when it was saved
+      baseUrl: project.openreplayBaseUrl || DEFAULT_OPENREPLAY_BASE_URL,
+      privacy: project.privacySettings,
+      capture: project.config,
+    });
   }
+
+  /** OpenReplay's player for one session (needs the numeric project id, not the API key) */
+  async getReplayUrl(projectId: string, sessionId: string): Promise<string> {
+    if (!SESSION_ID_PATTERN.test(sessionId)) throw new BadRequestException('sessionId is not an OpenReplay session id');
+    const project = await this.requireProject(projectId);
+    return openReplaySessionUrl(project.openreplayBaseUrl || DEFAULT_OPENREPLAY_BASE_URL, this.requireNumericId(project), sessionId);
+  }
+
+  /** OpenReplay's heatmap cards for the project, or one card */
+  async getHeatmapsUrl(projectId: string, heatmapId?: string): Promise<string> {
+    if (heatmapId !== undefined && !SESSION_ID_PATTERN.test(heatmapId)) throw new BadRequestException('heatmapId is not an OpenReplay card id');
+    const project = await this.requireProject(projectId);
+    return openReplayHeatmapsUrl(project.openreplayBaseUrl || DEFAULT_OPENREPLAY_BASE_URL, this.requireNumericId(project), heatmapId);
+  }
+
+  private requireProjectKey(project: Project): string {
+    if (!project.openreplayProjectKey) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'OPENREPLAY_PROJECT_KEY_MISSING',
+        message: "This project has no OpenReplay project key. Add it in the project's settings (OpenReplay shows it under Project settings).",
+      });
+    }
+    return project.openreplayProjectKey;
+  }
+
+  private requireNumericId(project: Project): number {
+    if (!project.openreplayProjectId) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'OPENREPLAY_PROJECT_ID_MISSING',
+        message: "This project has no OpenReplay project id, so there is no link into OpenReplay. Add it in the project's settings.",
+      });
+    }
+    return project.openreplayProjectId;
+  }
+
+  // ---------- Sessions (OpenReplay's public API) ----------
 
   /**
    * The OpenReplay client for a project's API calls. Without an API key there
    * is nothing to show: a 503 with code OPENREPLAY_NOT_CONFIGURED, which the
    * UI explains, rather than made-up sessions.
    */
-  private async openReplayFor(project: Project): Promise<{ client: OpenReplayApiClient; numericProjectId: number }> {
+  private async clientFor(project: Project): Promise<OpenReplayApiClient> {
     const apiKey = this.decryptToken(project.openreplayApiKey)?.trim();
     if (!apiKey) {
       throw new ServiceUnavailableException({
@@ -332,7 +508,7 @@ export class SessionReplayService {
     }
     // SSRF guard: re-checked before every request, since DNS can change after the URL was saved
     const baseUrl = await resolveOpenReplayBaseUrl(project.openreplayBaseUrl);
-    return { client: new OpenReplayApiClient(baseUrl, apiKey), numericProjectId: numericOpenReplayId(project.openreplayProjectKey) };
+    return new OpenReplayApiClient(baseUrl, apiKey);
   }
 
   /** For GET /integrations/status: projects with an OpenReplay API key, and with `check`, which can't reach OpenReplay */
@@ -342,109 +518,79 @@ export class SessionReplayService {
     const summary: ProjectIntegrationSummary = { projects: projects.length, withCredentials: withKey.length };
     if (check) {
       const failures = await checkEach(withKey, async (project) => {
-        const { client } = await this.openReplayFor(project);
-        if (!(await client.verifyConnection())) throw new Error('OpenReplay did not answer');
+        await (await this.clientFor(migrateProject(project))).checkConnection();
       });
       summary.unreachable = failures.map(({ item, error }) => ({ projectId: item.id, name: item.name, error }));
     }
     return summary;
   }
 
-  // Session Management
-  async searchSessions(
-    projectId: string,
-    params: {
-      startDate?: string;
-      endDate?: string;
-      userId?: string;
-      userEmail?: string;
-      issueType?: string;
-      limit?: number;
-      offset?: number;
-    }
-  ): Promise<{ sessions: Session[]; total: number }> {
+  /** One user's sessions, a page at a time: the public API lists sessions per user in a time window */
+  async searchSessions(projectId: string, params: SessionSearch): Promise<Page<Session>> {
     const project = await this.requireProject(projectId);
+    const userId = params.userId?.trim();
+    if (!userId) throw new BadRequestException('userId is required: OpenReplay lists sessions per user');
+    const window: OpenReplayWindow = { ...listWindow(params, DEFAULT_SESSION_WINDOW_MS), sortOrder: params.sortOrder ?? 'desc' };
+    const projectKey = this.requireProjectKey(project);
+    const client = await this.clientFor(project);
+    const baseUrl = project.openreplayBaseUrl || DEFAULT_OPENREPLAY_BASE_URL;
 
-    const { client: openreplayClient, numericProjectId } = await this.openReplayFor(project);
-
+    let result;
     try {
-      const result = await openreplayClient.searchSessions({
-        projectId: numericProjectId,
-        ...params,
-      });
-
-      // Map OpenReplay sessions to our Session format
-      const sessions: Session[] = result.sessions.map(s => ({
-        sessionId: s.sessionId,
-        projectId,
-        userId: s.userId,
-        userEmail: s.userEmail,
-        userDisplayName: s.userDisplayName,
-        startTime: new Date(s.startTs),
-        duration: s.duration,
-        pagesCount: s.pagesCount,
-        eventsCount: s.eventsCount,
-        errorsCount: s.errorsCount,
-        issueScore: s.issueScore,
-        issueTypes: s.issueTypes,
-        favorite: s.favorite,
-        viewed: s.viewed,
-        live: s.live,
-        replayUrl: openreplayClient.getSessionReplayUrl(numericProjectId, s.sessionId),
-        metadata: s.metadata,
-      }));
-
-      return {
-        sessions,
-        total: result.total,
-      };
-    } catch (error: any) {
-      throw new BadRequestException(`Failed to search sessions: ${error.message}`);
+      result = await client.listUserSessions(projectKey, userId, window);
+    } catch (error) {
+      throw upstream(error);
     }
+    const items = result.items.map((s): Session => {
+      const endTs = typeof s.endTs === 'number' ? s.endTs : null;
+      return {
+        sessionId: String(s.sessionId),
+        projectId,
+        userId,
+        startTime: new Date(s.startTs).toISOString(),
+        endTime: endTs !== null ? new Date(endTs).toISOString() : null,
+        duration: endTs !== null ? Math.max(0, Math.round((endTs - s.startTs) / 1000)) : null,
+        eventsCount: typeof s.eventsCount === 'number' ? s.eventsCount : null,
+        replayUrl: project.openreplayProjectId ? openReplaySessionUrl(baseUrl, project.openreplayProjectId, String(s.sessionId)) : null,
+      };
+    });
+    return {
+      items,
+      total: result.total,
+      page: window.page,
+      limit: window.limit,
+      startDate: new Date(window.startTimestamp).toISOString(),
+      endDate: new Date(window.endTimestamp).toISOString(),
+    };
   }
 
-  async getSession(projectId: string, sessionId: string): Promise<Session> {
+  /** The events OpenReplay recorded in one session, in a time window (the public API has no single-session lookup) */
+  async listSessionEvents(projectId: string, sessionId: string, params: EventSearch): Promise<Page<SessionEvent>> {
+    if (!SESSION_ID_PATTERN.test(sessionId)) throw new BadRequestException('sessionId is not an OpenReplay session id');
     const project = await this.requireProject(projectId);
+    const window: OpenReplayWindow = { ...listWindow(params, DEFAULT_EVENT_WINDOW_MS), sortOrder: 'asc' };
+    const projectKey = this.requireProjectKey(project);
+    const client = await this.clientFor(project);
 
-    const { client: openreplayClient, numericProjectId } = await this.openReplayFor(project);
-
+    let result;
     try {
-      const s = await openreplayClient.getSession(numericProjectId, sessionId);
-
-      return {
-        sessionId: s.sessionId,
-        projectId,
-        userId: s.userId,
-        userEmail: s.userEmail,
-        userDisplayName: s.userDisplayName,
-        startTime: new Date(s.startTs),
-        duration: s.duration,
-        pagesCount: s.pagesCount,
-        eventsCount: s.eventsCount,
-        errorsCount: s.errorsCount,
-        issueScore: s.issueScore,
-        issueTypes: s.issueTypes,
-        favorite: s.favorite,
-        viewed: s.viewed,
-        live: s.live,
-        replayUrl: openreplayClient.getSessionReplayUrl(numericProjectId, s.sessionId),
-        metadata: s.metadata,
-      };
-    } catch (error: any) {
-      throw new BadRequestException(`Failed to get session: ${error.message}`);
+      result = await client.listSessionEvents(projectKey, sessionId, window);
+    } catch (error) {
+      throw upstream(error);
     }
-  }
-
-  /**
-   * Get heatmaps URL for a project
-   */
-  async getHeatmapsUrl(projectId: string, heatmapId?: string): Promise<string> {
-    const project = await this.requireProject(projectId);
-
-    // Only builds a URL for the browser (no request); the base URL was checked when it was saved
-    const openreplayClient = new OpenReplayApiClient(project.openreplayBaseUrl || DEFAULT_OPENREPLAY_URL, '');
-    const numericProjectId = numericOpenReplayId(project.openreplayProjectKey);
-    return openreplayClient.getHeatmapUrl(numericProjectId, heatmapId);
+    return {
+      items: result.items.map((e) => ({
+        id: String(e.event_id),
+        name: e.$event_name ?? 'event',
+        time: new Date(e.created_at).toISOString(),
+        autoCaptured: e.$auto_captured === true,
+        properties: e.$properties ?? e.properties ?? {},
+      })),
+      total: result.total,
+      page: window.page,
+      limit: window.limit,
+      startDate: new Date(window.startTimestamp).toISOString(),
+      endDate: new Date(window.endTimestamp).toISOString(),
+    };
   }
 }
-

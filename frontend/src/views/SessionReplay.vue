@@ -37,6 +37,8 @@
               <AppIcon name="link" class="text-base text-ink-muted" />
               {{ getHostname(project.applicationUrl) }}
             </span>
+            <UiChip v-if="!project.openreplayProjectKey" tone="warning">Needs project key</UiChip>
+            <UiChip v-else-if="!project.hasApiKey" tone="neutral">No API key</UiChip>
             <span class="flex items-center gap-1 text-xs">
               <AppIcon name="users" class="text-base text-ink-muted" />
               <span class="sr-only">Team</span>
@@ -69,24 +71,37 @@
           v-model="newProject.openreplayBaseUrl"
           type="url"
           label="OpenReplay base URL"
-          required
-          placeholder="https://openreplay.example.com"
-          hint="Your self-hosted OpenReplay instance URL (e.g., https://openreplay.example.com)"
+          placeholder="https://api.openreplay.com"
+          hint="Leave blank for OpenReplay Cloud, or enter your self-hosted instance (e.g. https://openreplay.example.com)."
         />
-        <UiInput
-          v-model="newProject.openreplayProjectKey"
-          label="OpenReplay project key"
-          required
-          placeholder="your-project-key"
-          hint="Your OpenReplay project key"
-        />
+        <div class="grid md:grid-cols-2 gap-5">
+          <UiInput
+            v-model="newProject.openreplayProjectKey"
+            id="new-openreplay-project-key"
+            label="OpenReplay project key"
+            required
+            mono
+            placeholder="e.g. 9ihBzyeAkjDfK2rEXPBb"
+            hint="In OpenReplay's project settings. The tracker uses it."
+          />
+          <UiInput
+            v-model="newProject.openreplayProjectId"
+            id="new-openreplay-project-id"
+            label="OpenReplay project ID (optional)"
+            inputmode="numeric"
+            placeholder="e.g. 42"
+            hint="The number in OpenReplay's address bar, for links to replays. Filled in for you when you add an API key."
+          />
+        </div>
         <UiInput
           v-model="newProject.openreplayApiKey"
           type="password"
+          autocomplete="off"
           label="OpenReplay API key (optional)"
-          placeholder="Enter your OpenReplay API key"
-          hint="Required for searching sessions via API (stored securely)"
+          placeholder="Organization API key"
+          hint="Needed to list sessions here. Checked against OpenReplay and stored encrypted."
         />
+        <CaptureSettingsFields v-model="newCapture" id-prefix="new-project" />
       </form>
       <template #footer>
         <UiButton @click="closeCreateProjectModal">Cancel</UiButton>
@@ -106,6 +121,7 @@ import {
   PageShell,
   UiButton,
   UiCard,
+  UiChip,
   UiDialog,
   UiEmptyState,
   UiInput,
@@ -114,23 +130,28 @@ import {
   UiTextarea,
 } from '../components/ui';
 import apiClient from '../services/api.js';
+import { REPLAY_API, replayProblem } from '../components/session-replay/replayApi.js';
+import CaptureSettingsFields from '../components/session-replay/CaptureSettingsFields.vue';
+import { captureForm, capturePayload } from '../components/session-replay/captureSettings.js';
 
 const projects = ref([]);
 const loading = ref(false);
 const showCreateModal = ref(false);
 const creating = ref(false);
 
-const newProject = ref({
+const emptyProject = () => ({
   name: '',
   description: '',
   workspaceId: '',
   applicationUrl: '',
   openreplayBaseUrl: '',
   openreplayProjectKey: '',
+  openreplayProjectId: '',
   openreplayApiKey: '',
 });
+const newProject = ref(emptyProject());
+const newCapture = ref(captureForm());
 
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
 
 // Workspaces the caller can create projects in (editor or above)
 const editableWorkspaces = ref([]);
@@ -151,7 +172,7 @@ const loadWorkspaces = async () => {
 const loadProjects = async () => {
   loading.value = true;
   try {
-    const response = await apiClient.get(`${API_BASE_URL}/session-replay/projects`);
+    const response = await apiClient.get(`${REPLAY_API}/projects`);
     projects.value = response.data;
   } catch (error) {
     console.error('Failed to load projects:', error);
@@ -167,30 +188,30 @@ const openCreateProjectModal = () => {
 
 const closeCreateProjectModal = () => {
   showCreateModal.value = false;
-  newProject.value = {
-    name: '',
-    description: '',
-    workspaceId: '',
-    applicationUrl: '',
-    openreplayBaseUrl: '',
-    openreplayProjectKey: '',
-    openreplayApiKey: '',
-  };
+  newProject.value = emptyProject();
+  newCapture.value = captureForm();
+};
+
+/** The create request: blank optional fields are left out */
+const createPayload = () => {
+  const { openreplayProjectId, ...fields } = newProject.value;
+  const payload = { workspaceId: fields.workspaceId || null, name: fields.name.trim(), openreplayProjectKey: fields.openreplayProjectKey.trim() };
+  for (const key of ['description', 'applicationUrl', 'openreplayBaseUrl', 'openreplayApiKey']) {
+    if (fields[key].trim()) payload[key] = fields[key].trim();
+  }
+  if (String(openreplayProjectId).trim()) payload.openreplayProjectId = Number(openreplayProjectId);
+  return { ...payload, ...capturePayload(newCapture.value) };
 };
 
 const createProject = async () => {
   creating.value = true;
   try {
-    await apiClient.post(`${API_BASE_URL}/session-replay/projects`, {
-      ...newProject.value,
-      workspaceId: newProject.value.workspaceId || null,
-    });
-    window.showToast?.('Project created successfully', 'success');
+    await apiClient.post(`${REPLAY_API}/projects`, createPayload());
+    window.showToast?.('Project created', 'success');
     await loadProjects();
     closeCreateProjectModal();
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.message || 'Failed to create project. Please check your OpenReplay connection settings.';
-    window.showToast?.(errorMsg, 'error');
+    window.showToast?.(replayProblem(error, 'The project could not be created. Check the OpenReplay settings.').message, 'error');
     console.error('Failed to create project:', error);
   } finally {
     creating.value = false;

@@ -455,7 +455,7 @@ describe('Project access over HTTP (visual regression and session replay)', () =
     let project: any;
 
     beforeAll(async () => {
-      const res = await call('editor', 'POST', '/session-replay/projects', { name: 'Replay', openreplayProjectKey: '7', workspaceId: WS });
+      const res = await call('editor', 'POST', '/session-replay/projects', { name: 'Replay', openreplayProjectKey: 'abc123', openreplayProjectId: 7, workspaceId: WS });
       expect(res.status).toBe(201);
       project = res.body;
     });
@@ -467,8 +467,9 @@ describe('Project access over HTTP (visual regression and session replay)', () =
         ['PUT', `/session-replay/projects/${id}`, { name: 'Hijacked' }],
         ['DELETE', `/session-replay/projects/${id}`],
         ['GET', `/session-replay/projects/${id}/integration-code`],
-        ['GET', `/session-replay/projects/${id}/sessions`],
-        ['GET', `/session-replay/projects/${id}/sessions/s-1`],
+        ['GET', `/session-replay/projects/${id}/sessions?userId=u-1`],
+        ['GET', `/session-replay/projects/${id}/sessions/s-1/events`],
+        ['GET', `/session-replay/projects/${id}/sessions/s-1/replay-url`],
         ['GET', `/session-replay/projects/${id}/heatmaps-url`],
       ] as Array<[string, string, unknown?]>) {
         expect([method, route, (await call('outsider', method, route, body)).status]).toEqual([method, route, 404]);
@@ -476,7 +477,7 @@ describe('Project access over HTTP (visual regression and session replay)', () =
       expect((await call('outsider', 'GET', '/session-replay/projects')).body.map((p: any) => p.id)).not.toContain(id);
       expect((await call('viewer', 'GET', `/session-replay/projects/${id}`)).status).toBe(200);
       expect((await call('viewer', 'PUT', `/session-replay/projects/${id}`, { name: 'Nope' })).status).toBe(403);
-      expect((await call('viewer', 'POST', '/session-replay/projects', { name: 'X', openreplayProjectKey: '1', workspaceId: WS })).status).toBe(403);
+      expect((await call('viewer', 'POST', '/session-replay/projects', { name: 'X', openreplayProjectKey: 'abc123', workspaceId: WS })).status).toBe(403);
       // A project can't be moved by an update: the field is refused, not silently dropped
       const move = await call('editor', 'PUT', `/session-replay/projects/${id}`, { name: 'Replay 2', workspaceId: 'ws_other' });
       expect(move).toMatchObject({ status: 400, body: { message: ['property workspaceId should not exist'] } });
@@ -488,20 +489,46 @@ describe('Project access over HTTP (visual regression and session replay)', () =
 
     it('shows no made-up sessions: without an API key it says OpenReplay is not configured', async () => {
       const id = project.id;
-      for (const route of [`/session-replay/projects/${id}/sessions`, `/session-replay/projects/${id}/sessions/s-1`]) {
+      for (const route of [`/session-replay/projects/${id}/sessions?userId=u-1`, `/session-replay/projects/${id}/sessions/s-1/events`]) {
         const res = await call('viewer', 'GET', route);
         expect(res.status).toBe(503);
         expect(res.body).toMatchObject({ code: 'OPENREPLAY_NOT_CONFIGURED' });
       }
-      // The heatmap link is OpenReplay's own page, never a local mock
+      // Links go to OpenReplay's own pages, never a local mock; they need no API key
       const heatmaps = await call('viewer', 'GET', `/session-replay/projects/${id}/heatmaps-url`);
-      expect(heatmaps.status).toBe(200);
-      expect(JSON.stringify(heatmaps.body)).toContain('https://api.openreplay.com/project/7/heatmaps');
-      expect(JSON.stringify(heatmaps.body)).not.toContain('mock');
+      expect(heatmaps).toMatchObject({ status: 200, body: { url: 'https://app.openreplay.com/7/metrics' } });
+      const replay = await call('viewer', 'GET', `/session-replay/projects/${id}/sessions/s-1/replay-url`);
+      expect(replay).toMatchObject({ status: 200, body: { url: 'https://app.openreplay.com/7/session/s-1' } });
 
-      // A project id that isn't OpenReplay's numeric one is refused, not read as project 1
+      // Without the numeric id there is no link to make: it says so rather than guessing project 1
       const named = await call('editor', 'POST', '/session-replay/projects', { name: 'Named', openreplayProjectKey: 'abc-key', workspaceId: WS });
-      expect((await call('editor', 'GET', `/session-replay/projects/${named.body.id}/heatmaps-url`)).status).toBe(400);
+      expect(await call('editor', 'GET', `/session-replay/projects/${named.body.id}/heatmaps-url`)).toMatchObject({
+        status: 409,
+        body: { code: 'OPENREPLAY_PROJECT_ID_MISSING' },
+      });
+    });
+
+    it('validates keys, settings and session queries at the API', async () => {
+      const id = project.id;
+      const numericKey = await call('editor', 'POST', '/session-replay/projects', { name: 'N', openreplayProjectKey: '7', workspaceId: WS });
+      expect(numericKey.status).toBe(400);
+      expect(JSON.stringify(numericKey.body)).toContain('numeric project id');
+      const badMode = await call('editor', 'PUT', `/session-replay/projects/${id}`, { privacySettings: { defaultInputMode: 'everything' } });
+      expect(badMode.status).toBe(400);
+      expect((await call('viewer', 'GET', `/session-replay/projects/${id}/sessions`)).status).toBe(400);
+      expect((await call('viewer', 'GET', `/session-replay/projects/${id}/sessions?userId=u&limit=-1`)).status).toBe(400);
+      expect((await call('viewer', 'GET', `/session-replay/projects/${id}/sessions?userId=u&startDate=yesterday`)).status).toBe(400);
+
+      const saved = await call('editor', 'PUT', `/session-replay/projects/${id}`, {
+        privacySettings: { defaultInputMode: 'ignored', maskTextSelector: ['.price'] },
+        config: { captureNetworkPayload: true },
+      });
+      expect(saved).toMatchObject({ status: 200, body: { privacySettings: { defaultInputMode: 'ignored' }, config: { captureNetworkPayload: true } } });
+      const code = await call('viewer', 'GET', `/session-replay/projects/${id}/integration-code`);
+      expect(code.status).toBe(200);
+      expect(code.body.script).toContain('openreplay.js');
+      expect(code.body.npm).toContain("from '@openreplay/tracker'");
+      expect(code.body.script).toContain('capturePayload: true');
     });
 
     it('persists projects across a restart', async () => {

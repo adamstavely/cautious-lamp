@@ -196,18 +196,28 @@ POST /session-replay/projects
 Content-Type: application/json
 
 {
-  "teamId": "team-id",
   "name": "Project Name",
-  "openreplayProjectKey": "key",
-  "config": {...}
+  "workspaceId": "ws_id",
+  "openreplayProjectKey": "9ihBzyeAkjDfK2rEXPBb",
+  "openreplayProjectId": 42,
+  "privacySettings": { "defaultInputMode": "obscured" },
+  "config": { "captureNetworkPayload": false }
 }
 ```
 
 #### Search Sessions
 
+OpenReplay's public API lists sessions per user, so `userId` is required.
+
 ```http
-GET /session-replay/projects/:id/sessions?startDate=2024-01-01&endDate=2024-01-31
+GET /session-replay/projects/:id/sessions?userId=user-1234&startDate=2024-01-01&endDate=2024-01-31&page=1&limit=20&sortOrder=desc
+GET /session-replay/projects/:id/sessions/:sessionId/events
+GET /session-replay/projects/:id/sessions/:sessionId/replay-url
+GET /session-replay/projects/:id/heatmaps-url
+GET /session-replay/projects/:id/integration-code
 ```
+
+See [GETTING_STARTED_SESSION_REPLAY.md](./GETTING_STARTED_SESSION_REPLAY.md).
 
 ### API Keys
 

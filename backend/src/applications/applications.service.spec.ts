@@ -113,7 +113,7 @@ describe('ApplicationsService linked projects', () => {
     // Session replay needs nothing secret, so it comes back on any update
     const sr = await service.updateCapabilities(governance, app.id, { sessionReplay: { enabled: true, privacySettings: { maskAllText: true } } } as any);
     expect(sr.capabilities.sessionReplay.projectId).toBe(srId);
-    expect(await projects.sessionReplay.getProject(srId)).toMatchObject({ privacySettings: { maskAllText: true } });
+    expect(await projects.sessionReplay.getProject(srId)).toMatchObject({ privacySettings: { privateMode: true } });
 
     // Visual regression needs the Argos token, which went with the project: say so
     await expect(service.updateCapabilities(governance, app.id, { visualRegression: { enabled: true, argosBranch: 'x' } } as any)).rejects.toThrow(

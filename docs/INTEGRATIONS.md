@@ -6,7 +6,7 @@ Three features depend on tools and services that live outside this repository. T
 | --- | --- | --- | --- |
 | [IRIS](https://github.com/electronicarts/IRIS) (EA, BSD 3-clause) | Photosensitivity analysis | Inside the backend: the backend Docker image includes it | `IRIS_EXECUTABLE_PATH`, `IRIS_CONFIG_PATH` outside the image |
 | [Argos](https://argos-ci.com) | Visual regression | Argos's hosted service | An Argos project id and token per visual regression project |
-| [OpenReplay](https://openreplay.com) | Session replay | OpenReplay Cloud, or your own OpenReplay server | An OpenReplay project id and API key per session replay project |
+| [OpenReplay](https://openreplay.com) | Session replay | OpenReplay Cloud, or your own OpenReplay server | An OpenReplay project key, project id and API key per session replay project |
 
 Chromium (URL accessibility scans, design extraction) and a Claude API key (alt text) are listed on the status page too.
 
@@ -66,7 +66,8 @@ Argos doesn't publish a self-hosting image. Its repository's `docker-compose.yml
 OpenReplay's Docker Compose deployment [can't run locally](https://docs.openreplay.com/en/deployment/deploy-docker). It needs a server with a public IP and domain, at least 2 vCPUs and 8 GB RAM, on x86. So there's no local OpenReplay container either. Use OpenReplay Cloud (`https://api.openreplay.com`, the default) or your own OpenReplay server (on `OPENREPLAY_ALLOWED_BASE_URLS`).
 
 In a session replay project's **Settings**, set:
-- **OpenReplay project ID:** the numeric id from the project's settings in OpenReplay. A non-numeric id is refused, instead of silently reading project 1.
-- **OpenReplay API key:** write-only, checked against OpenReplay when you save, and stored encrypted.
+- **OpenReplay project key:** the tracker's key from OpenReplay's project settings. The public API addresses the project by it too. A key that is only digits is refused, because that is the project id.
+- **OpenReplay project id:** the numeric id in OpenReplay's address bar, used for links to replays and heatmaps. Filled in from OpenReplay when an API key is saved.
+- **OpenReplay API key:** the organization API key. Write-only, checked against OpenReplay (the key and the project) when you save, and stored encrypted.
 
-Without an API key, the session routes answer `503` with `code: "OPENREPLAY_NOT_CONFIGURED"`, and the project page explains how to connect it. Heatmap links always go to OpenReplay itself.
+Without an API key, the session routes answer `503` with `code: "OPENREPLAY_NOT_CONFIGURED"`, and the project page explains how to connect it. Replay and heatmap links always go to OpenReplay itself, and need the project id (`409 OPENREPLAY_PROJECT_ID_MISSING` without it). See [GETTING_STARTED_SESSION_REPLAY.md](./GETTING_STARTED_SESSION_REPLAY.md).

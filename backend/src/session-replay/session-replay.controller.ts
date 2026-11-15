@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/
 import { AuthPrincipal, Principal } from '../auth/principal';
 import { creatorOf } from '../visual-regression/project-access';
 import { CreateProjectDto } from './dto/create-project.dto';
+import { SearchSessionsQueryDto, SessionEventsQueryDto } from './dto/search-sessions.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { SessionReplayService } from './session-replay.service';
 
@@ -48,43 +49,51 @@ export class SessionReplayController {
     return { message: 'Project deleted successfully' };
   }
 
+  /** The tracker setup: `script` for a <script> tag, `npmInstall` and `npm` for the @openreplay/tracker package */
   @Get('projects/:id/integration-code')
   async getIntegrationCode(@Principal() principal: AuthPrincipal, @Param('id') id: string) {
     await this.sessionReplayService.authorizeProject(principal, id, 'read');
-    const code = await this.sessionReplayService.getIntegrationCode(id);
-    return { code };
+    return this.sessionReplayService.getIntegrationCode(id);
   }
 
+  /** One user's sessions in a time window, a page at a time (OpenReplay's public API lists sessions per user) */
   @Get('projects/:id/sessions')
-  async searchSessions(
-    @Principal() principal: AuthPrincipal,
-    @Param('id') projectId: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('userId') userId?: string,
-    @Query('userEmail') userEmail?: string,
-    @Query('issueType') issueType?: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
-  ) {
+  async searchSessions(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Query() query: SearchSessionsQueryDto) {
     await this.sessionReplayService.authorizeProject(principal, projectId, 'read');
     return this.sessionReplayService.searchSessions(projectId, {
-      startDate,
-      endDate,
-      userId,
-      userEmail,
-      issueType,
-      limit: limit ? parseInt(String(limit)) : undefined,
-      offset: offset ? parseInt(String(offset)) : undefined,
+      userId: query.userId,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      page: query.page !== undefined ? Number(query.page) : undefined,
+      limit: query.limit !== undefined ? Number(query.limit) : undefined,
+      sortOrder: query.sortOrder,
     });
   }
 
-  @Get('projects/:id/sessions/:sessionId')
-  async getSession(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Param('sessionId') sessionId: string) {
+  @Get('projects/:id/sessions/:sessionId/events')
+  async listSessionEvents(
+    @Principal() principal: AuthPrincipal,
+    @Param('id') projectId: string,
+    @Param('sessionId') sessionId: string,
+    @Query() query: SessionEventsQueryDto,
+  ) {
     await this.sessionReplayService.authorizeProject(principal, projectId, 'read');
-    return this.sessionReplayService.getSession(projectId, sessionId);
+    return this.sessionReplayService.listSessionEvents(projectId, sessionId, {
+      startDate: query.startDate,
+      endDate: query.endDate,
+      page: query.page !== undefined ? Number(query.page) : undefined,
+      limit: query.limit !== undefined ? Number(query.limit) : undefined,
+    });
   }
 
+  /** OpenReplay's player for the session; viewers sign in to OpenReplay to watch it */
+  @Get('projects/:id/sessions/:sessionId/replay-url')
+  async getReplayUrl(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Param('sessionId') sessionId: string) {
+    await this.sessionReplayService.authorizeProject(principal, projectId, 'read');
+    return { url: await this.sessionReplayService.getReplayUrl(projectId, sessionId) };
+  }
+
+  /** OpenReplay's heatmap cards for the project (a link out; heatmaps are not drawn here) */
   @Get('projects/:id/heatmaps-url')
   async getHeatmapsUrl(@Principal() principal: AuthPrincipal, @Param('id') projectId: string, @Query('heatmapId') heatmapId?: string) {
     await this.sessionReplayService.authorizeProject(principal, projectId, 'read');

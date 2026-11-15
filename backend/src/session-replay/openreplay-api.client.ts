@@ -1,60 +1,85 @@
 import axios, { AxiosInstance } from 'axios';
+import { openReplayPublicApiRoot } from './openreplay-url';
 
+/** A project as OpenReplay's public API returns it */
 export interface OpenReplayProject {
   projectId: number;
+  projectKey: string;
   name: string;
-  status: string;
-  createdAt: string;
+  platform?: string;
 }
 
+/** A session as `POST /:projectKey/users/:userId/sessions` lists it */
 export interface OpenReplaySession {
   sessionId: string;
-  projectId: number;
-  userId?: string;
-  userNumericId?: number;
-  userDisplayName?: string;
-  userEmail?: string;
-  userAnonymousId?: string;
-  platform: string;
   startTs: number;
-  duration: number;
-  pagesCount: number;
-  eventsCount: number;
-  errorsCount: number;
-  issueScore: number;
-  issueTypes: string[];
-  metadata?: Record<string, any>;
-  favorite: boolean;
-  viewed: boolean;
-  live: boolean;
-  url: string;
+  endTs?: number;
+  eventsCount?: number;
 }
 
-export interface OpenReplaySessionSearchParams {
-  projectId: number;
-  startDate?: string;
-  endDate?: string;
-  userId?: string;
-  userEmail?: string;
-  issueType?: string;
-  limit?: number;
-  offset?: number;
+/** An event as `POST /:projectKey/sessions/:sessionId/events` lists it */
+export interface OpenReplayEvent {
+  event_id: string;
+  $event_name?: string;
+  created_at: number;
+  distinct_id?: string;
+  session_id?: string;
+  properties?: Record<string, unknown>;
+  $properties?: Record<string, unknown>;
+  $auto_captured?: boolean;
 }
 
+/** One page of a list, with OpenReplay's total */
+export interface OpenReplayPage<T> {
+  total: number;
+  items: T[];
+}
+
+/** The time window and page every list endpoint takes */
+export interface OpenReplayWindow {
+  /** Epoch ms */
+  startTimestamp: number;
+  /** Epoch ms, after startTimestamp */
+  endTimestamp: number;
+  /** From 1 */
+  page: number;
+  /** 1-200 */
+  limit: number;
+  sortOrder?: 'asc' | 'desc';
+}
+
+/** OpenReplay answered with an error (`status`), or could not be reached (no status) */
+export class OpenReplayError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+  }
+}
+
+function describe(error: any, what: string): OpenReplayError {
+  const status: number | undefined = error?.response?.status;
+  if (status === 401 || status === 403) return new OpenReplayError('OpenReplay rejected the API key', status);
+  if (status) return new OpenReplayError(`OpenReplay could not ${what} (HTTP ${status})`, status);
+  return new OpenReplayError(`OpenReplay could not be reached: ${error?.message ?? 'no answer'}`);
+}
+
+/** The public API wraps results in `data`; older instances answer bare */
+function unwrap<T>(body: any): T {
+  return body && typeof body === 'object' && 'data' in body ? body.data : body;
+}
+
+/**
+ * OpenReplay's public REST API (docs.openreplay.com/en/api), authenticated
+ * with the organization API key. Projects are addressed by their project key;
+ * the numeric project id only appears in dashboard links (openreplay-url.ts).
+ */
 export class OpenReplayApiClient {
-  private client: AxiosInstance;
-  private baseUrl: string;
-  private apiKey: string;
+  private readonly client: AxiosInstance;
 
   constructor(baseUrl: string, apiKey: string) {
-    // Normalize base URL (remove trailing slash)
-    this.baseUrl = baseUrl.replace(/\/$/, '');
-    this.apiKey = apiKey;
-
     this.client = axios.create({
-      baseURL: this.baseUrl,
+      baseURL: openReplayPublicApiRoot(baseUrl),
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       timeout: 30000,
@@ -63,156 +88,63 @@ export class OpenReplayApiClient {
     });
   }
 
-  /**
-   * Verify connection to OpenReplay instance
-   */
+  /** Throws an OpenReplayError when OpenReplay can't be reached or refuses the key */
+  async checkConnection(): Promise<void> {
+    try {
+      await this.client.get('/projects');
+    } catch (error) {
+      throw describe(error, 'list projects');
+    }
+  }
+
+  /** True when OpenReplay answers and accepts the key */
   async verifyConnection(): Promise<boolean> {
     try {
-      // Try to access projects endpoint
-      const response = await this.client.get('/api/v1/projects', {
-        validateStatus: (status) => status < 500,
-      });
-      // If we get a response (even 401/403), the connection works
+      await this.checkConnection();
       return true;
-    } catch (error: any) {
-      // Network errors mean connection failed
-      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-        return false;
-      }
-      // Other errors mean connection works but auth might be wrong
-      return true;
+    } catch {
+      return false;
     }
   }
 
-  /**
-   * Get project by ID
-   */
-  async getProject(projectId: number): Promise<OpenReplayProject> {
+  /** The project with this key, or null when OpenReplay has none */
+  async getProject(projectKey: string): Promise<OpenReplayProject | null> {
     try {
-      const response = await this.client.get(`/api/v1/projects/${projectId}`);
-      return response.data;
+      const response = await this.client.get(`/projects/${encodeURIComponent(projectKey)}`);
+      return unwrap<OpenReplayProject>(response.data) ?? null;
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        throw new Error(`Project ${projectId} not found in OpenReplay`);
-      }
-      throw new Error(`Failed to fetch OpenReplay project: ${error.message}`);
+      if (error?.response?.status === 404) return null;
+      throw describe(error, 'fetch the project');
     }
   }
 
-  /**
-   * Search sessions
-   */
-  async searchSessions(params: OpenReplaySessionSearchParams): Promise<{
-    sessions: OpenReplaySession[];
-    total: number;
-  }> {
+  /** One user's sessions in a time window (the only session listing the public API has) */
+  async listUserSessions(projectKey: string, userId: string, window: OpenReplayWindow): Promise<OpenReplayPage<OpenReplaySession>> {
     try {
-      const response = await this.client.post('/api/v1/sessions/search', params);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(`Failed to search OpenReplay sessions: ${error.message}`);
+      const response = await this.client.post(
+        `/${encodeURIComponent(projectKey)}/users/${encodeURIComponent(userId)}/sessions`,
+        window,
+      );
+      const data = unwrap<{ total?: number; sessions?: OpenReplaySession[] }>(response.data) ?? {};
+      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+      return { total: typeof data.total === 'number' ? data.total : sessions.length, items: sessions };
+    } catch (error) {
+      throw describe(error, 'list sessions');
     }
   }
 
-  /**
-   * Get session by ID
-   */
-  async getSession(projectId: number, sessionId: string): Promise<OpenReplaySession> {
+  /** The events recorded in one session */
+  async listSessionEvents(projectKey: string, sessionId: string, window: OpenReplayWindow): Promise<OpenReplayPage<OpenReplayEvent>> {
     try {
-      const response = await this.client.get(`/api/v1/projects/${projectId}/sessions/${sessionId}`);
-      return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        throw new Error(`Session ${sessionId} not found`);
-      }
-      throw new Error(`Failed to fetch OpenReplay session: ${error.message}`);
+      const response = await this.client.post(
+        `/${encodeURIComponent(projectKey)}/sessions/${encodeURIComponent(sessionId)}/events`,
+        window,
+      );
+      const data = unwrap<{ total?: number; events?: OpenReplayEvent[] }>(response.data) ?? {};
+      const events = Array.isArray(data.events) ? data.events : [];
+      return { total: typeof data.total === 'number' ? data.total : events.length, items: events };
+    } catch (error) {
+      throw describe(error, 'list session events');
     }
   }
-
-  /**
-   * Get session replay URL
-   */
-  getSessionReplayUrl(projectId: number, sessionId: string): string {
-    return `${this.baseUrl}/project/${projectId}/session/${sessionId}`;
-  }
-
-  /**
-   * Get heatmaps page URL
-   */
-  getHeatmapsUrl(projectId: number): string {
-    return `${this.baseUrl}/project/${projectId}/heatmaps`;
-  }
-
-  /**
-   * Get specific heatmap URL (if heatmapId is provided)
-   */
-  getHeatmapUrl(projectId: number, heatmapId?: string): string {
-    if (heatmapId) {
-      return `${this.baseUrl}/project/${projectId}/heatmap/${heatmapId}`;
-    }
-    return `${this.baseUrl}/project/${projectId}/heatmaps`;
-  }
-
-  /**
-   * Get integration code snippet
-   */
-  getIntegrationCode(projectKey: string, baseUrl?: string, config?: any): string {
-    const ingestPoint = baseUrl ? `${baseUrl}/ingest` : 'https://api.openreplay.com/ingest';
-    
-    const privacySettings = config?.privacySettings || {};
-    const captureSettings = config?.config || {};
-
-    // Build configuration object
-    const configObj: any = {};
-    if (privacySettings.respectDoNotTrack !== false) {
-      configObj.respectDoNotTrack = true;
-    }
-    if (privacySettings.maskAllInputs) {
-      configObj.maskAllInputs = true;
-    }
-    if (privacySettings.maskAllText) {
-      configObj.maskAllText = true;
-    }
-    if (privacySettings.maskTextSelector && privacySettings.maskTextSelector.length > 0) {
-      configObj.maskTextSelector = privacySettings.maskTextSelector;
-    }
-    if (privacySettings.blockSelector && privacySettings.blockSelector.length > 0) {
-      configObj.blockSelector = privacySettings.blockSelector;
-    }
-    if (captureSettings.captureConsole !== false) {
-      configObj.captureConsole = true;
-    }
-    if (captureSettings.captureNetwork !== false) {
-      configObj.captureNetwork = true;
-    }
-    if (captureSettings.captureIFrames) {
-      configObj.captureIFrames = true;
-    }
-
-    const configStr = Object.keys(configObj).length > 0 
-      ? `\n  window.OpenReplay.config(${scriptLiteral(configObj, 2)});`
-      : '';
-
-    return `<!-- OpenReplay Session Replay -->
-<script>
-  (function(A,s,a,y,e,r){
-    r=window.OpenReplay=[e,function(y){r[e].push(y)}];
-    r[e].r=+new Date;
-    r[e].s=s;
-    r[e].a=a;
-    r[e].y=y;
-  })(window,0,${scriptLiteral(ingestPoint)},${scriptLiteral(projectKey)},"openreplay");${configStr}
-</script>`;
-  }
-}
-
-/**
- * A JS literal that is safe inside an inline <script>: JSON, with `<`, U+2028
- * and U+2029 escaped so a value can't close the tag or break the line.
- */
-function scriptLiteral(value: unknown, indent?: number): string {
-  return JSON.stringify(value, null, indent)
-    .replace(/</g, '\\u003c')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
 }
