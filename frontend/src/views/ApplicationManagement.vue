@@ -13,8 +13,17 @@
 
     <PageSection title="Applications" description="Every registered application, its version and the capabilities it uses.">
       <div class="flex flex-wrap items-end gap-4 mb-6">
-        <div class="w-full sm:w-64">
-          <UiSelect v-model="filterCapability" label="Filter by capability" :options="capabilityFilterOptions" />
+        <div class="w-full sm:w-72">
+          <UiInput v-model="search" type="search" label="Search" icon="search" placeholder="Name, description, URL, team or tag" />
+        </div>
+        <div class="w-full sm:w-52">
+          <UiSelect v-model="filterCapability" label="Capability" :options="capabilityFilterOptions" />
+        </div>
+        <div class="w-full sm:w-44">
+          <UiSelect v-model="filterTeam" label="Team" :options="teamOptions" />
+        </div>
+        <div class="w-full sm:w-44">
+          <UiSelect v-model="filterEnvironment" label="Environment" :options="environmentOptions" />
         </div>
         <!-- Workspace admins without admin:governance can only change their workspaces' applications -->
         <div v-if="!isGovernance" class="w-full sm:w-64">
@@ -36,9 +45,12 @@
       <UiEmptyState
         v-else-if="filteredApplications.length === 0"
         spot="admin/application-management"
-        :title="scope === 'mine' && !isGovernance ? 'No applications in the workspaces you administer.' : 'No applications found.'"
+        :title="emptyTitle"
       >
-        <template v-if="canRegister" #actions>
+        <template v-if="filtersActive" #actions>
+          <UiButton @click="clearFilters">Clear filters</UiButton>
+        </template>
+        <template v-else-if="canRegister" #actions>
           <UiButton variant="primary" to="/admin/applications/register">Register your first application</UiButton>
         </template>
       </UiEmptyState>
@@ -52,9 +64,9 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="app in filteredApplications" :key="app.id">
+            <tr v-for="app in pagedApplications" :key="app.id">
               <td>
-                <p class="font-medium text-ink-strong">{{ app.name }}</p>
+                <router-link :to="`/admin/applications/${encodeURIComponent(app.id)}`" class="app-name-link">{{ app.name }}</router-link>
                 <p v-if="app.description" class="text-ink-secondary">{{ app.description }}</p>
                 <p v-if="safeHttpUrl(app.repository)" class="mt-1 text-xs">
                   <UiLink :href="safeHttpUrl(app.repository)" external class="break-all">{{ app.repository }}</UiLink>
@@ -89,6 +101,7 @@
               </td>
               <td>
                 <div class="flex flex-col gap-1 text-ink-secondary">
+                  <p v-if="app.teamId"><span class="font-medium text-ink">Team:</span> {{ app.teamId }}</p>
                   <p v-if="app.metadata?.environment"><span class="font-medium text-ink">Env:</span> {{ app.metadata.environment }}</p>
                   <p v-if="app.metadata?.framework"><span class="font-medium text-ink">Framework:</span> {{ app.metadata.framework }}</p>
                   <div v-if="app.metadata?.tags?.length" class="flex flex-wrap gap-1 mt-1">
@@ -98,14 +111,54 @@
               </td>
               <td class="whitespace-nowrap">{{ formatDate(app.registeredAt) }}</td>
               <td class="whitespace-nowrap text-right">
-                <div v-if="canWrite(app)" class="flex items-center justify-end gap-1">
-                  <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${app.name}`" @click="openEdit(app)" />
-                  <UiButton variant="danger" size="sm" icon="trash-2" icon-only :label="`Delete ${app.name}`" @click="deleteApplication(app)" />
+                <div class="flex items-center justify-end gap-1">
+                  <UiButton variant="ghost" size="sm" icon="eye" icon-only :label="`View ${app.name}`" :to="`/admin/applications/${encodeURIComponent(app.id)}`" />
+                  <UiButton
+                    v-if="app.capabilities?.governance?.enabled && isGovernance"
+                    variant="ghost"
+                    size="sm"
+                    icon="shield"
+                    icon-only
+                    :label="`Run a governance scan of ${app.name}`"
+                    :loading="scanning === app.id"
+                    @click="runScan(app)"
+                  />
+                  <UiButton
+                    v-if="app.capabilities?.visualRegression?.projectId"
+                    variant="ghost"
+                    size="sm"
+                    icon="images"
+                    icon-only
+                    :label="`View ${app.name}'s visual regression test runs`"
+                    :to="`/tools/visual-regression/${encodeURIComponent(app.capabilities.visualRegression.projectId)}`"
+                  />
+                  <UiButton
+                    v-if="app.capabilities?.sessionReplay?.projectId"
+                    variant="ghost"
+                    size="sm"
+                    icon="video"
+                    icon-only
+                    :label="`View ${app.name}'s session replays`"
+                    :to="`/hcd/session-replay/${encodeURIComponent(app.capabilities.sessionReplay.projectId)}/sessions`"
+                  />
+                  <template v-if="canWrite(app)">
+                    <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${app.name}`" @click="openEdit(app)" />
+                    <UiButton variant="danger" size="sm" icon="trash-2" icon-only :label="`Delete ${app.name}`" @click="deleteApplication(app)" />
+                  </template>
                 </div>
               </td>
             </tr>
           </tbody>
         </UiTable>
+        <nav v-if="pageCount > 1" class="app-pager" aria-label="Application pages">
+          <span class="text-sm text-ink-secondary" aria-live="polite">
+            Showing {{ pageStart + 1 }}–{{ Math.min(pageStart + PAGE_SIZE, filteredApplications.length) }} of {{ filteredApplications.length }}
+          </span>
+          <div class="flex gap-2">
+            <UiButton size="sm" icon="chevron-left" :disabled="page === 1" @click="page -= 1">Previous</UiButton>
+            <UiButton size="sm" trailing-icon="chevron-right" :disabled="page === pageCount" @click="page += 1">Next</UiButton>
+          </div>
+        </nav>
       </UiPanel>
     </PageSection>
 
@@ -213,7 +266,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
@@ -224,6 +277,7 @@ import {
   UiCallout,
   UiChip,
   UiEmptyState,
+  UiInput,
   UiLink,
   UiPanel,
   UiSelect,
@@ -261,7 +315,7 @@ const { confirmState, askConfirm } = useConfirmDialog();
 
 const tableHeadings = ['Application', 'Workspace', 'Design system version', 'Capabilities', 'Metadata', 'Registered'];
 const capabilityFilterOptions = [
-  { value: '', label: 'All applications' },
+  { value: '', label: 'Any capability' },
   { value: 'governance', label: 'With governance' },
   { value: 'visualRegression', label: 'With visual regression' },
   { value: 'sessionReplay', label: 'With session replay' },
@@ -282,6 +336,24 @@ const loadError = ref(null);
 const applications = ref([]);
 const workspaces = ref([]);
 const filterCapability = ref('');
+const filterTeam = ref('');
+const filterEnvironment = ref('');
+const search = ref('');
+const facets = ref({ teams: [], environments: [] });
+const ENVIRONMENTS = ['development', 'staging', 'production'];
+const teamOptions = computed(() => [{ value: '', label: 'Any team' }, ...facets.value.teams.map((team) => ({ value: team, label: team }))]);
+const environmentOptions = computed(() => [
+  { value: '', label: 'Any environment' },
+  ...[...new Set([...ENVIRONMENTS, ...facets.value.environments])].map((env) => ({ value: env, label: env.charAt(0).toUpperCase() + env.slice(1) })),
+]);
+const filtersActive = computed(() => !!(search.value.trim() || filterCapability.value || filterTeam.value || filterEnvironment.value));
+const clearFilters = () => {
+  search.value = '';
+  filterCapability.value = '';
+  filterTeam.value = '';
+  filterEnvironment.value = '';
+};
+const scanning = ref(null);
 // Without admin:governance, start with the applications this user can change
 const scope = ref('mine');
 const migrationData = ref(null);
@@ -299,21 +371,60 @@ const canWriteId = (id) => {
   return !!app && canWrite(app);
 };
 
-const filteredApplications = computed(() =>
-  applications.value.filter(
-    (app) =>
-      (!filterCapability.value || app.capabilities?.[filterCapability.value]?.enabled === true) &&
-      (isGovernance.value || scope.value === 'all' || canWrite(app)),
-  ),
-);
+// Search and filters run on the server; "workspaces I administer" is narrowed here
+const filteredApplications = computed(() => applications.value.filter((app) => isGovernance.value || scope.value === 'all' || canWrite(app)));
+const emptyTitle = computed(() => {
+  if (filtersActive.value) return 'No applications match these filters.';
+  return scope.value === 'mine' && !isGovernance.value ? 'No applications in the workspaces you administer.' : 'No applications found.';
+});
+
+// Paging
+const PAGE_SIZE = 20;
+const page = ref(1);
+const pageCount = computed(() => Math.max(1, Math.ceil(filteredApplications.value.length / PAGE_SIZE)));
+const pageStart = computed(() => (page.value - 1) * PAGE_SIZE);
+const pagedApplications = computed(() => filteredApplications.value.slice(pageStart.value, pageStart.value + PAGE_SIZE));
+watch(pageCount, (count) => {
+  if (page.value > count) page.value = count;
+});
 
 const workspaceName = (id) => workspaces.value.find((ws) => ws.id === id)?.name ?? 'Another workspace';
 const isBehind = (version) => !!currentVersion.value && (!parseVersion(version) || compareVersions(version, currentVersion.value) < 0);
 
-const loadApplications = async () => {
-  const response = await apiClient.get('/api/v1/applications');
-  applications.value = response.data.applications ?? [];
+const filterParams = () => {
+  const params = {};
+  if (search.value.trim()) params.search = search.value.trim();
+  if (filterCapability.value) params.capability = filterCapability.value;
+  if (filterTeam.value) params.teamId = filterTeam.value;
+  if (filterEnvironment.value) params.environment = filterEnvironment.value;
+  return params;
 };
+
+// Responses can come back out of order while typing: only the latest request's answer is shown
+let listRequest = 0;
+const loadApplications = async () => {
+  const mine = ++listRequest;
+  const response = await apiClient.get('/api/v1/applications', { params: filterParams() });
+  if (mine !== listRequest) return;
+  applications.value = response.data.applications ?? [];
+  facets.value = response.data.facets ?? { teams: [], environments: [] };
+};
+
+// Filters reload from the server (search after a pause in typing) and go back to the first page
+let searchTimer;
+const reloadForFilters = () => {
+  page.value = 1;
+  loadApplications().catch((error) => showNotice(apiErrorMessage(error, 'Applications could not be loaded.'), 'error'));
+};
+watch([filterCapability, filterTeam, filterEnvironment], reloadForFilters);
+watch(search, () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(reloadForFilters, 300);
+});
+watch(scope, () => {
+  page.value = 1;
+});
+onBeforeUnmount(() => clearTimeout(searchTimer));
 
 const loadWorkspaces = async () => {
   try {
@@ -399,6 +510,21 @@ const moveOptions = computed(() => {
   return options;
 });
 
+// ---------- Quick actions ----------
+const runScan = async (app) => {
+  scanning.value = app.id;
+  try {
+    const { data } = await apiClient.post('/api/v1/governance/scans', { scope: 'application', applicationId: app.id });
+    const { errors = 0, warnings = 0, passed = 0 } = data.summary ?? {};
+    showNotice(`${app.name} scanned: ${errors} error(s), ${warnings} warning(s), ${passed} passed.`, errors ? 'warning' : 'success');
+    await refresh();
+  } catch (error) {
+    showNotice(apiErrorMessage(error, `${app.name} could not be scanned.`), 'error');
+  } finally {
+    scanning.value = null;
+  }
+};
+
 const openEdit = (app) => {
   Object.assign(edit, {
     app,
@@ -463,5 +589,27 @@ onMounted(async () => {
     router.replace({ query: { ...route.query, registered: undefined } });
   }
   await loadAll();
+  // The detail page's Edit opens the dialog here (?edit=<id>)
+  if (typeof route.query.edit === 'string') {
+    const id = route.query.edit;
+    router.replace({ query: { ...route.query, edit: undefined } });
+    try {
+      const app = applications.value.find((a) => a.id === id) ?? (await apiClient.get(`/api/v1/applications/${encodeURIComponent(id)}`)).data;
+      if (canWrite(app)) openEdit(app);
+      else showNotice(`You can't edit ${app.name}.`, 'error');
+    } catch (error) {
+      showNotice(apiErrorMessage(error, 'That application could not be opened.'), 'error');
+    }
+  }
 });
 </script>
+
+<style scoped>
+.app-name-link {
+  @apply font-medium text-ink-strong underline-offset-4 hover:text-accent-text hover:underline;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus rounded-control;
+}
+.app-pager {
+  @apply flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3;
+}
+</style>

@@ -73,6 +73,7 @@
     "src/views/AdminDashboard.vue",
     "src/views/Adopt.vue",
     "src/views/AltTextGenerator.vue",
+    "src/views/ApplicationDetail.vue",
     "src/views/ApplicationManagement.vue",
     "src/views/ApplicationRegistration.vue",
     "src/views/AtomicDesign.vue",

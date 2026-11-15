@@ -39,6 +39,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { breadcrumbLabelFor } from '../composables/useBreadcrumbLabel.js';
 
 const props = defineProps({
   customPath: {
@@ -314,6 +315,9 @@ const crumbs = computed(() => {
     });
   });
   
+  // A page can name its own crumb (an application's name instead of its id)
+  const named = breadcrumbLabelFor(path);
+  if (named && breadcrumbs.length) breadcrumbs[breadcrumbs.length - 1].label = named;
   return breadcrumbs;
 });
 

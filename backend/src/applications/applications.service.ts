@@ -50,7 +50,30 @@ export interface ApplicationFilters {
   teamId?: string;
   workspaceId?: string;
   capability?: CapabilityName;
+  /** metadata.environment */
+  environment?: string;
+  /** Case-insensitive text in the name, description, URLs, team or tags */
+  search?: string;
 }
+
+export interface ApplicationPage {
+  applications: ApplicationDoc[];
+  /** How many are in this page */
+  count: number;
+  /** How many match the filters, across all pages */
+  total: number;
+  offset: number;
+  limit: number | null;
+  /** Teams and environments among the applications the caller can read (for filter menus) */
+  facets: { teams: string[]; environments: string[] };
+}
+
+const matchesSearch = (app: ApplicationDoc, search: string): boolean => {
+  const needle = search.trim().toLowerCase();
+  if (!needle) return true;
+  const haystack = [app.name, app.description, app.repository, app.applicationUrl, app.teamId, ...(app.metadata?.tags ?? [])];
+  return haystack.some((value) => typeof value === 'string' && value.toLowerCase().includes(needle));
+};
 
 /** Projects this request created, so a failure can undo them */
 interface CreatedProjects {
@@ -109,7 +132,33 @@ export class ApplicationsService {
     if (filters.workspaceId) clause.workspaceId = filters.workspaceId;
     let apps = Object.keys(clause).length ? await this.store.findAny([clause]) : await this.store.list();
     if (filters.capability) apps = apps.filter((app) => app.capabilities?.[filters.capability]?.enabled === true);
+    if (filters.environment) apps = apps.filter((app) => app.metadata?.environment === filters.environment);
+    if (filters.search) apps = apps.filter((app) => matchesSearch(app, filters.search!));
     return apps.sort((a, b) => b.registeredAt.localeCompare(a.registeredAt));
+  }
+
+  /**
+   * One page of the applications the principal may read, newest first, with
+   * the total and the teams and environments to filter by. Without a limit
+   * every match is returned (existing callers rely on that).
+   */
+  async pageFor(principal: AuthPrincipal, filters: ApplicationFilters, paging: { limit?: number; offset?: number } = {}): Promise<ApplicationPage> {
+    const visible = await this.listFor(principal);
+    const matching = await this.listFor(principal, filters);
+    const offset = paging.offset ?? 0;
+    const applications = paging.limit ? matching.slice(offset, offset + paging.limit) : matching.slice(offset);
+    const distinct = (values: Array<string | undefined>) => [...new Set(values.filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b));
+    return {
+      applications,
+      count: applications.length,
+      total: matching.length,
+      offset,
+      limit: paging.limit ?? null,
+      facets: {
+        teams: distinct(visible.map((app) => app.teamId)),
+        environments: distinct(visible.map((app) => app.metadata?.environment)),
+      },
+    };
   }
 
   async get(id: string): Promise<ApplicationDoc> {

@@ -374,6 +374,10 @@ const router = createRouter({
         path: '/admin/applications/register',
         component: () => import('./views/ApplicationRegistration.vue'),
       },
+      {
+        path: '/admin/applications/:id',
+        component: () => import('./views/ApplicationDetail.vue'),
+      },
     {
       path: '/tokens',
       component: () => import('./views/Tokens.vue'),

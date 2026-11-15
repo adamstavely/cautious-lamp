@@ -204,6 +204,30 @@ describe('Applications HTTP API', () => {
     expect((await h.call('viewer', 'GET', '/applications?capability=everything')).status).toBe(400);
   });
 
+  it('searches, filters by team and environment, and pages, with facets for the filter menus', async () => {
+    const make = (name: string, extra: Record<string, unknown>) => register('governance', { name, workspaceId: ws, ...extra });
+    await make('Search Alpha', { teamId: 'payments', metadata: { environment: 'production', tags: ['checkout'] } });
+    await make('Search Beta', { teamId: 'payments', metadata: { environment: 'staging' } });
+    await make('Search Gamma', { teamId: 'growth', description: 'Runs the checkout funnel', metadata: { environment: 'production' } });
+
+    const get = async (query: string) => (await h.call('governance', 'GET', `/applications?workspaceId=${ws}&${query}`)).body;
+    expect((await get('search=checkout')).applications.map((a: any) => a.name).sort()).toEqual(['Search Alpha', 'Search Gamma']);
+    expect((await get('search=SEARCH&teamId=payments')).applications.map((a: any) => a.name).sort()).toEqual(['Search Alpha', 'Search Beta']);
+    expect((await get('search=search&environment=production')).applications.map((a: any) => a.name).sort()).toEqual(['Search Alpha', 'Search Gamma']);
+
+    const first = await get('search=search&limit=2');
+    expect(first).toMatchObject({ count: 2, total: 3, offset: 0, limit: 2 });
+    const second = await get('search=search&limit=2&offset=2');
+    expect(second).toMatchObject({ count: 1, total: 3, offset: 2 });
+    expect(new Set([...first.applications, ...second.applications].map((a: any) => a.id)).size).toBe(3);
+    expect(first.facets.teams).toEqual(expect.arrayContaining(['growth', 'payments']));
+    expect(first.facets.environments).toEqual(expect.arrayContaining(['production', 'staging']));
+
+    for (const bad of ['environment=moon', 'limit=0', 'limit=101', 'offset=-1', 'limit=two']) {
+      expect((await h.call('governance', 'GET', `/applications?${bad}`)).status).toBe(400);
+    }
+  });
+
   it("shows only applications without a workspace and those in the caller's workspaces", async () => {
     const mine = (await register('admin', { name: 'Members only', workspaceId: ws, designSystemVersion: '1.0.0' })).body;
     const open = (await register('governance', { name: 'Everyone', designSystemVersion: '1.0.0' })).body;
