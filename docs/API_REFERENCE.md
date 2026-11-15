@@ -127,6 +127,7 @@ Tokens and the other kinds of workspace items share one set of routes, `/workspa
 | `PATCH /workspaces/:id/resources/:kind/:itemId` | The fields to change |
 | `DELETE /workspaces/:id/resources/:kind/:itemId` | `204` |
 | `PUT /workspaces/:id/resources/:kind/:itemId/sharing` | `{ workspaceIds, isGlobal? }` |
+| `GET /resources` | The item kinds: `[{ kind, titleField, filterField?, filterValues? }]`, where `filterField` is what `?filter=` matches and `filterValues` its allowed values when they are fixed |
 | `GET /resources/:kind` | One kind across every workspace you can read |
 | `GET /workspaces/:id/resources/tokens/export/style-dictionary` | The workspace's tokens as a Style Dictionary file. `?filter=` is a category. See [GETTING_STARTED_TOKENS.md](./GETTING_STARTED_TOKENS.md#style-dictionary). |
 
@@ -156,6 +157,16 @@ The shared library, readable with an API key.
 | `PUT /components/:id/status`, `/deprecation`, `/dependencies`; `POST /components/:id/variants` | `component:edit` (see [AUTH.md](./AUTH.md#components-and-workspaces)) |
 | `GET /tokens` | `?category=&type=&tag=`. `{ tokens, count, filters }` |
 | `GET /tokens/:name`, `GET /tokens/category/:category` | |
+
+### Governance scans
+
+| Method and path | Notes |
+| --- | --- |
+| `POST /governance/scans` | `component:view` (the `application` scope also needs `admin:governance`). `{ scope: "design-system" \| "application", applicationId?, componentIds?, codebase?, url?, ruleIds?, categories? }`. `componentIds` (up to 200, design-system scope only) scans just those components; one you can't read is a `404` like a missing one. |
+| `GET /governance/scans` | `{ scans, total }`: the scans you may read |
+| `GET /governance/scans/:id` | |
+
+See [GOVERNANCE.md](./GOVERNANCE.md#scans).
 
 ### Applications
 
