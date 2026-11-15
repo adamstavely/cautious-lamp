@@ -22,7 +22,7 @@ This describes the accessibility work in the frontend as the code stands, and wh
 - `.sr-only` in `style.css` hides text visually but keeps it for screen readers.
 
 ### Non-text content (1.1.1)
-- The app does use `<img>`: visual regression diffs (`EnhancedDiffViewer.vue`, `ImageComparisonSlider.vue`), image previews (`PNGToICO.vue`, `ImageCompressor.vue`), workspace resources (`WorkspaceResourceList.vue`, `ResourceLibrary.vue`) and examples (`ComponentExamples.vue`). Each has an `alt`, mostly built from the image's name; decorative ones use `alt=""`. The examples' "Card image" is a placeholder, not useful alt text.
+- The app does use `<img>`: visual regression diffs (`EnhancedDiffViewer.vue`, `ImageComparisonSlider.vue`), image previews (`PNGToICO.vue`, `ImageCompressor.vue`) and workspace resources (`WorkspaceResourceList.vue`, `ResourceLibrary.vue`). Each has an `alt`, mostly built from the image's name; decorative ones use `alt=""`.
 - Page-hero spot illustrations (`SpotArt.vue`) are inlined SVG and `aria-hidden`.
 - `MarkdownViewer.vue` inlines `/svgs/*.svg` images from the guidance Markdown in place of their `<img>` tags.
 
@@ -42,7 +42,7 @@ This describes the accessibility work in the frontend as the code stands, and wh
 - [x] Visible focus ring for keyboard focus
 - [x] Labelled fields and announced errors in the ui kit
 - [x] Accessible dialog component
-- [x] Alt text on `<img>` elements (one placeholder to improve)
+- [x] Alt text on `<img>` elements
 - [ ] Contrast checked across the app
 - [ ] Every page on the design system
 - [ ] Screen reader testing

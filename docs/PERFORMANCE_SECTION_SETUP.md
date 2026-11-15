@@ -31,7 +31,7 @@ The "Supported browsers" list on these pages is a fixed list in the page (Chrome
 
 `/admin/performance` also manages budgets: `GET /api/v1/performance/budgets` (anyone signed in), and `POST`, `PUT /performance/budgets/:id` and `DELETE /performance/budgets/:id`, which need `admin:performance_analysis`. A budget has `name`, `metric`, `threshold`, `unit`, optional `alertThreshold` and `enabled`. Budgets are stored in `design-system-performance-budgets`.
 
-`/performance/budgets` and `/performance/bundle-analysis` redirect to `/admin/performance`. The older `BundleSizeAnalysis.vue` and `PerformanceBudgets.vue` views are not routed anywhere.
+`/performance/budgets` and `/performance/bundle-analysis` redirect to `/admin/performance`. The older `BundleSizeAnalysis.vue` and `PerformanceBudgets.vue` duplicates were deleted in #66.
 
 ## Backend telemetry
 
