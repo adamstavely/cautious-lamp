@@ -1,5 +1,7 @@
 /** Elasticsearch indices, injection tokens and documents for notifications and the changelog */
 
+import type { UrlChannel } from '../delivery/delivery.types';
+
 export const NOTIFICATIONS_INDEX = 'design-system-notifications';
 export const NOTIFICATION_SETTINGS_INDEX = 'design-system-notification-settings';
 export const CHANGELOG_INDEX = 'design-system-changelog';
@@ -126,17 +128,32 @@ export interface NotificationPreferences {
   /** Only notify about breaking changes */
   breakingOnly: boolean;
   /**
-   * Saved for when delivery to these channels exists. Nothing is sent to
-   * email, Slack or webhooks yet; the UI says so.
+   * Where else notifications are delivered (NotificationDeliveryService).
+   * Email goes to the person's sign-in address; Slack, Teams and webhook
+   * need a URL saved in `targets`.
    */
-  channels: { email: boolean; slack: boolean; webhook: boolean };
+  channels: { email: boolean; slack: boolean; teams: boolean; webhook: boolean };
+}
+
+/** A saved Slack, Teams or webhook target. Both fields are encrypted at rest and never returned. */
+export interface StoredChannelTarget {
+  url: string;
+  /** Webhook only: signs each delivery (HMAC-SHA256) */
+  secret?: string;
+  savedAt: string;
+}
+
+/** What the API says about a saved target: whether there is one, never the URL */
+export interface ChannelTargetView {
+  configured: boolean;
+  savedAt?: string;
 }
 
 export const DEFAULT_PREFERENCES: NotificationPreferences = {
   inApp: true,
   actions: ['created', 'updated', 'deprecated', 'deleted', 'status-changed'],
   breakingOnly: false,
-  channels: { email: false, slack: false, webhook: false },
+  channels: { email: false, slack: false, teams: false, webhook: false },
 };
 
 /** One document per person (id = the user's id) */
@@ -147,6 +164,8 @@ export interface NotificationSettingsDoc {
   /** Denormalized from subscriptions (`<type>:<entityId>`) for term queries */
   topics: string[];
   preferences: NotificationPreferences;
+  /** Saved URLs for Slack, Teams and webhook delivery (encrypted) */
+  targets?: Partial<Record<UrlChannel, StoredChannelTarget>>;
   createdAt: string;
   updatedAt: string;
 }

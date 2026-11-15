@@ -14,6 +14,7 @@ import { UsersService } from '../auth/users.service';
 import { ArgosApiClient, ArgosApiError, ArgosBuild, ArgosSnapshotDiff } from './argos-api.client';
 import { ArgosWebhookController, VisualRegressionController } from './visual-regression.controller';
 import { VisualRegressionService } from './visual-regression.service';
+import { VisualRegressionNotifier } from './visual-regression-notifier';
 import { createProjectServices } from './testing/services';
 import { globalValidationPipe } from '../common/validation/global-validation';
 
@@ -122,6 +123,7 @@ describe('Project access over HTTP (visual regression and session replay)', () =
       controllers: [VisualRegressionController, ArgosWebhookController, SessionReplayController],
       providers: [
         { provide: VisualRegressionService, useValue: services.visualRegression },
+        { provide: VisualRegressionNotifier, useValue: services.notifier },
         { provide: SessionReplayService, useValue: services.sessionReplay },
         { provide: AuthService, useValue: auth },
         { provide: UsersService, useValue: users },
@@ -195,7 +197,9 @@ describe('Project access over HTTP (visual regression and session replay)', () =
         ['GET', `/visual-regression/projects/${id}/shares`],
         ['POST', `/visual-regression/projects/${id}/share`, { email: 'outsider@example.com', role: 'editor' }],
         ['GET', `/visual-regression/projects/${id}/notifications`],
-        ['POST', `/visual-regression/projects/${id}/notifications`, { type: 'webhook', config: {} }],
+        ['POST', `/visual-regression/projects/${id}/notifications`, { type: 'webhook', url: 'https://hooks.example.com/x' }],
+        ['DELETE', `/visual-regression/projects/${id}/notifications/webhook`],
+        ['POST', `/visual-regression/projects/${id}/notifications/webhook/test`],
       ] as Array<[string, string, unknown?]>) {
         expect([method, route, (await call('outsider', method, route, body)).status]).toEqual([method, route, 404]);
       }

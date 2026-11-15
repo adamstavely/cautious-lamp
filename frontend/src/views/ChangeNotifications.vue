@@ -138,84 +138,159 @@
         <div v-else-if="!settingsLoaded" class="flex justify-center py-8">
           <UiSpinner label="Loading your settings…" />
         </div>
-        <div v-else class="grid lg:grid-cols-2 gap-6">
-          <UiPanel title="Following" description="You're notified when anything you follow changes.">
-            <form class="flex flex-wrap items-end gap-3 mb-5" @submit.prevent="followSelected">
-              <UiSelect id="follow-type" v-model="followType" label="Type" size="sm" :options="FOLLOW_TYPE_OPTIONS" class="w-40" />
-              <UiSelect
-                id="follow-item"
-                v-model="followItem"
-                label="Item"
-                size="sm"
-                :options="followItemOptions"
-                class="flex-1 min-w-48"
-                :hint="followType === 'component' ? '' : `To follow one ${followType}, use Follow on one of its changes.`"
-              />
-              <UiButton type="submit" size="sm" variant="primary" icon="plus" :loading="following">Follow</UiButton>
-            </form>
-
-            <p v-if="subscriptions.length === 0" class="text-sm text-ink-secondary">You aren't following anything yet.</p>
-            <ul v-else class="divide-y divide-line">
-              <li v-for="sub in subscriptions" :key="sub.id" class="flex items-center justify-between gap-3 py-2">
-                <span class="flex items-center gap-2 min-w-0">
-                  <UiChip :tone="TYPE_TONES[sub.type] || 'neutral'">{{ TYPE_LABELS[sub.type] }}</UiChip>
-                  <span class="text-sm text-ink-strong truncate">{{ subscriptionName(sub) }}</span>
-                </span>
-                <UiButton variant="ghost" size="sm" :aria-label="`Unfollow ${subscriptionName(sub)}`" @click="unfollow(sub)">Unfollow</UiButton>
-              </li>
-            </ul>
-          </UiPanel>
-
-          <div class="space-y-6">
-            <UiPanel title="Preferences" description="Changes are saved as you make them.">
-              <div class="space-y-4">
-                <UiSwitch
-                  :model-value="preferences.inApp"
-                  label="Show notifications in the app"
-                  hint="The bell in the top bar and the list on this page."
-                  :disabled="savingPreferences"
-                  @update:model-value="savePreferences({ inApp: $event })"
+        <div v-else class="space-y-6">
+          <div class="grid lg:grid-cols-2 gap-6">
+            <UiPanel title="Following" description="You're notified when anything you follow changes.">
+              <form class="flex flex-wrap items-end gap-3 mb-5" @submit.prevent="followSelected">
+                <UiSelect id="follow-type" v-model="followType" label="Type" size="sm" :options="FOLLOW_TYPE_OPTIONS" class="w-40" />
+                <UiSelect
+                  id="follow-item"
+                  v-model="followItem"
+                  label="Item"
+                  size="sm"
+                  :options="followItemOptions"
+                  class="flex-1 min-w-48"
+                  :hint="followType === 'component' ? '' : `To follow one ${followType}, use Follow on one of its changes.`"
                 />
-                <UiSwitch
-                  :model-value="preferences.breakingOnly"
-                  label="Only breaking changes"
-                  :disabled="savingPreferences"
-                  @update:model-value="savePreferences({ breakingOnly: $event })"
-                />
-                <fieldset>
-                  <legend class="text-sm font-medium text-ink-strong mb-2">Notify me when something is</legend>
-                  <div class="flex flex-wrap gap-x-6 gap-y-2">
-                    <UiCheckbox
-                      v-for="option in ACTION_OPTIONS"
-                      :key="option.value"
-                      :model-value="preferences.actions"
-                      :value="option.value"
-                      :label="option.label"
-                      :disabled="savingPreferences"
-                      @update:model-value="savePreferences({ actions: $event })"
+                <UiButton type="submit" size="sm" variant="primary" icon="plus" :loading="following">Follow</UiButton>
+              </form>
+
+              <p v-if="subscriptions.length === 0" class="text-sm text-ink-secondary">You aren't following anything yet.</p>
+              <ul v-else class="divide-y divide-line">
+                <li v-for="sub in subscriptions" :key="sub.id" class="flex items-center justify-between gap-3 py-2">
+                  <span class="flex items-center gap-2 min-w-0">
+                    <UiChip :tone="TYPE_TONES[sub.type] || 'neutral'">{{ TYPE_LABELS[sub.type] }}</UiChip>
+                    <span class="text-sm text-ink-strong truncate">{{ subscriptionName(sub) }}</span>
+                  </span>
+                  <UiButton variant="ghost" size="sm" :aria-label="`Unfollow ${subscriptionName(sub)}`" @click="unfollow(sub)">Unfollow</UiButton>
+                </li>
+              </ul>
+            </UiPanel>
+
+            <div class="space-y-6">
+              <UiPanel title="Preferences" description="Changes are saved as you make them.">
+                <div class="space-y-4">
+                  <UiSwitch
+                    :model-value="preferences.inApp"
+                    label="Show notifications in the app"
+                    hint="The bell in the top bar and the list on this page."
+                    :disabled="savingPreferences"
+                    @update:model-value="savePreferences({ inApp: $event })"
+                  />
+                  <UiSwitch
+                    :model-value="preferences.breakingOnly"
+                    label="Only breaking changes"
+                    :disabled="savingPreferences"
+                    @update:model-value="savePreferences({ breakingOnly: $event })"
+                  />
+                  <fieldset>
+                    <legend class="text-sm font-medium text-ink-strong mb-2">Notify me when something is</legend>
+                    <div class="flex flex-wrap gap-x-6 gap-y-2">
+                      <UiCheckbox
+                        v-for="option in ACTION_OPTIONS"
+                        :key="option.value"
+                        :model-value="preferences.actions"
+                        :value="option.value"
+                        :label="option.label"
+                        :disabled="savingPreferences"
+                        @update:model-value="savePreferences({ actions: $event })"
+                      />
+                    </div>
+                  </fieldset>
+                </div>
+              </UiPanel>
+            </div>
+          </div>
+
+          <UiPanel
+            title="Email, Slack, Teams and webhooks"
+            description="What reaches your notifications is also sent to the channels you turn on. Every delivery is recorded below."
+          >
+            <UiCallout v-if="deliveryError" tone="danger" role="alert" class="mb-4">Delivery settings couldn't be loaded. {{ deliveryError }}</UiCallout>
+            <ul class="divide-y divide-line">
+              <li v-for="channel in CHANNELS" :key="channel.value" class="py-4 space-y-3">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <UiSwitch
+                    :model-value="preferences.channels[channel.value]"
+                    :label="channel.label"
+                    :hint="channel.hint"
+                    :disabled="savingPreferences || (!preferences.channels[channel.value] && !isReady(channel.value))"
+                    @update:model-value="savePreferences({ channels: { [channel.value]: $event } })"
+                  />
+                  <div class="flex flex-wrap items-center gap-2">
+                    <UiChip :tone="channelState(channel.value).tone">{{ channelState(channel.value).label }}</UiChip>
+                    <UiButton
+                      size="sm"
+                      icon="send"
+                      :loading="testing === channel.value"
+                      :disabled="!isReady(channel.value) || !!testing"
+                      :aria-label="`Send test to ${channel.label}`"
+                      @click="sendTest(channel)"
+                    >
+                      Send test
+                    </UiButton>
+                  </div>
+                </div>
+
+                <UiCallout v-if="isUnavailable(channel.value)" tone="warning" :title="`${channel.label} isn't set up on this server`">
+                  {{ availability[channel.value].reason }} Ask an administrator to configure it; until then nothing is sent by email.
+                </UiCallout>
+
+                <form v-if="channel.url" class="flex flex-wrap items-end gap-3" @submit.prevent="saveTarget(channel)">
+                  <UiInput
+                    :id="`${channel.value}-url`"
+                    v-model="urlDrafts[channel.value]"
+                    type="url"
+                    size="sm"
+                    :label="`${channel.label} URL`"
+                    :placeholder="targets[channel.value]?.configured ? 'Saved. Enter a new URL to replace it.' : channel.placeholder"
+                    autocomplete="off"
+                    class="flex-1 min-w-64"
+                  />
+                  <UiInput
+                    v-if="channel.value === 'webhook'"
+                    id="webhook-secret-input"
+                    v-model="secretDraft"
+                    size="sm"
+                    label="Signing secret (optional)"
+                    placeholder="Generated if left empty"
+                    autocomplete="off"
+                    class="w-64"
+                  />
+                  <UiButton type="submit" size="sm" variant="primary" :loading="savingTarget === channel.value" :disabled="!urlDrafts[channel.value].trim()">
+                    Save URL
+                  </UiButton>
+                  <UiButton
+                    v-if="targets[channel.value]?.configured"
+                    size="sm"
+                    variant="ghost"
+                    icon="trash-2"
+                    :aria-label="`Remove the ${channel.label} URL`"
+                    @click="removeTarget(channel)"
+                  >
+                    Remove
+                  </UiButton>
+                </form>
+
+                <div v-if="channel.value === 'webhook' && revealedSecret" class="flex flex-wrap items-end gap-2 rounded-tile border border-warning-border bg-warning-bg p-4">
+                  <div class="flex-1 min-w-0">
+                    <UiInput
+                      id="webhook-secret-revealed"
+                      :model-value="revealedSecret"
+                      label="Your webhook's signing secret. Copy it now: it won't be shown again."
+                      readonly
+                      mono
+                      @focus="$event.target.select()"
                     />
                   </div>
-                </fieldset>
-              </div>
-            </UiPanel>
+                  <UiButton :icon="secretCopied ? 'check' : 'copy'" @click="copySecret">{{ secretCopied ? 'Copied' : 'Copy' }}</UiButton>
+                </div>
+              </li>
+            </ul>
 
-            <UiPanel title="Email, Slack and webhooks">
-              <UiCallout tone="warning" title="Delivery isn't set up yet" class="mb-4">
-                Nothing is sent to email, Slack or webhooks yet. You can choose channels now and they're saved, but only in-app notifications are delivered.
-              </UiCallout>
-              <div class="flex flex-wrap gap-x-6 gap-y-2">
-                <UiCheckbox
-                  v-for="channel in CHANNEL_OPTIONS"
-                  :key="channel.value"
-                  :model-value="preferences.channels[channel.value]"
-                  :label="channel.label"
-                  hint="Not delivered yet"
-                  :disabled="savingPreferences"
-                  @update:model-value="savePreferences({ channels: { [channel.value]: $event } })"
-                />
-              </div>
-            </UiPanel>
-          </div>
+            <h3 class="text-sm font-semibold text-ink-strong mt-6 mb-3">Recent deliveries</h3>
+            <DeliveryAttempts :attempts="attempts" empty-text="Nothing has been sent to email, Slack, Teams or webhooks yet." />
+          </UiPanel>
         </div>
       </template>
     </UiTabs>
@@ -225,6 +300,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
+import DeliveryAttempts from '../components/delivery/DeliveryAttempts.vue';
 import {
   PageHero,
   PageShell,
@@ -233,6 +309,7 @@ import {
   UiCheckbox,
   UiChip,
   UiEmptyState,
+  UiInput,
   UiLink,
   UiPanel,
   UiSegmented,
@@ -255,10 +332,29 @@ const ACTION_OPTIONS = [
   { value: 'deprecated', label: 'Deprecated' },
   { value: 'deleted', label: 'Removed' },
 ];
-const CHANNEL_OPTIONS = [
-  { value: 'email', label: 'Email' },
-  { value: 'slack', label: 'Slack' },
-  { value: 'webhook', label: 'Webhook' },
+const CHANNELS = [
+  { value: 'email', label: 'Email', hint: 'Sent to the email address you sign in with.', url: false },
+  {
+    value: 'slack',
+    label: 'Slack',
+    hint: 'Posted by a Slack incoming webhook to the channel it belongs to.',
+    url: true,
+    placeholder: 'https://hooks.slack.com/services/…',
+  },
+  {
+    value: 'teams',
+    label: 'Microsoft Teams',
+    hint: 'Posted as a card by a Teams incoming webhook or Workflows URL.',
+    url: true,
+    placeholder: 'https://….webhook.office.com/…',
+  },
+  {
+    value: 'webhook',
+    label: 'Webhook',
+    hint: 'A JSON POST signed with HMAC-SHA256 in the X-Signature-256 header.',
+    url: true,
+    placeholder: 'https://example.com/hooks/design-system',
+  },
 ];
 const INBOX_FILTERS = [
   { value: 'all', label: 'All' },
@@ -376,7 +472,8 @@ const actionTone = (entry) => {
 // ---------- Following and preferences ----------
 
 const subscriptions = ref([]);
-const preferences = ref({ inApp: true, actions: [], breakingOnly: false, channels: { email: false, slack: false, webhook: false } });
+const preferences = ref({ inApp: true, actions: [], breakingOnly: false, channels: { email: false, slack: false, teams: false, webhook: false } });
+const targets = ref({});
 const settingsLoaded = ref(false);
 const settingsError = ref('');
 const savingPreferences = ref(false);
@@ -388,6 +485,7 @@ const followItem = ref('*');
 const applySettings = (data) => {
   subscriptions.value = data.subscriptions ?? [];
   preferences.value = data.preferences ?? preferences.value;
+  targets.value = data.targets ?? targets.value;
 };
 
 const loadSettings = async () => {
@@ -475,11 +573,103 @@ const savePreferences = async (patch) => {
   }
 };
 
+// ---------- Delivery to email, Slack, Teams and webhooks ----------
+
+const availability = ref({});
+const attempts = ref([]);
+const deliveryError = ref('');
+const urlDrafts = ref({ slack: '', teams: '', webhook: '' });
+const secretDraft = ref('');
+const savingTarget = ref('');
+const testing = ref('');
+const revealedSecret = ref('');
+const secretCopied = ref(false);
+
+const loadDelivery = async () => {
+  deliveryError.value = '';
+  try {
+    const res = await apiClient.get('/api/v1/notifications/delivery');
+    availability.value = res.data.channels ?? {};
+    attempts.value = res.data.attempts ?? [];
+  } catch (error) {
+    deliveryError.value = apiErrorMessage(error);
+  }
+};
+
+/** The server can't send by this channel at all (email without SMTP) */
+const isUnavailable = (channel) => availability.value[channel]?.available === false;
+/** Something to send to: the server can, and a URL is saved where one is needed */
+const isReady = (channel) => {
+  if (isUnavailable(channel) || !availability.value[channel]) return false;
+  return channel === 'email' || !!targets.value[channel]?.configured;
+};
+
+const channelState = (channel) => {
+  if (isUnavailable(channel)) return { label: 'Not set up on this server', tone: 'warning' };
+  if (channel !== 'email' && !targets.value[channel]?.configured) return { label: 'No URL saved', tone: 'neutral' };
+  return preferences.value.channels[channel] ? { label: 'On', tone: 'success' } : { label: 'Off', tone: 'neutral' };
+};
+
+const saveTarget = async (channel) => {
+  savingTarget.value = channel.value;
+  try {
+    const body = { url: urlDrafts.value[channel.value].trim() };
+    if (channel.value === 'webhook' && secretDraft.value.trim()) body.secret = secretDraft.value.trim();
+    const res = await apiClient.put(`/api/v1/notifications/channels/${channel.value}`, body);
+    applySettings(res.data);
+    urlDrafts.value[channel.value] = '';
+    if (channel.value === 'webhook') {
+      secretDraft.value = '';
+      revealedSecret.value = res.data.secret && !body.secret ? res.data.secret : '';
+      secretCopied.value = false;
+    }
+    showNotice(`${channel.label} URL saved. ${channel.label} is on.`, 'success');
+  } catch (error) {
+    showNotice(apiErrorMessage(error, `The ${channel.label} URL couldn't be saved.`), 'error');
+  } finally {
+    savingTarget.value = '';
+  }
+};
+
+const removeTarget = async (channel) => {
+  try {
+    applySettings((await apiClient.delete(`/api/v1/notifications/channels/${channel.value}`)).data);
+    if (channel.value === 'webhook') revealedSecret.value = '';
+    showNotice(`${channel.label} URL removed.`, 'success');
+  } catch (error) {
+    showNotice(apiErrorMessage(error, `The ${channel.label} URL couldn't be removed.`), 'error');
+  }
+};
+
+const sendTest = async (channel) => {
+  testing.value = channel.value;
+  try {
+    const attempt = (await apiClient.post(`/api/v1/notifications/channels/${channel.value}/test`)).data;
+    attempts.value = [attempt, ...attempts.value.filter((a) => a.id !== attempt.id)];
+    if (attempt.status === 'sent') showNotice(channel.value === 'email' ? 'Test email sent.' : `Test sent to ${channel.label}.`, 'success');
+    else showNotice(`The test to ${channel.label} wasn't delivered: ${attempt.error || attempt.status}`, 'error');
+  } catch (error) {
+    showNotice(apiErrorMessage(error, `The test to ${channel.label} couldn't be sent.`), 'error');
+  } finally {
+    testing.value = '';
+  }
+};
+
+const copySecret = async () => {
+  try {
+    await navigator.clipboard.writeText(revealedSecret.value);
+    secretCopied.value = true;
+  } catch {
+    showNotice('Copy the secret by selecting it.', 'error');
+  }
+};
+
 onMounted(() => {
   loadNotifications();
   loadChanges();
   loadSettings();
   loadComponents();
+  loadDelivery();
 });
 </script>
 

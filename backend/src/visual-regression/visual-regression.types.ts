@@ -50,10 +50,33 @@ export interface BaselineEvent {
 
 export type NotificationType = 'email' | 'slack' | 'teams' | 'webhook';
 
+/**
+ * Where a project's build results are sent (VisualRegressionNotifier). The
+ * URL and secret are encrypted at rest and never returned.
+ */
 export interface NotificationEntry {
   type: NotificationType;
-  config: NotificationConfig;
   enabled: boolean;
+  /** Email: who gets it */
+  recipients?: string[];
+  /** Slack, Teams and webhook: the incoming-webhook URL (encrypted) */
+  url?: string;
+  /** Webhook: signs each delivery with HMAC-SHA256 (encrypted) */
+  secret?: string;
+  savedAt?: string;
+  /** Saved before delivery existed and never read; re-save the channel to use it */
+  config?: NotificationConfig;
+}
+
+/** A project's notification channel as the API returns it: no URL, no secret */
+export interface NotificationChannelView {
+  type: NotificationType;
+  enabled: boolean;
+  /** Has what it needs to send: recipients for email, a URL otherwise */
+  configured: boolean;
+  recipients?: string[];
+  hasSecret?: boolean;
+  savedAt?: string;
 }
 
 /** A project as returned by the API: no Argos token or webhook secret */
@@ -141,6 +164,8 @@ export interface TestRunDoc extends TestRun {
   resultIds: string[];
   /** For the store's default sort */
   createdAt: string;
+  /** When build notifications were sent for this run; they go out once */
+  notifiedAt?: string;
 }
 
 const keyword = { type: 'keyword' };

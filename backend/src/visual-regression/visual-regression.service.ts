@@ -6,6 +6,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -14,7 +15,7 @@ import { ErrorHandler } from '../common/errors/error-handler';
 import { ProjectIntegrationSummary, checkEach } from '../integrations/integration.types';
 import { PaginatedResponse, PaginationParams, createPaginatedResponse } from '../common/pagination/pagination.types';
 import { EncryptionService } from '../common/security/encryption.service';
-import { CreateProjectDto, NotificationConfig, WebhookPayload } from '../common/types/common.types';
+import { CreateProjectDto, WebhookPayload } from '../common/types/common.types';
 import { DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
 import { QueryableStore } from '../workspaces/queryable-store';
 import { isSafeId } from '../workspaces/workspace-access.service';
@@ -22,11 +23,10 @@ import { ARGOS_API_URL, ArgosApiClient, ArgosApiError, ArgosBuild, ArgosSnapshot
 import { CiSetup, buildCiSetup } from './ci-setup';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectAccessService, ProjectAction, ProjectCreator, ProjectShare } from './project-access';
+import { VisualRegressionNotifier } from './visual-regression-notifier';
 import {
   Baseline,
   BaselineEvent,
-  NotificationEntry,
-  NotificationType,
   Project,
   ProjectDoc,
   RunStatus,
@@ -80,8 +80,20 @@ function toProject(doc: ProjectDoc): Project {
 /** Printable ASCII, long enough to resist guessing */
 const WEBHOOK_SECRET_PATTERN = /^[\x21-\x7e]{16,256}$/;
 
+function isFinished(status: RunStatus): boolean {
+  return status === 'completed' || status === 'failed';
+}
+
+/** Builds older than this when their result is first saved don't send build notifications */
+const NOTIFY_WITHIN_MS = 24 * 60 * 60 * 1000;
+
+function isRecent(startedAt: string | undefined): boolean {
+  const started = startedAt ? Date.parse(startedAt) : NaN;
+  return Number.isNaN(started) || Date.now() - started < NOTIFY_WITHIN_MS;
+}
+
 function toRun(doc: TestRunDoc): TestRun {
-  const { results, resultIds, createdAt, ...run } = doc;
+  const { results, resultIds, createdAt, notifiedAt, ...run } = doc;
   return run;
 }
 
@@ -104,6 +116,7 @@ export class VisualRegressionService {
     @Inject(VR_RUN_STORE) private readonly runs: QueryableStore<TestRunDoc>,
     private readonly access: ProjectAccessService,
     private readonly encryptionService: EncryptionService,
+    @Optional() private readonly notifier?: VisualRegressionNotifier,
   ) {}
 
   // ---------- Access ----------
@@ -427,13 +440,18 @@ export class VisualRegressionService {
     } catch (error) {
       this.logger.error(`Failed to fetch build results for run ${runId}: ${(error as Error).message}`);
     }
+    let finished = false;
     try {
-      return await this.mutateRun(runId, (doc) => {
+      const updated = await this.mutateRun(runId, (doc) => {
         const wasFinished = doc.argosStatus !== undefined && FINISHED_STATUSES.has(doc.argosStatus);
+        const status = this.mapArgosStatusToRunStatus(build.status);
+        // Notify once per run, when it first reaches a final status; old builds found by a first sync stay quiet
+        finished = isFinished(status) && !doc.notifiedAt && isRecent(doc.startedAt);
+        if (finished) doc.notifiedAt = new Date().toISOString();
         doc.argosStatus = build.status;
         doc.argosBuildNumber = build.number;
         doc.argosUrl = build.url;
-        doc.status = this.mapArgosStatusToRunStatus(build.status);
+        doc.status = status;
         if (!wasFinished || !doc.completedAt) doc.completedAt = new Date().toISOString();
         if (build.metadata?.testReport?.stats?.duration !== undefined) doc.durationMs = build.metadata.testReport.stats.duration;
         if (results) {
@@ -453,6 +471,8 @@ export class VisualRegressionService {
           };
         }
       });
+      if (finished) void this.notifier?.runFinished(updated.projectId, updated);
+      return updated;
     } catch (error) {
       if (error instanceof NotFoundException) return null;
       throw error;
@@ -805,24 +825,7 @@ export class VisualRegressionService {
   }
 
   // ---------- Notifications ----------
-
-  async configureNotifications(
-    projectId: string,
-    dto: { type: NotificationType; config: NotificationConfig },
-  ): Promise<{ type: string; enabled: boolean; config: NotificationConfig }> {
-    if (!dto || !['email', 'slack', 'teams', 'webhook'].includes(dto.type)) {
-      throw new BadRequestException('type must be one of email, slack, teams, webhook');
-    }
-    const entry: NotificationEntry = { type: dto.type, config: dto.config ?? {}, enabled: true };
-    await this.mutateProject(projectId, (doc) => {
-      doc.notifications = [...(doc.notifications ?? []).filter((n) => n.type !== dto.type), entry];
-    });
-    return entry;
-  }
-
-  async getNotificationConfig(projectId: string): Promise<NotificationEntry[]> {
-    return (await this.requireProject(projectId)).notifications ?? [];
-  }
+  // Settings, test sends and delivery live in VisualRegressionNotifier; applyBuild tells it when a run finishes.
 
   // ---------- Storage ----------
 

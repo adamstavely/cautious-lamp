@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
-import { NotificationConfig } from '../../common/types/common.types';
+import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { MAX_RECIPIENTS } from '../visual-regression-notifier';
 
 export class CreateBaselineDto {
   @IsString()
@@ -23,12 +23,37 @@ export class WebhookSecretDto {
   secret?: string;
 }
 
+/**
+ * One notification channel. Fields left out keep their saved value, so
+ * `{ type, enabled }` only turns the channel on or off.
+ */
 export class NotificationSettingsDto {
   @IsIn(['email', 'slack', 'teams', 'webhook'])
   type: 'email' | 'slack' | 'teams' | 'webhook';
 
-  @IsObject()
-  config: NotificationConfig;
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  /** Email only */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_RECIPIENTS)
+  @IsEmail({}, { each: true })
+  recipients?: string[];
+
+  /** Slack, Teams or webhook: the URL to post to (https, public addresses only) */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  url?: string;
+
+  /** Webhook only: the signing secret; generated when a new URL is saved without one */
+  @IsOptional()
+  @IsString()
+  @MinLength(16)
+  @MaxLength(256)
+  secret?: string;
 }
 
 /** Gives one person access to the project (see ProjectShare) */

@@ -1,12 +1,15 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
+import { URL_CHANNELS, UrlChannel } from '../delivery/delivery.types';
 import { DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
 import { QueryableStore } from '../workspaces/queryable-store';
 import {
+  ChannelTargetView,
   DEFAULT_PREFERENCES,
   NOTIFICATION_SETTINGS_STORE,
   NotificationPreferences,
   NotificationSettingsDoc,
+  StoredChannelTarget,
   SubscribableType,
   Subscription,
   topicOf,
@@ -19,6 +22,8 @@ export const MAX_SUBSCRIPTIONS = 200;
 export interface NotificationSettingsView {
   subscriptions: Subscription[];
   preferences: NotificationPreferences;
+  /** Which delivery URLs are saved; the URLs themselves are never returned */
+  targets: Record<UrlChannel, ChannelTargetView>;
 }
 
 export type PreferencesPatch = Partial<Omit<NotificationPreferences, 'channels'>> & {
@@ -39,6 +44,26 @@ export class NotificationSettingsService {
     return toView(doc);
   }
 
+  /** The stored document, with encrypted targets, for delivery. Null for someone who never saved settings. */
+  async getDoc(userId: string): Promise<NotificationSettingsDoc | null> {
+    return (await this.store.get(userId))?.doc ?? null;
+  }
+
+  /**
+   * Saves (already encrypted) a Slack, Teams or webhook target and turns the
+   * channel on, or with `null` removes it and turns the channel off.
+   */
+  async setTarget(userId: string, channel: UrlChannel, target: StoredChannelTarget | null): Promise<NotificationSettingsView> {
+    const doc = await this.mutate(userId, (d) => {
+      const targets = { ...(d.targets ?? {}) };
+      if (target) targets[channel] = target;
+      else delete targets[channel];
+      d.targets = targets;
+      d.preferences = { ...d.preferences, channels: { ...DEFAULT_PREFERENCES.channels, ...d.preferences.channels, [channel]: !!target } };
+    });
+    return toView(doc);
+  }
+
   async updatePreferences(userId: string, patch: PreferencesPatch): Promise<NotificationSettingsView> {
     const doc = await this.mutate(userId, (d) => {
       d.preferences = {
@@ -46,7 +71,7 @@ export class NotificationSettingsService {
         ...(patch.inApp !== undefined ? { inApp: patch.inApp } : {}),
         ...(patch.actions !== undefined ? { actions: [...new Set(patch.actions)] } : {}),
         ...(patch.breakingOnly !== undefined ? { breakingOnly: patch.breakingOnly } : {}),
-        channels: { ...d.preferences.channels, ...(patch.channels ?? {}) },
+        channels: { ...DEFAULT_PREFERENCES.channels, ...d.preferences.channels, ...(patch.channels ?? {}) },
       };
     });
     return toView(doc);
@@ -119,8 +144,17 @@ export class NotificationSettingsService {
 }
 
 function toView(doc: NotificationSettingsDoc | undefined): NotificationSettingsView {
+  const defaults = structuredClone(DEFAULT_PREFERENCES);
+  const saved = doc?.preferences;
+  const targets = Object.fromEntries(
+    URL_CHANNELS.map((channel) => {
+      const target = doc?.targets?.[channel];
+      return [channel, target ? { configured: true, savedAt: target.savedAt } : { configured: false }];
+    }),
+  ) as Record<UrlChannel, ChannelTargetView>;
   return {
     subscriptions: doc?.subscriptions ?? [],
-    preferences: { ...structuredClone(DEFAULT_PREFERENCES), ...(doc?.preferences ?? {}) },
+    preferences: { ...defaults, ...(saved ?? {}), channels: { ...defaults.channels, ...(saved?.channels ?? {}) } },
+    targets,
   };
 }

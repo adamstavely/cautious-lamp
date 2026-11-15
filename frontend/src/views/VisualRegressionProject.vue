@@ -239,6 +239,8 @@
                 </UiButton>
               </div>
             </UiPanel>
+
+            <VrNotificationSettings :project-id="project.id" />
           </div>
         </template>
       </UiTabs>
@@ -255,6 +257,7 @@ import VrCiSetup from '../components/visual-regression/VrCiSetup.vue';
 import VrSharing from '../components/visual-regression/VrSharing.vue';
 import VrTestSettings from '../components/visual-regression/VrTestSettings.vue';
 import { VR_API_PATH, formatDateTime, vrErrorMessage } from '../components/visual-regression/vrApi.js';
+import VrNotificationSettings from '../components/visual-regression/VrNotificationSettings.vue';
 import {
   PageHero,
   PageShell,
