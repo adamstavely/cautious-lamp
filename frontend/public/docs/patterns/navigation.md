@@ -1,23 +1,19 @@
-# Navigation Patterns
-
-Navigation helps users move through and understand the structure of an application.
-
-## Sidebar Navigation
+## Sidebar navigation
 
 Fixed sidebar navigation provides persistent access to main sections.
 
-### Best Practices
+### Best practices
 
 - Keep navigation items organized logically
 - Use clear labels and icons
 - Highlight active states
 - Support keyboard navigation
 
-## Top Navigation
+## Top navigation
 
 Horizontal navigation bar for primary actions and global navigation.
 
-### Best Practices
+### Best practices
 
 - Limit the number of top-level items
 - Use clear, concise labels
@@ -28,7 +24,7 @@ Horizontal navigation bar for primary actions and global navigation.
 
 Show users their location in the hierarchy.
 
-### Best Practices
+### Best practices
 
 - Use for deep navigation hierarchies
 - Make each level clickable

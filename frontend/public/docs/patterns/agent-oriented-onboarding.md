@@ -1,21 +1,27 @@
-<div class="mb-12 -mx-4">
-  <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-    <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-      <div class="flex-1">
-        <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">Agent-Oriented Onboarding</h1>
-        <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">Design patterns for onboarding users to AI agent capabilities and interactions.</p>
-      </div>
-      <div class="hidden md:block flex-shrink-0">
-        <div class="w-64 h-64 relative">
-          <img src="/svgs/patterns/agent-oriented-onboarding.svg" alt="Agent-Oriented Onboarding" class="w-full h-full" />
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+## Set expectations first
 
-## Overview
+People arrive with mental models from other AI tools. Onboarding should give them an accurate one for this agent.
 
-Learn how to design effective onboarding experiences that introduce users to AI agent features and capabilities.
+- Say what the agent is for in one sentence, and what it doesn't do.
+- Name the data it can see and the actions it can take on the person's behalf.
+- Show two or three example requests that work well, drawn from real tasks in the product.
+- Say plainly that it can be wrong, and how to check its work.
 
+## Learn by doing
+
+- Start with a real, low-risk task the person already needs to do, rather than a tour.
+- Offer suggested prompts as starting points, not as the only way to ask.
+- After the first result, point out how to refine it ("Ask for a shorter version", "Add a source").
+- Keep help available later, in the place it's needed, instead of front-loading everything.
+
+## Control and consent
+
+- Ask before the agent acts outside the conversation (sending, deleting, buying), and show exactly what it will do.
+- Make it clear how to stop the agent, undo its actions and turn it off.
+- Let people choose what the agent may remember, and show what it has remembered.
+
+## Accessibility
+
+- Make every onboarding step reachable and dismissible with the keyboard.
+- Announce agent responses with a polite live region; don't move focus on every update.
+- Keep the onboarding text readable on its own, without relying on animation.

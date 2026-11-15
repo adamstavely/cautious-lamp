@@ -1,21 +1,31 @@
-<div class="mb-12 -mx-4">
-  <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-    <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-      <div class="flex-1">
-        <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">Data Visualization</h1>
-        <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">Patterns and best practices for creating effective data visualizations in user interfaces.</p>
-      </div>
-      <div class="hidden md:block flex-shrink-0">
-        <div class="w-64 h-64 relative">
-          <img src="/svgs/patterns/data-visualization.svg" alt="Data Visualization" class="w-full h-full" />
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+## Choosing a chart
 
-## Overview
+Start from the question the chart answers, then pick the simplest form that answers it.
 
-Explore design patterns for presenting data in clear, accessible, and meaningful visual formats.
+- **Compare values**: a bar chart, sorted, starting at zero.
+- **Show change over time**: a line chart, with time on the horizontal axis.
+- **Show parts of a whole**: a stacked bar; use a pie only for two or three parts.
+- **Show a distribution**: a histogram or box plot.
+- **Show one number**: a large figure with its label and its change, not a gauge.
 
+If a table answers the question as well, use the table.
+
+## Making it clear
+
+- Title each chart with what it shows ("Sign-ups per week, last 12 weeks").
+- Label axes and units, and label lines directly instead of relying on a legend.
+- Limit colours to the series that matter; grey out the rest.
+- Use the chart colours from the design system so series look the same everywhere.
+- Don't truncate bar axes, add 3D effects, or smooth lines that hide real data.
+
+## Being honest about the data
+
+- Show when data is missing, partial or still loading; don't draw zeros for gaps.
+- Say where the numbers come from and when they were last updated.
+- Show uncertainty (ranges, sample sizes) when it changes what someone would conclude.
+
+## Accessibility
+
+- Give every chart a text alternative that states the main finding, and offer the data as a table.
+- Keep 3:1 contrast between series and the background, and don't use colour as the only difference: add patterns, markers or labels.
+- Make interactive charts usable with the keyboard, with tooltips that also appear on focus.

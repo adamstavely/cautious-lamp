@@ -1,12 +1,8 @@
-# Feedback Patterns
-
-Feedback patterns communicate system status and user actions.
-
-## Toast Notifications
+## Toast notifications
 
 Temporary messages that appear and disappear automatically.
 
-### Best Practices
+### Best practices
 
 - Keep messages concise
 - Use appropriate duration (3-5 seconds)
@@ -14,11 +10,11 @@ Temporary messages that appear and disappear automatically.
 - Support multiple toasts
 - Provide dismiss action
 
-## Alert Messages
+## Alert messages
 
 Persistent messages that require user attention.
 
-### Best Practices
+### Best practices
 
 - Use appropriate alert types (success, error, warning, info)
 - Make messages actionable when needed
@@ -26,11 +22,11 @@ Persistent messages that require user attention.
 - Support dismiss functionality
 - Group related alerts
 
-## Loading States
+## Loading states
 
 Indicate when content is being loaded or processed.
 
-### Best Practices
+### Best practices
 
 - Show loading indicators immediately
 - Use skeleton screens for content
@@ -38,11 +34,11 @@ Indicate when content is being loaded or processed.
 - Disable actions during loading
 - Use appropriate animation
 
-## Error Handling
+## Error handling
 
 Guide users when something goes wrong.
 
-### Best Practices
+### Best practices
 
 - Use clear, user-friendly error messages
 - Suggest solutions when possible
@@ -50,11 +46,11 @@ Guide users when something goes wrong.
 - Log errors for debugging
 - Maintain user context
 
-## Success Feedback
+## Success feedback
 
 Confirm successful actions to users.
 
-### Best Practices
+### Best practices
 
 - Show immediate confirmation
 - Use visual indicators (checkmarks, animations)

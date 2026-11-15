@@ -1,21 +1,28 @@
-<div class="mb-12 -mx-4">
-  <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-    <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-      <div class="flex-1">
-        <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">Error Handling</h1>
-        <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">Design patterns for communicating errors clearly and providing recovery paths.</p>
-      </div>
-      <div class="hidden md:block flex-shrink-0">
-        <div class="w-64 h-64 relative">
-          <img src="/svgs/patterns/error-handling.svg" alt="Error Handling" class="w-full h-full" />
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+## What a good error says
 
-## Overview
+Every error message answers three questions: what happened, why (if it helps), and what the person can do next.
 
-Explore effective error handling patterns that help users understand what went wrong and how to fix it.
+- Write in plain language. "We couldn't save your changes" is better than "Error 500".
+- Say how to fix it: "Enter a date in the future", not "Invalid date".
+- Don't blame the user, and don't joke.
+- Keep technical detail (codes, request ids) available but secondary, for people who contact support.
 
+## Where errors appear
+
+- **Field errors** sit next to the field, are linked with `aria-describedby`, and appear when the field loses focus or on submit, not while the person is still typing.
+- **Form errors** that affect the whole form appear above it, with a list of links to each field in error.
+- **Page errors** (the page's data didn't load) replace the content with a message and a "Try again" action, and keep the navigation working.
+- **Background errors** (a save that failed after the fact) use a persistent banner or a toast that stays until dismissed.
+
+## Recovery
+
+- Keep what the person typed. Never clear a form because one field was wrong.
+- Offer a retry when the failure is temporary, and say when it is worth retrying.
+- For permission errors, say who can grant access instead of hiding the feature.
+- After a failed submit, move focus to the error summary or the first field in error.
+
+## Accessibility
+
+- Use `role="alert"` for errors that appear after an action, so they are announced.
+- Don't rely on colour alone: pair the red border with an icon and text.
+- Set `aria-invalid="true"` on fields in error.

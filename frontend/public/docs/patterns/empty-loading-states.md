@@ -1,21 +1,26 @@
-<div class="mb-12 -mx-4">
-  <div class="rounded-3xl p-12 md:p-16 bg-gradient-to-r from-slate-800 via-slate-700 to-slate-600 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10 texture-pattern"></div>
-    <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-      <div class="flex-1">
-        <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">Empty Loading States</h1>
-        <p class="text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl">Designing engaging empty states and loading indicators that improve user experience.</p>
-      </div>
-      <div class="hidden md:block flex-shrink-0">
-        <div class="w-64 h-64 relative">
-          <img src="/svgs/patterns/empty-loading-states.svg" alt="Empty Loading States" class="w-full h-full" />
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+## Empty states
 
-## Overview
+An empty state is the first thing many people see in a new feature. Use it to explain what will appear here and how to get started.
 
-Learn how to create helpful empty states and smooth loading experiences that guide users and set expectations.
+- Say what the area is for in one sentence ("Projects you create or join appear here").
+- Offer the one action that fills it ("Create a project"), and only that action.
+- Tell apart "nothing yet", "nothing matches your filters" and "you don't have access"; each needs a different way out.
+- When a search or filter returns nothing, show what was searched for and a way to clear it.
+- Never fill an empty area with sample records that look real.
 
+## Loading states
+
+People tolerate waiting when they can see that something is happening and roughly how long it will take.
+
+- Show nothing for the first few hundred milliseconds; a spinner that flashes for an instant feels slower than none.
+- Use a skeleton that matches the layout for content that arrives in one go, and a spinner for short actions.
+- Use a progress bar with a real percentage for long operations such as uploads and exports.
+- Keep the page usable while one part loads, and keep what was already on screen instead of blanking it.
+- Disable the button that started an action while it runs, so it can't be sent twice.
+
+## Accessibility
+
+- Announce that content is loading with `role="status"`, and announce again when it has arrived.
+- Mark a region that is updating with `aria-busy="true"`.
+- Respect reduced motion: replace shimmering skeletons with a still placeholder.
+- Give loading indicators a text label ("Loading projects…"), not only an animation.
