@@ -12,28 +12,28 @@ export class TokenSyncController {
   constructor(private readonly tokenSyncService: TokenSyncService) {}
 
   @Get('connections')
-  getConnections(@Principal() principal: AuthPrincipal): TokenSyncConnectionView[] {
+  getConnections(@Principal() principal: AuthPrincipal): Promise<TokenSyncConnectionView[]> {
     return this.tokenSyncService.getAllConnections(principal);
   }
 
   @Get('connections/:id')
-  getConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string): TokenSyncConnectionView {
+  getConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<TokenSyncConnectionView> {
     return this.tokenSyncService.getConnection(principal, id);
   }
 
   @Post('connections')
-  createConnection(@Principal() principal: AuthPrincipal, @Body() body: unknown): TokenSyncConnectionView {
+  createConnection(@Principal() principal: AuthPrincipal, @Body() body: unknown): Promise<TokenSyncConnectionView> {
     return this.tokenSyncService.createConnection(principal, body);
   }
 
   @Put('connections/:id')
-  updateConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() body: unknown): TokenSyncConnectionView {
+  updateConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string, @Body() body: unknown): Promise<TokenSyncConnectionView> {
     return this.tokenSyncService.updateConnection(principal, id, body);
   }
 
   @Delete('connections/:id')
-  deleteConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string): { success: boolean } {
-    this.tokenSyncService.deleteConnection(principal, id);
+  async deleteConnection(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<{ success: boolean }> {
+    await this.tokenSyncService.deleteConnection(principal, id);
     return { success: true };
   }
 
@@ -50,8 +50,8 @@ export class TokenSyncController {
   }
 
   @Delete('connections/:id/auto-sync')
-  disableAutoSync(@Principal() principal: AuthPrincipal, @Param('id') id: string): { success: boolean } {
-    this.tokenSyncService.disableAutoSync(principal, id);
+  async disableAutoSync(@Principal() principal: AuthPrincipal, @Param('id') id: string): Promise<{ success: boolean }> {
+    await this.tokenSyncService.disableAutoSync(principal, id);
     return { success: true };
   }
 

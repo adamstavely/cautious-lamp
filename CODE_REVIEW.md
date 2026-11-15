@@ -107,7 +107,7 @@ Found while fixing these: pattern and contribution bodies weren't validated, so 
 NestJS was then upgraded from 10 to 11 (Express 5), which cleared the `@nestjs/core` and `file-type` advisories. What's left (6, moderate and low) is `style-dictionary`'s bundled glob and deepmerge, which have no upstream fix yet.
 
 **Known gaps:**
-- **Design and token sync connections:** still kept in memory, so they're lost on restart.
+- **Design and token sync connections (fixed later):** they were kept in memory and lost on restart. They're now stored in Elasticsearch (`design-system-design-sync-connections`, `design-system-token-sync-connections`), with API keys still encrypted by EncryptionService before they're written. The patterns library and the contribution process (guidelines, PR templates, check definitions) moved to Elasticsearch at the same time; their defaults are seeded once, with stable unique ids, and a deleted default stays deleted.
 - **Session replay (fixed after Phase 3):** it showed mock sessions when no OpenReplay key was set. It now says OpenReplay isn't connected, and project settings can set the key. IRIS ships in the backend Docker image, and `GET /integrations/status` reports every integration (docs/INTEGRATIONS.md).
 - **Argos webhooks (fixed after Phase 3):** nothing could set a project's webhook secret, so every webhook was refused. Projects now have `POST`/`DELETE …/webhook-secret` (manage role) and a settings card to generate, replace or remove it.
 - **Migration:**

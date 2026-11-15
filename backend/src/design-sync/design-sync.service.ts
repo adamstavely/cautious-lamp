@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotImplementedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotImplementedException } from '@nestjs/common';
 import { AuthPrincipal } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
 import { Component, Token } from '../design-system/design-system.service';
+import { DocumentStore } from '../reviews/document-store';
 import {
   AUTO_SYNC_UNSUPPORTED,
   ConnectionRegistry,
@@ -103,7 +104,11 @@ export interface DesignToken {
 export const DESIGN_SYNC_TOOLS = ['figma', 'penpot'] as const;
 export const SYNC_DIRECTIONS = ['design-to-code', 'code-to-design', 'bidirectional'] as const;
 
-/** As stored (in memory); `apiKey` is encrypted */
+export const DESIGN_SYNC_CONNECTIONS_INDEX = 'design-system-design-sync-connections';
+/** Injection token for the connection store */
+export const DESIGN_SYNC_CONNECTION_STORE = Symbol('DESIGN_SYNC_CONNECTION_STORE');
+
+/** As stored in Elasticsearch; `apiKey` is encrypted */
 export interface DesignSyncConnection extends StoredConnection {
   name: string;
   tool: (typeof DESIGN_SYNC_TOOLS)[number];
@@ -166,8 +171,12 @@ export interface SyncResult {
 export class DesignSyncService {
   private readonly registry: ConnectionRegistry<DesignSyncConnection>;
 
-  constructor(encryption: EncryptionService) {
+  constructor(
+    encryption: EncryptionService,
+    @Inject(DESIGN_SYNC_CONNECTION_STORE) store: DocumentStore<DesignSyncConnection>,
+  ) {
     this.registry = new ConnectionRegistry<DesignSyncConnection>(
+      store,
       encryption,
       'sync',
       {
@@ -183,35 +192,35 @@ export class DesignSyncService {
     );
   }
 
-  getAllConnections(principal: AuthPrincipal): DesignSyncConnectionView[] {
+  getAllConnections(principal: AuthPrincipal): Promise<DesignSyncConnectionView[]> {
     return this.registry.list(principal);
   }
 
-  getConnection(principal: AuthPrincipal, id: string): DesignSyncConnectionView {
+  getConnection(principal: AuthPrincipal, id: string): Promise<DesignSyncConnectionView> {
     return this.registry.get(principal, id);
   }
 
-  createConnection(principal: AuthPrincipal, body: unknown): DesignSyncConnectionView {
+  createConnection(principal: AuthPrincipal, body: unknown): Promise<DesignSyncConnectionView> {
     return this.registry.create(principal, body);
   }
 
-  updateConnection(principal: AuthPrincipal, id: string, body: unknown): DesignSyncConnectionView {
+  updateConnection(principal: AuthPrincipal, id: string, body: unknown): Promise<DesignSyncConnectionView> {
     return this.registry.update(principal, id, body);
   }
 
-  deleteConnection(principal: AuthPrincipal, id: string): void {
-    this.registry.delete(principal, id);
+  deleteConnection(principal: AuthPrincipal, id: string): Promise<void> {
+    return this.registry.delete(principal, id);
   }
 
   /** 501: no design tool client */
-  fetchDesignFile(principal: AuthPrincipal, connectionId: string): never {
-    this.registry.require(principal, connectionId);
+  async fetchDesignFile(principal: AuthPrincipal, connectionId: string): Promise<never> {
+    await this.registry.require(principal, connectionId);
     throw new NotImplementedException(DESIGN_SYNC_UNSUPPORTED);
   }
 
   /** 501 in every direction: no design tool client */
-  sync(principal: AuthPrincipal, connectionId: string, direction?: string): never {
-    this.registry.require(principal, connectionId);
+  async sync(principal: AuthPrincipal, connectionId: string, direction?: string): Promise<never> {
+    await this.registry.require(principal, connectionId);
     if (direction !== undefined && !SYNC_DIRECTIONS.includes(direction as (typeof SYNC_DIRECTIONS)[number])) {
       throw new BadRequestException(`direction must be one of ${SYNC_DIRECTIONS.join(', ')}`);
     }
@@ -219,24 +228,24 @@ export class DesignSyncService {
   }
 
   /** 501: generating code needs the component from the design file */
-  generateComponentCode(principal: AuthPrincipal, connectionId: string): never {
-    this.registry.require(principal, connectionId);
+  async generateComponentCode(principal: AuthPrincipal, connectionId: string): Promise<never> {
+    await this.registry.require(principal, connectionId);
     throw new NotImplementedException(DESIGN_SYNC_UNSUPPORTED);
   }
 
   /** Versions seen by syncs on this connection: none until sync is implemented */
-  getFileVersions(principal: AuthPrincipal, connectionId: string): string[] {
-    const connection = this.registry.require(principal, connectionId);
+  async getFileVersions(principal: AuthPrincipal, connectionId: string): Promise<string[]> {
+    const connection = await this.registry.require(principal, connectionId);
     return connection.lastSyncVersion ? [connection.lastSyncVersion] : [];
   }
 
   /** 501: there is no scheduler, and nothing to schedule */
-  enableAutoSync(principal: AuthPrincipal, connectionId: string): never {
-    this.registry.require(principal, connectionId);
+  async enableAutoSync(principal: AuthPrincipal, connectionId: string): Promise<never> {
+    await this.registry.require(principal, connectionId);
     throw new NotImplementedException(AUTO_SYNC_UNSUPPORTED);
   }
 
-  disableAutoSync(principal: AuthPrincipal, connectionId: string): DesignSyncConnectionView {
+  disableAutoSync(principal: AuthPrincipal, connectionId: string): Promise<DesignSyncConnectionView> {
     return this.registry.disableAutoSync(principal, connectionId);
   }
 }

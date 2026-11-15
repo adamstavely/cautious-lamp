@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotImplementedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotImplementedException } from '@nestjs/common';
 import { AuthPrincipal } from '../auth/principal';
 import { EncryptionService } from '../common/security/encryption.service';
 import { DesignSystemService, Token } from '../design-system/design-system.service';
+import { DocumentStore } from '../reviews/document-store';
 import { AUTO_SYNC_UNSUPPORTED, ConnectionRegistry, PublicConnection, StoredConnection, bool, httpUrl, oneOf, text } from './connection-registry';
 
 export interface DesignToolToken {
@@ -25,7 +26,11 @@ export interface TokenMapping {
 
 export const TOKEN_SYNC_TOOLS = ['figma', 'penpot', 'adobe-xd'] as const;
 
-/** As stored (in memory); `apiKey` is encrypted */
+export const TOKEN_SYNC_CONNECTIONS_INDEX = 'design-system-token-sync-connections';
+/** Injection token for the connection store */
+export const TOKEN_SYNC_CONNECTION_STORE = Symbol('TOKEN_SYNC_CONNECTION_STORE');
+
+/** As stored in Elasticsearch; `apiKey` is encrypted */
 export interface TokenSyncConnection extends StoredConnection {
   name: string;
   tool: (typeof TOKEN_SYNC_TOOLS)[number];
@@ -92,8 +97,10 @@ export class TokenSyncService {
   constructor(
     private readonly designSystemService: DesignSystemService,
     encryption: EncryptionService,
+    @Inject(TOKEN_SYNC_CONNECTION_STORE) store: DocumentStore<TokenSyncConnection>,
   ) {
     this.registry = new ConnectionRegistry<TokenSyncConnection>(
+      store,
       encryption,
       'conn',
       {
@@ -110,29 +117,29 @@ export class TokenSyncService {
   }
 
   // Connection Management
-  getAllConnections(principal: AuthPrincipal): TokenSyncConnectionView[] {
+  getAllConnections(principal: AuthPrincipal): Promise<TokenSyncConnectionView[]> {
     return this.registry.list(principal);
   }
 
-  getConnection(principal: AuthPrincipal, id: string): TokenSyncConnectionView {
+  getConnection(principal: AuthPrincipal, id: string): Promise<TokenSyncConnectionView> {
     return this.registry.get(principal, id);
   }
 
-  createConnection(principal: AuthPrincipal, body: unknown): TokenSyncConnectionView {
+  createConnection(principal: AuthPrincipal, body: unknown): Promise<TokenSyncConnectionView> {
     return this.registry.create(principal, body);
   }
 
-  updateConnection(principal: AuthPrincipal, id: string, body: unknown): TokenSyncConnectionView {
+  updateConnection(principal: AuthPrincipal, id: string, body: unknown): Promise<TokenSyncConnectionView> {
     return this.registry.update(principal, id, body);
   }
 
-  deleteConnection(principal: AuthPrincipal, id: string): void {
-    this.registry.delete(principal, id);
+  deleteConnection(principal: AuthPrincipal, id: string): Promise<void> {
+    return this.registry.delete(principal, id);
   }
 
   /** 501: there is no design tool client to read tokens from */
-  syncTokens(principal: AuthPrincipal, connectionId: string): never {
-    this.registry.require(principal, connectionId);
+  async syncTokens(principal: AuthPrincipal, connectionId: string): Promise<never> {
+    await this.registry.require(principal, connectionId);
     throw new NotImplementedException(TOKEN_SYNC_UNSUPPORTED);
   }
 
@@ -142,12 +149,12 @@ export class TokenSyncService {
   }
 
   /** 501: there is no scheduler, and nothing to schedule */
-  enableAutoSync(principal: AuthPrincipal, connectionId: string): never {
-    this.registry.require(principal, connectionId);
+  async enableAutoSync(principal: AuthPrincipal, connectionId: string): Promise<never> {
+    await this.registry.require(principal, connectionId);
     throw new NotImplementedException(AUTO_SYNC_UNSUPPORTED);
   }
 
-  disableAutoSync(principal: AuthPrincipal, connectionId: string): TokenSyncConnectionView {
+  disableAutoSync(principal: AuthPrincipal, connectionId: string): Promise<TokenSyncConnectionView> {
     return this.registry.disableAutoSync(principal, connectionId);
   }
 

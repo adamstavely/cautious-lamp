@@ -29,17 +29,17 @@ export class ContributionWorkflowController {
   // ==================== Guidelines ====================
 
   @Get('guidelines')
-  getGuidelines(
+  async getGuidelines(
     @Query('category') category?: string,
   ) {
     return this.contributionService.getAllGuidelines(category as ContributionGuideline['category']);
   }
 
   @Get('guidelines/:id')
-  getGuideline(
+  async getGuideline(
     @Param('id') id: string,
   ) {
-    const guideline = this.contributionService.getGuideline(id);
+    const guideline = await this.contributionService.getGuideline(id);
     if (!guideline) {
       throw new BadRequestException(`Guideline '${id}' not found`);
     }
@@ -48,7 +48,7 @@ export class ContributionWorkflowController {
 
   @Post('guidelines')
   @RequirePermission(Permission.COMPONENT_APPROVE)
-  createGuideline(
+  async createGuideline(
     @Body() data: {
       title: string;
       description: string;
@@ -68,17 +68,17 @@ export class ContributionWorkflowController {
   // ==================== Templates ====================
 
   @Get('templates')
-  getTemplates(
+  async getTemplates(
     @Query('category') category?: string,
   ) {
     return this.contributionService.getAllTemplates(category as ContributionTemplate['category']);
   }
 
   @Get('templates/:id')
-  getTemplate(
+  async getTemplate(
     @Param('id') id: string,
   ) {
-    const template = this.contributionService.getTemplate(id);
+    const template = await this.contributionService.getTemplate(id);
     if (!template) {
       throw new BadRequestException(`Template '${id}' not found`);
     }
@@ -87,7 +87,7 @@ export class ContributionWorkflowController {
 
   @Post('templates')
   @RequirePermission(Permission.COMPONENT_APPROVE)
-  createTemplate(
+  async createTemplate(
     @Body() data: {
       name: string;
       description: string;
@@ -100,9 +100,10 @@ export class ContributionWorkflowController {
     return this.contributionService.createTemplate(data);
   }
 
+  /** Returns the pull request text (markdown) only; no pull request is opened */
   @Post('templates/:id/generate-pr')
   @RequirePermission(Permission.COMPONENT_CREATE)
-  generatePRTemplate(
+  async generatePRTemplate(
     @Param('id') id: string,
     @Body() data: {
       title?: string;
@@ -111,9 +112,7 @@ export class ContributionWorkflowController {
     },
   ) {
     try {
-      return {
-        prTemplate: this.contributionService.generatePRTemplate(id, data),
-      };
+      return await this.contributionService.generatePRTemplate(id, data ?? {});
     } catch (error: any) {
       throw new BadRequestException(error.message);
     }
@@ -122,7 +121,7 @@ export class ContributionWorkflowController {
   // ==================== Automated Checks ====================
 
   @Get('checks')
-  getChecks(
+  async getChecks(
     @Query('category') category?: string,
     @Query('enabledOnly') enabledOnly?: string,
   ) {
@@ -133,10 +132,10 @@ export class ContributionWorkflowController {
   }
 
   @Get('checks/:id')
-  getCheck(
+  async getCheck(
     @Param('id') id: string,
   ) {
-    const check = this.contributionService.getCheck(id);
+    const check = await this.contributionService.getCheck(id);
     if (!check) {
       throw new BadRequestException(`Check '${id}' not found`);
     }
@@ -145,7 +144,7 @@ export class ContributionWorkflowController {
 
   @Post('checks')
   @RequirePermission(Permission.COMPONENT_APPROVE)
-  createCheck(
+  async createCheck(
     @Body() data: {
       name: string;
       description: string;

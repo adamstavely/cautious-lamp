@@ -7,6 +7,7 @@ import { EncryptionService } from '../common/security/encryption.service';
 import { SecurityAuditService } from '../common/security/security-audit.service';
 import { DesignSyncController } from '../design-sync/design-sync.controller';
 import { DesignSyncService } from '../design-sync/design-sync.service';
+import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { DesignSystemService } from '../design-system/design-system.service';
 import { Permission } from '../rbac/rbac.service';
 import { TokenSyncController } from './token-sync.controller';
@@ -45,11 +46,11 @@ describe('Sync connections over HTTP', () => {
 
   beforeAll(async () => {
     encryption = new EncryptionService();
-    tokenSync = new TokenSyncService({ getAllTokens: () => [] } as unknown as DesignSystemService, encryption);
+    tokenSync = new TokenSyncService({ getAllTokens: () => [] } as unknown as DesignSystemService, encryption, new InMemoryStore());
     const moduleRef = await Test.createTestingModule({
       controllers: [DesignSyncController, TokenSyncController],
       providers: [
-        { provide: DesignSyncService, useValue: new DesignSyncService(encryption) },
+        { provide: DesignSyncService, useValue: new DesignSyncService(encryption, new InMemoryStore()) },
         { provide: TokenSyncService, useValue: tokenSync },
         { provide: AuthService, useValue: auth },
         { provide: SecurityAuditService, useValue: { logPermissionDenied: async () => undefined } },
@@ -112,7 +113,7 @@ describe('Sync connections over HTTP', () => {
     it('stores the credential encrypted', async () => {
       const service = path === '/token-sync' ? tokenSync : (app.get(DesignSyncService) as DesignSyncService);
       const registry = (service as unknown as { registry: { require: Function; credential: Function } }).registry;
-      const stored = registry.require(await auth.resolve('tok-alice'), id);
+      const stored = await registry.require(await auth.resolve('tok-alice'), id);
       expect(stored.apiKey).not.toBe('figd_secret_value');
       expect(encryption.isEncrypted(stored.apiKey)).toBe(true);
       expect(registry.credential(stored)).toBe('figd_secret_value');

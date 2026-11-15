@@ -15,7 +15,8 @@ import { AuthPrincipal } from '../auth/principal';
 import { SecurityAuditService } from '../common/security/security-audit.service';
 import { ComponentAccessService } from '../design-system/component-access.service';
 import { DesignSystemService } from '../design-system/design-system.service';
-import { PatternsLibraryService } from '../patterns-library/patterns-library.service';
+import { PATTERN_META_STORE, PATTERN_STORE, PatternsLibraryService } from '../patterns-library/patterns-library.service';
+import { InMemoryStore } from '../reviews/testing/in-memory-store';
 import { InMemoryQueryableStore } from '../workspaces/testing/in-memory-queryable-store';
 import { WorkspaceAccessService } from '../workspaces/workspace-access.service';
 import { WORKSPACE_STORE, WorkspaceDoc } from '../workspaces/workspace.types';
@@ -71,6 +72,8 @@ describe('AI assistant HTTP API', () => {
         DesignSystemService,
         ComponentAccessService,
         PatternsLibraryService,
+        { provide: PATTERN_STORE, useValue: new InMemoryStore() },
+        { provide: PATTERN_META_STORE, useValue: new InMemoryStore() },
         WorkspaceAccessService,
         { provide: WORKSPACE_STORE, useValue: workspaces },
         { provide: AuthService, useValue: authStub },
