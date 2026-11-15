@@ -17,7 +17,7 @@
               class="step-dot"
               :class="currentStep > index ? 'step-dot-done' : currentStep === index ? 'step-dot-current' : 'step-dot-todo'"
             >
-              <span v-if="currentStep > index" class="material-symbols-outlined text-lg" aria-hidden="true">check</span>
+              <AppIcon name="check" v-if="currentStep > index" class="text-lg" />
               <span v-else aria-hidden="true">{{ index + 1 }}</span>
             </span>
             <span class="text-sm font-medium hidden sm:inline" :class="currentStep >= index ? 'text-ink-strong' : 'text-ink-muted'">
@@ -32,7 +32,7 @@
         <!-- Getting started guide -->
         <div class="guide">
           <div class="flex items-start gap-3">
-            <span class="material-symbols-outlined text-2xl text-accent-text" aria-hidden="true">auto_awesome</span>
+            <AppIcon name="sparkles" class="text-2xl text-accent-text" />
             <div class="flex-1 flex flex-col gap-4">
               <div>
                 <h2 class="text-lg font-semibold text-ink-strong">How to use this wizard</h2>
@@ -121,7 +121,7 @@
                 In Stencil.js, props are defined with the <UiCode>@Prop()</UiCode> decorator. Props can be reflected to HTML attributes, made mutable, and have default values.
               </UiCallout>
             </div>
-            <UiButton variant="primary" icon="add" label="Add property" @click="addProperty" />
+            <UiButton variant="primary" icon="plus" label="Add property" @click="addProperty" />
           </div>
 
           <div class="flex flex-col gap-4">
@@ -129,7 +129,7 @@
               <legend class="sr-only">Property {{ index + 1 }}</legend>
               <div class="flex items-start justify-between">
                 <p class="font-semibold text-ink-strong" aria-hidden="true">Property {{ index + 1 }}</p>
-                <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Remove property ${index + 1}`" @click="removeProperty(index)" />
+                <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Remove property ${index + 1}`" @click="removeProperty(index)" />
               </div>
 
               <div class="grid sm:grid-cols-2 gap-4">
@@ -165,7 +165,7 @@
                 body="Properties are the inputs your component accepts. For example, a button might have &quot;variant&quot; and &quot;size&quot; properties."
               >
                 <template #actions>
-                  <UiButton variant="primary" icon="add" label="Add your first property" @click="addProperty" />
+                  <UiButton variant="primary" icon="plus" label="Add your first property" @click="addProperty" />
                 </template>
               </UiEmptyState>
               <div class="example-well">
@@ -197,14 +197,14 @@
           <section class="flex flex-col gap-4" aria-labelledby="wizard-events-heading">
             <div class="flex items-center justify-between">
               <h3 id="wizard-events-heading" class="text-lg font-semibold text-ink-strong">Events</h3>
-              <UiButton variant="primary" icon="add" label="Add event" @click="addEvent" />
+              <UiButton variant="primary" icon="plus" label="Add event" @click="addEvent" />
             </div>
 
             <fieldset v-for="(event, index) in componentData.events" :key="index" class="item-card">
               <legend class="sr-only">Event {{ index + 1 }}</legend>
               <div class="flex items-start justify-between">
                 <p class="font-medium text-ink-strong" aria-hidden="true">Event {{ index + 1 }}</p>
-                <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Remove event ${index + 1}`" @click="removeEvent(index)" />
+                <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Remove event ${index + 1}`" @click="removeEvent(index)" />
               </div>
               <div class="grid sm:grid-cols-2 gap-4">
                 <UiInput v-model="event.name" label="Name (camelCase)" required placeholder="e.g., buttonClick, valueChange" hint="Event name in camelCase. Will be emitted as a CustomEvent." />
@@ -235,14 +235,14 @@
           <section class="flex flex-col gap-4" aria-labelledby="wizard-methods-heading">
             <div class="flex items-center justify-between">
               <h3 id="wizard-methods-heading" class="text-lg font-semibold text-ink-strong">Methods</h3>
-              <UiButton variant="primary" icon="add" label="Add method" @click="addMethod" />
+              <UiButton variant="primary" icon="plus" label="Add method" @click="addMethod" />
             </div>
 
             <fieldset v-for="(method, index) in componentData.methods" :key="index" class="item-card">
               <legend class="sr-only">Method {{ index + 1 }}</legend>
               <div class="flex items-start justify-between">
                 <p class="font-medium text-ink-strong" aria-hidden="true">Method {{ index + 1 }}</p>
-                <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Remove method ${index + 1}`" @click="removeMethod(index)" />
+                <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Remove method ${index + 1}`" @click="removeMethod(index)" />
               </div>
               <div class="grid sm:grid-cols-2 gap-4">
                 <UiInput v-model="method.name" label="Name (camelCase)" required placeholder="e.g., open, close, reset" hint="Public method name. Can be called from parent components." />
@@ -322,7 +322,7 @@
               <div class="flex flex-col items-center gap-3">
                 <UiButton
                   variant="primary"
-                  icon="auto_fix_high"
+                  icon="wand-sparkles"
                   :loading="generating"
                   :label="generating ? 'Generating...' : 'Generate component'"
                   :disabled="generating || !componentData.name || !componentData.description || !componentData.category"

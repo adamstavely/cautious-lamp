@@ -120,7 +120,7 @@ const ratioOptions = [
 const exportFormats = [
   { value: 'css', label: 'Export CSS', icon: 'code' },
   { value: 'tailwind', label: 'Export Tailwind', icon: 'settings' },
-  { value: 'json', label: 'Export JSON', icon: 'data_object' },
+  { value: 'json', label: 'Export JSON', icon: 'braces' },
 ];
 
 const headingSamples = ['h1', 'h2', 'h3', 'h4'];

@@ -14,7 +14,7 @@
           <!-- Preview -->
           <UiPanel title="Preview">
             <template #actions>
-              <UiChip v-if="animationEnabled" tone="accent" icon="sync">Animating</UiChip>
+              <UiChip v-if="animationEnabled" tone="accent" icon="refresh-cw">Animating</UiChip>
             </template>
 
             <div class="gradient-preview" :class="{ 'animate-gradient': animationEnabled }" role="img" aria-label="Gradient preview"></div>
@@ -42,8 +42,8 @@
                 <div class="flex flex-wrap items-center gap-2 h-11" role="status">
                   <span class="text-sm font-medium text-ink">Ratio</span>
                   <UiChip :tone="contrastTone">{{ contrastRatio.toFixed(2) }}:1</UiChip>
-                  <UiChip :tone="contrastRatio >= 4.5 ? 'success' : 'danger'" :icon="contrastRatio >= 4.5 ? 'check' : 'close'">AA</UiChip>
-                  <UiChip :tone="contrastRatio >= 7 ? 'success' : 'danger'" :icon="contrastRatio >= 7 ? 'check' : 'close'">AAA</UiChip>
+                  <UiChip :tone="contrastRatio >= 4.5 ? 'success' : 'danger'" :icon="contrastRatio >= 4.5 ? 'check' : 'x'">AA</UiChip>
+                  <UiChip :tone="contrastRatio >= 7 ? 'success' : 'danger'" :icon="contrastRatio >= 7 ? 'check' : 'x'">AAA</UiChip>
                 </div>
                 <div class="gradient-fill text-sample flex-1">Sample</div>
               </div>
@@ -56,7 +56,7 @@
               <UiButton size="sm" :loading="loadingPalettes" icon="palette" @click="fetchPalettes">
                 {{ loadingPalettes ? 'Loading…' : 'Load from Palette Builder' }}
               </UiButton>
-              <UiButton size="sm" variant="primary" icon="add" @click="addColorStop">Add stop</UiButton>
+              <UiButton size="sm" variant="primary" icon="plus" @click="addColorStop">Add stop</UiButton>
             </template>
 
             <InlineNotice :notice="paletteNotice" @dismiss="clearPaletteNotice" />
@@ -84,14 +84,7 @@
               >
                 <fieldset class="flex flex-wrap items-end gap-3">
                   <legend class="sr-only">Stop {{ index + 1 }}</legend>
-                  <span
-                    class="material-symbols-outlined drag-handle"
-                    draggable="true"
-                    title="Drag to reorder"
-                    aria-hidden="true"
-                    @dragstart="handleDragStart(index, $event)"
-                    @dragend="handleDragEnd"
-                  >drag_indicator</span>
+                  <AppIcon name="grip-vertical" class="drag-handle" draggable="true" title="Drag to reorder" @dragstart="handleDragStart(index, $event)" @dragend="handleDragEnd" />
 
                   <button type="button" class="swatch-button" :aria-label="`Pick color for stop ${index + 1}`" title="Pick color" @click="openColorPicker(index, $event)">
                     <UiSwatch :color="stop.color" size="fill" :label="`Stop ${index + 1}: ${stop.color}`" />
@@ -131,7 +124,7 @@
                   <UiButton
                     v-if="colorStops.length > 2"
                     icon-only
-                    icon="delete"
+                    icon="trash-2"
                     variant="ghost"
                     :label="`Remove stop ${index + 1}`"
                     @click="removeColorStop(index)"
@@ -155,7 +148,7 @@
                 <h3 class="text-sm font-medium text-ink">Layers</h3>
                 <p class="text-xs text-ink-muted">Stack multiple gradients with blend modes</p>
               </div>
-              <UiButton size="sm" icon="add" @click="addLayer">Add layer</UiButton>
+              <UiButton size="sm" icon="plus" @click="addLayer">Add layer</UiButton>
             </div>
 
             <ul class="flex flex-col gap-2 max-h-64 overflow-y-auto">
@@ -169,9 +162,9 @@
                   </span>
                 </button>
                 <div class="flex items-center">
-                  <UiButton v-if="index > 0" icon-only size="sm" variant="ghost" icon="arrow_upward" :label="`Move layer ${index + 1} up`" @click="moveLayer(index, index - 1)" />
-                  <UiButton v-if="index < layers.length - 1" icon-only size="sm" variant="ghost" icon="arrow_downward" :label="`Move layer ${index + 1} down`" @click="moveLayer(index, index + 1)" />
-                  <UiButton v-if="layers.length > 1" icon-only size="sm" variant="ghost" icon="delete" :label="`Delete layer ${index + 1}`" @click="removeLayer(index)" />
+                  <UiButton v-if="index > 0" icon-only size="sm" variant="ghost" icon="arrow-up" :label="`Move layer ${index + 1} up`" @click="moveLayer(index, index - 1)" />
+                  <UiButton v-if="index < layers.length - 1" icon-only size="sm" variant="ghost" icon="arrow-down" :label="`Move layer ${index + 1} down`" @click="moveLayer(index, index + 1)" />
+                  <UiButton v-if="layers.length > 1" icon-only size="sm" variant="ghost" icon="trash-2" :label="`Delete layer ${index + 1}`" @click="removeLayer(index)" />
                 </div>
               </li>
             </ul>
@@ -386,8 +379,8 @@ const exportFormatOptions = [
 const fileExports = [
   { label: 'Export as Image', icon: 'image', variant: 'primary', run: () => exportAsImage() },
   { label: 'Export as SVG', icon: 'code', variant: 'secondary', run: () => exportAsSVG() },
-  { label: 'Export to Adobe', icon: 'file_download', variant: 'secondary', run: () => exportToAdobe() },
-  { label: 'Export to Penpot', icon: 'file_download', variant: 'secondary', run: () => exportToPenpot() },
+  { label: 'Export to Adobe', icon: 'download', variant: 'secondary', run: () => exportToAdobe() },
+  { label: 'Export to Penpot', icon: 'download', variant: 'secondary', run: () => exportToPenpot() },
 ];
 
 // Fixed backdrops to judge the gradient against (test colours, not design colours)

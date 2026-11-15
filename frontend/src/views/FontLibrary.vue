@@ -34,15 +34,15 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
+                      <AppIcon name="tag" class="text-base" />
                       Google Fonts
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">library_books</span>
+                      <AppIcon name="library" class="text-base" />
                       15 font families
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
+                      <AppIcon name="refresh-ccw" class="text-base" />
                       Updated Jan 15, 2024
                     </span>
                   </div>

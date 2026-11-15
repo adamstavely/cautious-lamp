@@ -3,7 +3,7 @@
     <UiSegmented
       :model-value="uploadType"
       label="Upload type"
-      :options="[{ value: 'file', label: 'Upload file', icon: 'upload_file' }, { value: 'url', label: 'Website URL', icon: 'link' }]"
+      :options="[{ value: 'file', label: 'Upload file', icon: 'file-up' }, { value: 'url', label: 'Website URL', icon: 'link' }]"
       @update:model-value="setUploadType"
     />
 
@@ -42,7 +42,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <UiCheckbox v-model="showPassword" label="Show password" />
           <UiButton size="sm" variant="ghost" icon="key" @click="generatePassword">Suggest strong password</UiButton>
-          <UiButton size="sm" variant="ghost" :icon="passwordCopied ? 'check' : 'content_copy'" :disabled="!password" @click="copyPassword">
+          <UiButton size="sm" variant="ghost" :icon="passwordCopied ? 'check' : 'copy'" :disabled="!password" @click="copyPassword">
             {{ passwordCopied ? 'Copied' : 'Copy password' }}
           </UiButton>
           <span class="sr-only" aria-live="polite">{{ passwordCopied ? 'Password copied' : '' }}</span>

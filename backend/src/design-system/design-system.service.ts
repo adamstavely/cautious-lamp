@@ -2454,28 +2454,28 @@ export const Table = ({
   getComponentMetadata(components: Component[] = this.components) {
     const metadata: Record<string, any> = {};
     
-    // Icon mapping for components
+    // Lucide icon names for components
     const iconMap: Record<string, string> = {
-      'button': 'smart_button',
-      'card': 'view_module',
-      'input': 'input',
-      'select': 'arrow_drop_down',
-      'dropdown': 'arrow_drop_down',
+      'button': 'rectangle-horizontal',
+      'card': 'layout-grid',
+      'input': 'text-cursor-input',
+      'select': 'chevron-down',
+      'dropdown': 'chevron-down',
       'navigation': 'navigation',
       'sidebar': 'menu',
       'topnav': 'menu',
-      'breadcrumbs': 'navigate_next',
-      'table': 'table_chart',
-      'modal': 'fullscreen',
+      'breadcrumbs': 'chevron-right',
+      'table': 'table-2',
+      'modal': 'maximize',
       'tooltip': 'info',
-      'drawer': 'left_panel_close',
+      'drawer': 'panel-left-close',
     };
     
     components.forEach((component) => {
       metadata[component.id] = {
         name: component.name,
         path: `@design-system/components/${component.id}`,
-        icon: iconMap[component.id] || 'widgets',
+        icon: iconMap[component.id] || 'blocks',
         links: {
           docs: `/components/${component.id === 'button' ? 'buttons' : component.id === 'card' ? 'cards' : component.id === 'input' || component.id === 'select' ? 'forms' : component.id === 'navigation' || component.id === 'sidebar' || component.id === 'topnav' || component.id === 'breadcrumbs' ? 'navigation' : component.id === 'table' ? 'data-display' : 'overlays'}`,
           github: `https://github.com/your-org/design-system/tree/main/packages/components/src/${component.name}`,

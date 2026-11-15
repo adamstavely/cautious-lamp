@@ -11,9 +11,7 @@
         class="pointer-events-auto min-w-[300px] max-w-md rounded-lg shadow-lg border p-4 flex items-start gap-3"
         :class="getToastClasses(toast.type)"
       >
-        <span class="material-symbols-outlined flex-shrink-0" :class="getIconClass(toast.type)">
-          {{ getIcon(toast.type) }}
-        </span>
+        <AppIcon :name="getIcon(toast.type)" class="flex-shrink-0" :class="getIconClass(toast.type)" />
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium" :class="getTextClass(toast.type)">
             {{ toast.message }}
@@ -25,7 +23,7 @@
           :class="getTextClass(toast.type)"
           aria-label="Close notification"
         >
-          <span class="material-symbols-outlined text-base">close</span>
+          <AppIcon name="x" class="text-base" />
         </button>
       </div>
     </TransitionGroup>
@@ -109,9 +107,9 @@ const getTextClass = (type) => {
 
 const getIcon = (type) => {
   const icons = {
-    success: 'check_circle',
-    error: 'error',
-    warning: 'warning',
+    success: 'circle-check',
+    error: 'circle-alert',
+    warning: 'triangle-alert',
     info: 'info',
   };
   return icons[type] || icons.info;

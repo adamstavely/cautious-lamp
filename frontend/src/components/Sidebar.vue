@@ -14,7 +14,7 @@
           @click="handleSidebarClick"
           :class="['side-item mb-1', { on: isActive(item.path) }]"
         >
-          <span class="material-symbols-outlined side-ic" aria-hidden="true">{{ item.icon }}</span>
+          <AppIcon :name="item.icon" class="side-ic" />
           <span class="side-label">{{ item.label }}</span>
         </router-link>
         <!-- Divider after HCD and Design Assets -->
@@ -33,7 +33,7 @@
         @click="handleSidebarClick"
         :class="['side-item', { on: isActive('/admin') }]"
       >
-        <span class="material-symbols-outlined side-ic" aria-hidden="true">admin_panel_settings</span>
+        <AppIcon name="shield-user" class="side-ic" />
         <span class="side-label">Admin</span>
       </router-link>
     </div>
@@ -46,9 +46,7 @@
         :title="darkTheme ? 'Light Mode' : 'Dark Mode'"
         :aria-label="darkTheme ? 'Switch to light mode' : 'Switch to dark mode'"
       >
-        <span class="material-symbols-outlined side-ic flex-shrink-0" aria-hidden="true">
-          {{ darkTheme ? 'light_mode' : 'dark_mode' }}
-        </span>
+        <AppIcon :name="darkTheme ? 'sun' : 'moon'" class="side-ic flex-shrink-0" />
       </button>
     </div>
   </aside>
@@ -124,16 +122,16 @@ const toggleDarkMode = () => {
 };
 
 const menuItems = [
-  { path: '/getting-started', label: 'Getting Started', icon: 'rocket_launch' },
-  { path: '/guidelines', label: 'Guidelines', icon: 'menu_book' },
-  { path: '/research', label: 'HCD', icon: 'note_stack' },
-  { path: '/components', label: 'Components', icon: 'widgets' },
-  { path: '/tokens', label: 'Tokens', icon: 'style' },
-  { path: '/patterns', label: 'Patterns', icon: 'pattern' },
-  { path: '/design-assets', label: 'Design Assets', icon: 'collections' },
-  { path: '/review', label: 'Review', icon: 'rate_review' },
-  { path: '/data-viz', label: 'Data Viz', icon: 'bar_chart' },
-  { path: '/tools', label: 'Tools', icon: 'build' },
+  { path: '/getting-started', label: 'Getting Started', icon: 'rocket' },
+  { path: '/guidelines', label: 'Guidelines', icon: 'book-open' },
+  { path: '/research', label: 'HCD', icon: 'notebook-tabs' },
+  { path: '/components', label: 'Components', icon: 'blocks' },
+  { path: '/tokens', label: 'Tokens', icon: 'swatch-book' },
+  { path: '/patterns', label: 'Patterns', icon: 'layout-template' },
+  { path: '/design-assets', label: 'Design Assets', icon: 'images' },
+  { path: '/review', label: 'Review', icon: 'message-square-text' },
+  { path: '/data-viz', label: 'Data Viz', icon: 'chart-column' },
+  { path: '/tools', label: 'Tools', icon: 'wrench' },
 ];
 
 const isActive = (path) => {

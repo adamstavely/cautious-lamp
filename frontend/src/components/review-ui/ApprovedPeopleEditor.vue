@@ -12,11 +12,11 @@
             @update:model-value="update(index, $event)"
           />
         </div>
-        <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove email address ${index + 1}`" @click="remove(index)" />
+        <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove email address ${index + 1}`" @click="remove(index)" />
       </li>
     </ul>
     <div>
-      <UiButton size="sm" variant="ghost" icon="add" @click="add">Add person</UiButton>
+      <UiButton size="sm" variant="ghost" icon="plus" @click="add">Add person</UiButton>
     </div>
   </UiField>
 </template>

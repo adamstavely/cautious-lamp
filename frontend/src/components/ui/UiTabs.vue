@@ -16,7 +16,7 @@
         @click="$emit('update:modelValue', tab.value)"
         @keydown="onKey($event, index)"
       >
-        <span v-if="tab.icon" class="material-symbols-outlined text-base" aria-hidden="true">{{ tab.icon }}</span>
+        <AppIcon :name="tab.icon" v-if="tab.icon" class="text-base" />
         {{ tab.label }}
         <UiChip v-if="tab.count !== undefined" tone="neutral">{{ tab.count }}</UiChip>
       </button>

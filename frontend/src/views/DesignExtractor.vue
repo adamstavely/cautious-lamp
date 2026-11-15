@@ -21,7 +21,7 @@
             <UiCheckbox v-model="options.slow" label="Slow loading site (3x timeout)" />
           </div>
         </fieldset>
-        <UiButton variant="primary" type="submit" icon="travel_explore" :disabled="!url" :loading="extracting">
+        <UiButton variant="primary" type="submit" icon="globe-lock" :disabled="!url" :loading="extracting">
           {{ extracting ? 'Extracting design tokens…' : 'Extract design tokens' }}
         </UiButton>
       </form>
@@ -30,7 +30,7 @@
     <!-- Token review -->
     <UiPanel v-if="extractedData && !saving" title="Review extracted tokens">
       <template #actions>
-        <UiButton variant="ghost" icon="close" icon-only label="Discard and start over" @click="extractedData = null; url = ''; error = null" />
+        <UiButton variant="ghost" icon="x" icon-only label="Discard and start over" @click="extractedData = null; url = ''; error = null" />
       </template>
 
       <p class="mb-6 text-sm text-ink-secondary">
@@ -58,7 +58,7 @@
                   </div>
                   <div v-else class="mt-2 break-words font-code text-sm text-ink">{{ getTokenValue(token) }}</div>
                 </div>
-                <UiButton size="sm" variant="ghost" icon="delete" icon-only :label="`Remove token ${key}`" @click="removeToken(category, key)" />
+                <UiButton size="sm" variant="ghost" icon="trash-2" icon-only :label="`Remove token ${key}`" @click="removeToken(category, key)" />
               </div>
               <p v-if="getTokenDescription(token)" class="text-xs text-ink-muted">{{ getTokenDescription(token) }}</p>
               <UiChip tone="accent" class="mt-2">{{ getTokenType(token) }}</UiChip>

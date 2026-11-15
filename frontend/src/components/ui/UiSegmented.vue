@@ -16,7 +16,7 @@
         @click="select(option.value)"
         @keydown="onKey($event, index)"
       >
-        <span v-if="option.icon" class="material-symbols-outlined text-base" aria-hidden="true">{{ option.icon }}</span>
+        <AppIcon :name="option.icon" v-if="option.icon" class="text-base" />
         {{ option.label }}
       </button>
     </div>

@@ -145,7 +145,7 @@ const setCorner = (corner, value) => {
 const exportButtons = [
   { format: 'css', icon: 'code', label: 'Export CSS' },
   { format: 'tailwind', icon: 'settings', label: 'Export Tailwind' },
-  { format: 'json', icon: 'data_object', label: 'Export JSON' },
+  { format: 'json', icon: 'braces', label: 'Export JSON' },
 ];
 
 const updateUnified = () => {

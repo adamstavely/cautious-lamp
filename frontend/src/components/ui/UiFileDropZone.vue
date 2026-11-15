@@ -14,20 +14,20 @@
       <input ref="input" type="file" class="sr-only" tabindex="-1" aria-hidden="true" :accept="accept" @change="onChange" />
 
       <div v-if="file" class="ui-drop-file">
-        <span class="material-symbols-outlined ui-drop-file-icon" aria-hidden="true">draft</span>
+        <AppIcon name="file-pen" class="ui-drop-file-icon" />
         <div class="min-w-0 flex-1 text-left">
           <p class="ui-drop-file-name">{{ file.name }}</p>
           <p v-if="file.size !== undefined" class="ui-drop-file-size">{{ formatSize(file.size) }}</p>
         </div>
-        <UiButton icon-only icon="close" variant="ghost" size="sm" :label="`Remove ${file.name}`" @click="remove" />
+        <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove ${file.name}`" @click="remove" />
       </div>
 
       <template v-else>
-        <span class="material-symbols-outlined ui-drop-icon" aria-hidden="true">{{ icon }}</span>
+        <AppIcon :name="icon" class="ui-drop-icon" />
         <p class="ui-drop-prompt">{{ prompt }}</p>
       </template>
 
-      <UiButton size="sm" icon="upload_file" :label="file ? 'Choose another file' : buttonLabel" @click="open" />
+      <UiButton size="sm" icon="file-up" :label="file ? 'Choose another file' : buttonLabel" @click="open" />
     </div>
   </UiField>
 </template>
@@ -56,7 +56,7 @@ const props = defineProps({
   prompt: { type: String, default: 'Drop a file here, or choose one.' },
   buttonLabel: { type: String, default: 'Choose file' },
   /** Material Symbols name shown above the prompt */
-  icon: { type: String, default: 'cloud_upload' },
+  icon: { type: String, default: 'cloud-upload' },
 });
 
 const emit = defineEmits(['select', 'remove']);

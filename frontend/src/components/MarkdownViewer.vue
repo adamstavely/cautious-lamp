@@ -49,7 +49,7 @@
           <!-- Edit Page and Last Updated Footer -->
           <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-sm">
             <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-              <span class="material-symbols-outlined text-base">edit</span>
+              <AppIcon name="pencil" class="text-base" />
               <a 
                 :href="editPageUrl" 
                 target="_blank" 

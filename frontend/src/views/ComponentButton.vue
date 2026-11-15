@@ -24,10 +24,10 @@
       description="Experiment with the Button component. Edit props, see live previews, and export code snippets."
     >
       <template #actions>
-        <UiButton variant="primary" icon="share" label="Share playground" @click="sharePlayground" />
+        <UiButton variant="primary" icon="share-2" label="Share playground" @click="sharePlayground" />
         <UiButton
           v-if="sharedPlaygroundUrl"
-          :icon="shareUrlCopied ? 'check' : 'content_copy'"
+          :icon="shareUrlCopied ? 'check' : 'copy'"
           :label="shareUrlCopied ? 'Copied!' : 'Copy link'"
           @click="copyShareUrl"
         />
@@ -53,12 +53,12 @@
             <UiButton
               size="sm"
               variant="ghost"
-              :icon="previewDarkMode ? 'dark_mode' : 'light_mode'"
+              :icon="previewDarkMode ? 'moon' : 'sun'"
               :label="previewDarkMode ? 'Dark' : 'Light'"
               :aria-pressed="previewDarkMode"
               @click="previewDarkMode = !previewDarkMode"
             />
-            <UiButton size="sm" variant="ghost" icon="fullscreen" icon-only label="Toggle fullscreen" @click="toggleFullscreen" />
+            <UiButton size="sm" variant="ghost" icon="maximize" icon-only label="Toggle fullscreen" @click="toggleFullscreen" />
           </template>
           <div class="preview-stage" :class="previewDarkMode ? 'bg-surface-inverse dark' : 'bg-surface-sunken'">
             <component-preview
@@ -92,7 +92,7 @@
       <template #actions>
         <UiButton
           :variant="showVariantBuilder ? 'primary' : 'secondary'"
-          :icon="showVariantBuilder ? 'remove' : 'add'"
+          :icon="showVariantBuilder ? 'minus' : 'plus'"
           :label="showVariantBuilder ? 'Hide builder' : 'Create variant'"
           :aria-expanded="showVariantBuilder"
           @click="showVariantBuilder = !showVariantBuilder"
@@ -174,7 +174,7 @@
         >
           <template #actions>
             <UiChip tone="info">Custom</UiChip>
-            <UiButton size="sm" variant="ghost" icon="delete" icon-only :label="`Delete ${variant.name} variant`" @click="deleteVariant(variant.name)" />
+            <UiButton size="sm" variant="ghost" icon="trash-2" icon-only :label="`Delete ${variant.name} variant`" @click="deleteVariant(variant.name)" />
           </template>
           <div class="demo-stage" :class="{ 'mb-4': variant.generatedCode }">
             <UiDesignedButton :styles="getVariantStyles(variant.properties)">
@@ -238,7 +238,7 @@
     <!-- Performance -->
     <PageSection title="Performance metrics" description="Bundle size, dependencies and browser support." divided>
       <template v-if="performanceData" #actions>
-        <UiButton size="sm" icon="refresh" label="Refresh" @click="loadPerformanceData" />
+        <UiButton size="sm" icon="refresh-cw" label="Refresh" @click="loadPerformanceData" />
       </template>
 
       <UiSpinner v-if="performanceLoading" label="Loading performance data..." />
@@ -249,13 +249,13 @@
           <UiStat label="React size" icon="code" :value="formatSize(performanceData.reactSize)" />
           <UiStat
             label="Total size"
-            icon="storage"
+            icon="hard-drive"
             :value="formatSize(performanceData.totalSize)"
             :hint="`+ ${formatSize(performanceData.dependenciesSize)} deps`"
           />
           <UiStat
             label="Gzipped"
-            icon="compress"
+            icon="shrink"
             :value="formatSize(performanceData.gzippedSize)"
             :hint="`${Math.round((performanceData.gzippedSize / performanceData.totalSize) * 100)}% compression`"
           />
@@ -414,7 +414,7 @@
     <PageSection title="Best practices" description="Recommended patterns and guidelines for using the Button component effectively." divided>
       <div class="space-y-6">
         <UiPanel v-for="practice in bestPractices" :key="practice.title" :title="practice.title" :description="practice.description">
-          <template #actions><UiChip tone="success" icon="check_circle">Do</UiChip></template>
+          <template #actions><UiChip tone="success" icon="circle-check">Do</UiChip></template>
           <UiCodeBlock :code="practice.code" label="Example" />
         </UiPanel>
       </div>
@@ -424,7 +424,7 @@
     <PageSection title="Anti-patterns" description="Common mistakes to avoid when using the Button component." divided>
       <div class="space-y-6">
         <UiPanel v-for="pattern in antiPatterns" :key="pattern.title" :title="pattern.title" :description="pattern.description">
-          <template #actions><UiChip tone="danger" icon="error">Avoid</UiChip></template>
+          <template #actions><UiChip tone="danger" icon="circle-alert">Avoid</UiChip></template>
           <UiCodeBlock :code="pattern.code" label="Example" />
         </UiPanel>
       </div>

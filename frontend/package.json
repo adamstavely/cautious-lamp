@@ -13,6 +13,7 @@
     "check:sfc": "node scripts/check-sfc.mjs",
     "test": "vitest run",
     "check:styles": "node scripts/check-styles.mjs",
+    "check:icons": "node scripts/check-icons.mjs",
     "tc:sync": "node scripts/sync-trenchcoat.mjs",
     "tc:vendor": "scripts/vendor-trenchcoat.sh"
   },

@@ -28,7 +28,7 @@
         </fieldset>
 
         <template #footer>
-          <UiButton variant="primary" icon="sell" @click="generate">Generate tags</UiButton>
+          <UiButton variant="primary" icon="tag" @click="generate">Generate tags</UiButton>
         </template>
       </UiPanel>
     </PageSection>

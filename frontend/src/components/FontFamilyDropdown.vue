@@ -15,9 +15,7 @@
       ]"
     >
       <span>{{ selectedLabel }}</span>
-      <span class="material-symbols-outlined text-lg transition-transform" :class="{ 'rotate-180': isOpen }">
-        expand_more
-      </span>
+      <AppIcon name="chevron-down" class="text-lg transition-transform" :class="{ 'rotate-180': isOpen }" />
     </button>
     
     <Transition

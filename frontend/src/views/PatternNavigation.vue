@@ -34,11 +34,11 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
+                      <AppIcon name="tag" class="text-base" />
                       Pattern Library
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
+                      <AppIcon name="refresh-ccw" class="text-base" />
                       Updated Jan 15, 2024
                     </span>
                   </div>
@@ -132,7 +132,7 @@
 
                 <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
                   <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">lightbulb</span>
+                    <AppIcon name="lightbulb" class="text-blue-600 dark:text-blue-400" />
                     Best Practices
                   </h4>
                   <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -193,7 +193,7 @@
 
               <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
                 <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">lightbulb</span>
+                  <AppIcon name="lightbulb" class="text-blue-600 dark:text-blue-400" />
                   Best Practices
                 </h4>
                 <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -250,7 +250,7 @@
 
               <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
                 <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <span class="material-symbols-outlined text-blue-600 dark:text-blue-400">lightbulb</span>
+                  <AppIcon name="lightbulb" class="text-blue-600 dark:text-blue-400" />
                   Best Practices
                 </h4>
                 <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -284,7 +284,7 @@
                 : 'bg-blue-50 border-blue-200'"
             >
               <div class="flex items-start gap-4">
-                <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">accessibility</span>
+                <AppIcon name="accessibility" class="text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'" />
                 <div>
                   <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Accessibility</h3>
                   <ul class="space-y-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -328,7 +328,7 @@
             >
               <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                 <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
+                  <AppIcon name="gauge" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                   Pattern Performance
                 </h2>
               </div>
@@ -337,7 +337,7 @@
                 <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">category</span>
+                      <AppIcon name="shapes" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Category
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -350,7 +350,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">check_circle</span>
+                      <AppIcon name="circle-check" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Status
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -363,7 +363,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">devices</span>
+                      <AppIcon name="monitor-smartphone" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Responsive
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -376,7 +376,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">accessibility</span>
+                      <AppIcon name="accessibility" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       WCAG
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -436,7 +436,7 @@
             <div class="grid md:grid-cols-3 gap-6">
               <router-link to="/patterns/layout" class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
                 <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-2xl">view_quilt</span>
+                  <AppIcon name="layout-dashboard" class="text-indigo-600 dark:text-indigo-400 text-2xl" />
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     Layout Patterns
                   </h3>
@@ -448,7 +448,7 @@
 
               <router-link to="/patterns/data-display" class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
                 <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-2xl">table_chart</span>
+                  <AppIcon name="table-2" class="text-indigo-600 dark:text-indigo-400 text-2xl" />
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     Data Display
                   </h3>
@@ -460,7 +460,7 @@
 
               <router-link to="/patterns/forms" class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
                 <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-2xl">description</span>
+                  <AppIcon name="file-text" class="text-indigo-600 dark:text-indigo-400 text-2xl" />
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     Form Patterns
                   </h3>

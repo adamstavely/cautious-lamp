@@ -36,12 +36,7 @@
           <!-- Search Bar -->
           <div class="mb-8">
             <div class="relative">
-              <span class="material-symbols-outlined absolute left-4 top-1/2 transform -translate-y-1/2 text-xl pointer-events-none"
-                :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'"
-                aria-hidden="true"
-              >
-                search
-              </span>
+              <AppIcon name="search" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-xl pointer-events-none" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
               <input
                 v-model="searchQuery"
                 type="search"
@@ -84,9 +79,7 @@
             </div>
 
             <div v-if="filteredResults.length === 0" class="text-center py-12">
-              <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                search_off
-              </span>
+              <AppIcon name="search-x" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
               <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 No results found
               </p>
@@ -109,9 +102,7 @@
                   <div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
                     :class="isDarkMode ? 'bg-indigo-900/30' : 'bg-indigo-100'"
                   >
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                      {{ result.icon }}
-                    </span>
+                    <AppIcon :name="result.icon" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-2">
@@ -131,14 +122,12 @@
                     <div class="flex items-center gap-4 text-xs" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
                       <span>{{ result.path }}</span>
                       <span v-if="result.tags && result.tags.length > 0" class="flex items-center gap-1">
-                        <span class="material-symbols-outlined text-sm">label</span>
+                        <AppIcon name="tag" class="text-sm" />
                         {{ result.tags.join(', ') }}
                       </span>
                     </div>
                   </div>
-                  <span class="material-symbols-outlined flex-shrink-0" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                    chevron_right
-                  </span>
+                  <AppIcon name="chevron-right" class="flex-shrink-0" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
                 </div>
               </router-link>
             </div>
@@ -146,9 +135,7 @@
 
           <!-- Empty State -->
           <div v-else class="text-center py-12">
-            <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-              search
-            </span>
+            <AppIcon name="search" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
             <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
               Start searching
             </p>
@@ -204,58 +191,58 @@ const searchSuggestions = [
 
 // Search index - in a real app, this would come from an API or be generated
 const searchIndex = [
-  { id: 'button', title: 'Button', description: 'Primary, secondary, and tertiary button variants with different sizes and states', category: 'Components', path: '/components/buttons', icon: 'smart_button', tags: ['interactive', 'form', 'action'] },
-  { id: 'component-status', title: 'Component Status', description: 'Track component development status and availability', category: 'Components', path: '/components/status', icon: 'check_circle', tags: ['status', 'tracking'] },
-  { id: 'forms', title: 'Forms', description: 'Input fields, selects, checkboxes, and form controls', category: 'Components', path: '/components/forms', icon: 'description', tags: ['form', 'input', 'validation'] },
-  { id: 'cards', title: 'Cards', description: 'Card components for displaying content and actions', category: 'Components', path: '/components/cards', icon: 'view_module', tags: ['layout', 'content'] },
+  { id: 'button', title: 'Button', description: 'Primary, secondary, and tertiary button variants with different sizes and states', category: 'Components', path: '/components/buttons', icon: 'rectangle-horizontal', tags: ['interactive', 'form', 'action'] },
+  { id: 'component-status', title: 'Component Status', description: 'Track component development status and availability', category: 'Components', path: '/components/status', icon: 'circle-check', tags: ['status', 'tracking'] },
+  { id: 'forms', title: 'Forms', description: 'Input fields, selects, checkboxes, and form controls', category: 'Components', path: '/components/forms', icon: 'file-text', tags: ['form', 'input', 'validation'] },
+  { id: 'cards', title: 'Cards', description: 'Card components for displaying content and actions', category: 'Components', path: '/components/cards', icon: 'layout-grid', tags: ['layout', 'content'] },
   { id: 'navigation', title: 'Navigation', description: 'Menus, breadcrumbs, tabs, and navigation components', category: 'Components', path: '/components/navigation', icon: 'navigation', tags: ['navigation', 'menu'] },
-  { id: 'data-display', title: 'Data Display', description: 'Tables, lists, and data visualization components', category: 'Components', path: '/components/data-display', icon: 'table_chart', tags: ['data', 'table', 'list'] },
-  { id: 'token-studio', title: 'Token Studio', description: 'Create and manage design tokens with Style Dictionary', category: 'Tokens', path: '/tokens/studio', icon: 'tune', tags: ['tokens', 'design', 'style'] },
-  { id: 'style-library', title: 'Style Library', description: 'View, edit, download, and retire style dictionaries', category: 'Tokens', path: '/tokens/library', icon: 'library_books', tags: ['tokens', 'library'] },
+  { id: 'data-display', title: 'Data Display', description: 'Tables, lists, and data visualization components', category: 'Components', path: '/components/data-display', icon: 'table-2', tags: ['data', 'table', 'list'] },
+  { id: 'token-studio', title: 'Token Studio', description: 'Create and manage design tokens with Style Dictionary', category: 'Tokens', path: '/tokens/studio', icon: 'sliders-horizontal', tags: ['tokens', 'design', 'style'] },
+  { id: 'style-library', title: 'Style Library', description: 'View, edit, download, and retire style dictionaries', category: 'Tokens', path: '/tokens/library', icon: 'library', tags: ['tokens', 'library'] },
   { id: 'pattern-navigation', title: 'Navigation Pattern', description: 'Navigation patterns and best practices', category: 'Patterns', path: '/patterns/navigation', icon: 'navigation', tags: ['pattern', 'navigation'] },
-  { id: 'pattern-layout', title: 'Layout Pattern', description: 'Grid systems, containers, and responsive layouts', category: 'Patterns', path: '/patterns/layout', icon: 'view_quilt', tags: ['pattern', 'layout'] },
-  { id: 'pattern-forms', title: 'Form Pattern', description: 'Form patterns and validation guidelines', category: 'Patterns', path: '/patterns/forms', icon: 'description', tags: ['pattern', 'form'] },
-  { id: 'pattern-feedback', title: 'Feedback Pattern', description: 'User feedback patterns and notifications', category: 'Patterns', path: '/patterns/feedback', icon: 'feedback', tags: ['pattern', 'feedback'] },
-  { id: 'font-library', title: 'Font Library', description: 'Browse and preview hundreds of Google Fonts', category: 'Fonts', path: '/fonts/library', icon: 'library_books', tags: ['font', 'typography'] },
-  { id: 'font-scale', title: 'Font Scale', description: 'Typography scale and sizing system', category: 'Fonts', path: '/fonts/scale', icon: 'format_line_spacing', tags: ['font', 'scale', 'typography'] },
-  { id: 'font-stack', title: 'Font Stack', description: 'Font fallback stacks and combinations', category: 'Fonts', path: '/fonts/stack', icon: 'font_download', tags: ['font', 'stack'] },
-  { id: 'font-subsetting', title: 'Font Subsetting', description: 'Optimize fonts by subsetting character sets', category: 'Fonts', path: '/fonts/subsetting', icon: 'content_cut', tags: ['font', 'optimization'] },
+  { id: 'pattern-layout', title: 'Layout Pattern', description: 'Grid systems, containers, and responsive layouts', category: 'Patterns', path: '/patterns/layout', icon: 'layout-dashboard', tags: ['pattern', 'layout'] },
+  { id: 'pattern-forms', title: 'Form Pattern', description: 'Form patterns and validation guidelines', category: 'Patterns', path: '/patterns/forms', icon: 'file-text', tags: ['pattern', 'form'] },
+  { id: 'pattern-feedback', title: 'Feedback Pattern', description: 'User feedback patterns and notifications', category: 'Patterns', path: '/patterns/feedback', icon: 'message-square-warning', tags: ['pattern', 'feedback'] },
+  { id: 'font-library', title: 'Font Library', description: 'Browse and preview hundreds of Google Fonts', category: 'Fonts', path: '/fonts/library', icon: 'library', tags: ['font', 'typography'] },
+  { id: 'font-scale', title: 'Font Scale', description: 'Typography scale and sizing system', category: 'Fonts', path: '/fonts/scale', icon: 'list-chevrons-up-down', tags: ['font', 'scale', 'typography'] },
+  { id: 'font-stack', title: 'Font Stack', description: 'Font fallback stacks and combinations', category: 'Fonts', path: '/fonts/stack', icon: 'type', tags: ['font', 'stack'] },
+  { id: 'font-subsetting', title: 'Font Subsetting', description: 'Optimize fonts by subsetting character sets', category: 'Fonts', path: '/fonts/subsetting', icon: 'scissors', tags: ['font', 'optimization'] },
   { id: 'icon-library', title: 'Icon Library', description: 'Upload and manage icon sets from Material and Lucide', category: 'Design Assets', path: '/design-assets/icons', icon: 'star', tags: ['icons', 'assets'] },
   { id: 'color-converter', title: 'Color Converter', description: 'Convert colors between different formats (HEX, RGB, HSL, etc.)', category: 'Tools', path: '/tools/color-converter', icon: 'palette', tags: ['color', 'converter', 'tool'] },
   { id: 'color-contrast', title: 'Color Contrast Checker', description: 'Check color contrast ratios for accessibility', category: 'Tools', path: '/tools/color-contrast', icon: 'contrast', tags: ['color', 'accessibility', 'contrast'] },
-  { id: 'gradient-generator', title: 'Gradient Generator', description: 'Create beautiful gradients with custom stops and directions', category: 'Tools', path: '/tools/gradient-generator', icon: 'gradient', tags: ['gradient', 'color', 'tool'] },
-  { id: 'lorem-ipsum', title: 'Lorem Ipsum Generator', description: 'Generate placeholder text with various options', category: 'Tools', path: '/tools/lorem-ipsum', icon: 'text_fields', tags: ['text', 'placeholder', 'tool'] },
+  { id: 'gradient-generator', title: 'Gradient Generator', description: 'Create beautiful gradients with custom stops and directions', category: 'Tools', path: '/tools/gradient-generator', icon: 'blend', tags: ['gradient', 'color', 'tool'] },
+  { id: 'lorem-ipsum', title: 'Lorem Ipsum Generator', description: 'Generate placeholder text with various options', category: 'Tools', path: '/tools/lorem-ipsum', icon: 'type', tags: ['text', 'placeholder', 'tool'] },
   { id: 'seo-tagging', title: 'SEO Tagging Generator', description: 'Generate SEO meta tags for your pages', category: 'Tools', path: '/tools/seo-tagging', icon: 'search', tags: ['seo', 'meta', 'tool'] },
   { id: 'color-scale', title: 'Color Scale Generator', description: 'Generate color scales with accessibility checks', category: 'Tools', path: '/tools/color-scale', icon: 'palette', tags: ['color', 'scale', 'accessibility'] },
   { id: 'map-maker', title: 'Map Maker', description: 'Create choropleth maps and flow maps with customizable data visualization', category: 'Tools', path: '/tools/map-maker', icon: 'map', tags: ['map', 'choropleth', 'flow-map', 'geographic', 'data-visualization', 'tool'] },
   { id: 'guidelines-colors', title: 'Color Guidelines', description: 'Color system and usage guidelines', category: 'Guidelines', path: '/guidelines/colors', icon: 'palette', tags: ['guidelines', 'color'] },
-  { id: 'guidelines-typography', title: 'Typography Guidelines', description: 'Typography system and best practices', category: 'Guidelines', path: '/guidelines/typography', icon: 'text_fields', tags: ['guidelines', 'typography'] },
-  { id: 'guidelines-spacing', title: 'Spacing Guidelines', description: 'Spacing system and layout guidelines', category: 'Guidelines', path: '/guidelines/spacing', icon: 'space_dashboard', tags: ['guidelines', 'spacing'] },
+  { id: 'guidelines-typography', title: 'Typography Guidelines', description: 'Typography system and best practices', category: 'Guidelines', path: '/guidelines/typography', icon: 'type', tags: ['guidelines', 'typography'] },
+  { id: 'guidelines-spacing', title: 'Spacing Guidelines', description: 'Spacing system and layout guidelines', category: 'Guidelines', path: '/guidelines/spacing', icon: 'layout-panel-left', tags: ['guidelines', 'spacing'] },
   // Reference pages
   { id: 'jaws-commands', title: 'JAWS Commands', description: 'Reference guide for JAWS screen reader commands and keyboard shortcuts', category: 'Tools', path: '/tools/references/jaws-commands', icon: 'keyboard', tags: ['jaws', 'screen-reader', 'accessibility', 'keyboard', 'commands', 'reference', 'a11y'] },
-  { id: 'penpot-for-beginners', title: 'Penpot for Beginners', description: 'Getting started guide for Penpot design tool', category: 'Tools', path: '/tools/references/penpot-for-beginners', icon: 'draw', tags: ['penpot', 'design-tool', 'tutorial', 'beginners', 'reference'] },
-  { id: 'units-of-measure', title: 'Units of Measure', description: 'Reference guide for units of measurement in design and development', category: 'Tools', path: '/tools/references/units-of-measure', icon: 'straighten', tags: ['units', 'measurement', 'reference', 'design', 'development'] },
+  { id: 'penpot-for-beginners', title: 'Penpot for Beginners', description: 'Getting started guide for Penpot design tool', category: 'Tools', path: '/tools/references/penpot-for-beginners', icon: 'pencil-line', tags: ['penpot', 'design-tool', 'tutorial', 'beginners', 'reference'] },
+  { id: 'units-of-measure', title: 'Units of Measure', description: 'Reference guide for units of measurement in design and development', category: 'Tools', path: '/tools/references/units-of-measure', icon: 'ruler', tags: ['units', 'measurement', 'reference', 'design', 'development'] },
   // Pattern pages (under /guidelines/patterns/)
-  { id: 'agent-oriented-onboarding', title: 'Agent-Oriented Onboarding', description: 'Design patterns for AI agent onboarding experiences', category: 'Patterns', path: '/guidelines/patterns/agent-oriented-onboarding', icon: 'rocket_launch', tags: ['pattern', 'onboarding', 'ai', 'agent', 'interaction'] },
-  { id: 'ai-disengagement-timeout-error', title: 'AI Disengagement Timeout Error', description: 'Patterns for handling AI disengagement and timeout errors', category: 'Patterns', path: '/guidelines/patterns/ai-disengagement-timeout-error', icon: 'timer_off', tags: ['pattern', 'ai', 'error', 'timeout', 'disengagement', 'interaction'] },
-  { id: 'ai-thinking-states', title: 'AI Thinking States', description: 'Design patterns for displaying AI thinking and processing states', category: 'Patterns', path: '/guidelines/patterns/ai-thinking-states', icon: 'psychology', tags: ['pattern', 'ai', 'thinking', 'states', 'loading', 'interaction'] },
-  { id: 'empty-loading-states', title: 'Empty Loading States', description: 'Design patterns for empty and loading states in user interfaces', category: 'Patterns', path: '/guidelines/patterns/empty-loading-states', icon: 'hourglass_empty', tags: ['pattern', 'empty', 'loading', 'states', 'ui', 'design'] },
-  { id: 'error-handling', title: 'Error Handling', description: 'Design patterns for error handling and user feedback', category: 'Patterns', path: '/guidelines/patterns/error-handling', icon: 'error', tags: ['pattern', 'error', 'handling', 'feedback', 'ui', 'design'] },
-  { id: 'multi-agent-orchestration', title: 'Multi-Agent Orchestration', description: 'Design patterns for orchestrating multiple AI agents', category: 'Patterns', path: '/guidelines/patterns/multi-agent-orchestration', icon: 'account_tree', tags: ['pattern', 'ai', 'agents', 'orchestration', 'multi-agent', 'interaction'] },
-  { id: 'new-features-experiences', title: 'New Features Experiences', description: 'Design patterns for introducing new features to users', category: 'Patterns', path: '/guidelines/patterns/new-features-experiences', icon: 'new_releases', tags: ['pattern', 'features', 'onboarding', 'discovery', 'ui', 'design'] },
+  { id: 'agent-oriented-onboarding', title: 'Agent-Oriented Onboarding', description: 'Design patterns for AI agent onboarding experiences', category: 'Patterns', path: '/guidelines/patterns/agent-oriented-onboarding', icon: 'rocket', tags: ['pattern', 'onboarding', 'ai', 'agent', 'interaction'] },
+  { id: 'ai-disengagement-timeout-error', title: 'AI Disengagement Timeout Error', description: 'Patterns for handling AI disengagement and timeout errors', category: 'Patterns', path: '/guidelines/patterns/ai-disengagement-timeout-error', icon: 'timer-off', tags: ['pattern', 'ai', 'error', 'timeout', 'disengagement', 'interaction'] },
+  { id: 'ai-thinking-states', title: 'AI Thinking States', description: 'Design patterns for displaying AI thinking and processing states', category: 'Patterns', path: '/guidelines/patterns/ai-thinking-states', icon: 'brain', tags: ['pattern', 'ai', 'thinking', 'states', 'loading', 'interaction'] },
+  { id: 'empty-loading-states', title: 'Empty Loading States', description: 'Design patterns for empty and loading states in user interfaces', category: 'Patterns', path: '/guidelines/patterns/empty-loading-states', icon: 'hourglass', tags: ['pattern', 'empty', 'loading', 'states', 'ui', 'design'] },
+  { id: 'error-handling', title: 'Error Handling', description: 'Design patterns for error handling and user feedback', category: 'Patterns', path: '/guidelines/patterns/error-handling', icon: 'circle-alert', tags: ['pattern', 'error', 'handling', 'feedback', 'ui', 'design'] },
+  { id: 'multi-agent-orchestration', title: 'Multi-Agent Orchestration', description: 'Design patterns for orchestrating multiple AI agents', category: 'Patterns', path: '/guidelines/patterns/multi-agent-orchestration', icon: 'network', tags: ['pattern', 'ai', 'agents', 'orchestration', 'multi-agent', 'interaction'] },
+  { id: 'new-features-experiences', title: 'New Features Experiences', description: 'Design patterns for introducing new features to users', category: 'Patterns', path: '/guidelines/patterns/new-features-experiences', icon: 'badge-alert', tags: ['pattern', 'features', 'onboarding', 'discovery', 'ui', 'design'] },
   // Guideline pages
   { id: 'color-contrast', title: 'Color Contrast', description: 'Guidelines for color contrast and accessibility in design', category: 'Guidelines', path: '/guidelines/color-contrast', icon: 'contrast', tags: ['guidelines', 'color', 'contrast', 'accessibility', 'a11y', 'wcag'] },
   { id: 'content-organization-navigation', title: 'Content Organization Navigation', description: 'Guidelines for organizing content and navigation structures', category: 'Guidelines', path: '/guidelines/content-organization-navigation', icon: 'navigation', tags: ['guidelines', 'content', 'organization', 'navigation', 'information-architecture'] },
-  { id: 'css-grid-layout', title: 'CSS Grid Layout', description: 'Guidelines for using CSS Grid in layout design', category: 'Guidelines', path: '/guidelines/css-grid-layout', icon: 'view_quilt', tags: ['guidelines', 'css', 'grid', 'layout', 'design'] },
-  { id: 'flashing', title: 'Flashing', description: 'Guidelines for handling flashing content and photosensitivity', category: 'Guidelines', path: '/guidelines/flashing', icon: 'flash_on', tags: ['guidelines', 'flashing', 'photosensitivity', 'accessibility', 'a11y', 'epilepsy'] },
-  { id: 'focus', title: 'Focus', description: 'Guidelines for keyboard focus and accessibility', category: 'Guidelines', path: '/guidelines/focus', icon: 'center_focus_strong', tags: ['guidelines', 'focus', 'keyboard', 'accessibility', 'a11y'] },
+  { id: 'css-grid-layout', title: 'CSS Grid Layout', description: 'Guidelines for using CSS Grid in layout design', category: 'Guidelines', path: '/guidelines/css-grid-layout', icon: 'layout-dashboard', tags: ['guidelines', 'css', 'grid', 'layout', 'design'] },
+  { id: 'flashing', title: 'Flashing', description: 'Guidelines for handling flashing content and photosensitivity', category: 'Guidelines', path: '/guidelines/flashing', icon: 'zap', tags: ['guidelines', 'flashing', 'photosensitivity', 'accessibility', 'a11y', 'epilepsy'] },
+  { id: 'focus', title: 'Focus', description: 'Guidelines for keyboard focus and accessibility', category: 'Guidelines', path: '/guidelines/focus', icon: 'focus', tags: ['guidelines', 'focus', 'keyboard', 'accessibility', 'a11y'] },
   { id: 'iconography', title: 'Iconography', description: 'Guidelines for icon design and usage', category: 'Guidelines', path: '/guidelines/iconography', icon: 'image', tags: ['guidelines', 'icons', 'iconography', 'design', 'visual'] },
-  { id: 'information-architecture', title: 'Information Architecture', description: 'Guidelines for information architecture and content structure', category: 'Guidelines', path: '/guidelines/information-architecture', icon: 'account_tree', tags: ['guidelines', 'information-architecture', 'ia', 'structure', 'content'] },
+  { id: 'information-architecture', title: 'Information Architecture', description: 'Guidelines for information architecture and content structure', category: 'Guidelines', path: '/guidelines/information-architecture', icon: 'network', tags: ['guidelines', 'information-architecture', 'ia', 'structure', 'content'] },
   { id: 'keyboard-gestures', title: 'Keyboard Gestures', description: 'Guidelines for keyboard gestures and shortcuts', category: 'Guidelines', path: '/guidelines/keyboard-gestures', icon: 'keyboard', tags: ['guidelines', 'keyboard', 'gestures', 'shortcuts', 'accessibility', 'a11y'] },
   { id: 'metadata-seo', title: 'Metadata SEO', description: 'Guidelines for metadata and SEO best practices', category: 'Guidelines', path: '/guidelines/metadata-seo', icon: 'search', tags: ['guidelines', 'metadata', 'seo', 'search', 'optimization'] },
-  { id: 'multimedia-animation', title: 'Multimedia Animation', description: 'Guidelines for multimedia and animation in design', category: 'Guidelines', path: '/guidelines/multimedia-animation', icon: 'animation', tags: ['guidelines', 'multimedia', 'animation', 'video', 'motion'] },
-  { id: 'text-graphics', title: 'Text Graphics', description: 'Guidelines for combining text and graphics in design', category: 'Guidelines', path: '/guidelines/text-graphics', icon: 'text_fields', tags: ['guidelines', 'text', 'graphics', 'typography', 'visual'] },
-  { id: 'time', title: 'Time', description: 'Guidelines for time-based interactions and displays', category: 'Guidelines', path: '/guidelines/time', icon: 'schedule', tags: ['guidelines', 'time', 'temporal', 'interactions', 'display'] },
+  { id: 'multimedia-animation', title: 'Multimedia Animation', description: 'Guidelines for multimedia and animation in design', category: 'Guidelines', path: '/guidelines/multimedia-animation', icon: 'wand-sparkles', tags: ['guidelines', 'multimedia', 'animation', 'video', 'motion'] },
+  { id: 'text-graphics', title: 'Text Graphics', description: 'Guidelines for combining text and graphics in design', category: 'Guidelines', path: '/guidelines/text-graphics', icon: 'type', tags: ['guidelines', 'text', 'graphics', 'typography', 'visual'] },
+  { id: 'time', title: 'Time', description: 'Guidelines for time-based interactions and displays', category: 'Guidelines', path: '/guidelines/time', icon: 'clock', tags: ['guidelines', 'time', 'temporal', 'interactions', 'display'] },
 ];
 
 const filteredResults = computed(() => {

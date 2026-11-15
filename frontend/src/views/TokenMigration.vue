@@ -65,7 +65,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">palette</span>
+                <AppIcon name="palette" class="text-indigo-600" />
                 Token Migration Setup
               </h3>
               <div class="space-y-3">
@@ -205,7 +205,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">undo</span>
+                <AppIcon name="undo-2" class="text-indigo-600" />
                 Rollback
               </h3>
               <p class="text-sm mb-4" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -234,7 +234,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">progress_activity</span>
+                <AppIcon name="loader-circle" class="text-indigo-600" />
                 Migration Progress
               </h3>
               <div class="space-y-3">
@@ -336,19 +336,19 @@
               </h3>
               <div class="space-y-3">
                 <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-green-500">check_circle</span>
+                  <AppIcon name="circle-check" class="text-green-500" />
                   <span class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                     {{ tokenMigrationResults.tokensMigrated }} tokens migrated
                   </span>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-blue-500">info</span>
+                  <AppIcon name="info" class="text-blue-500" />
                   <span class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                     {{ tokenMigrationResults.filesProcessed }} files processed
                   </span>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-yellow-500">warning</span>
+                  <AppIcon name="triangle-alert" class="text-yellow-500" />
                   <span class="text-sm" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                     {{ tokenMigrationResults.warnings }} warnings
                   </span>

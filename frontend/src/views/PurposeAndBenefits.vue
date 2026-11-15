@@ -95,7 +95,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">bolt</span>
+                  <AppIcon name="zap" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Increased Efficiency
@@ -113,7 +113,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">tune</span>
+                  <AppIcon name="sliders-horizontal" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Design Consistency
@@ -131,7 +131,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">verified</span>
+                  <AppIcon name="badge-check" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Built-in Quality
@@ -149,7 +149,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">handshake</span>
+                  <AppIcon name="handshake" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Better Collaboration
@@ -167,7 +167,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">trending_up</span>
+                  <AppIcon name="trending-up" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Scalability
@@ -185,7 +185,7 @@
                   : 'bg-white border-gray-200'"
               >
                 <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                  <span class="material-symbols-outlined text-5xl">savings</span>
+                  <AppIcon name="piggy-bank" class="text-5xl" />
                 </div>
                 <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                   Cost Savings

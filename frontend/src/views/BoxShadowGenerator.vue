@@ -24,7 +24,7 @@
     <PageSection title="Shadows" description="Start from a preset or add layers; the first shadow is drawn on top." divided>
       <template #actions>
         <UiButton v-for="preset in presetButtons" :key="preset.size" size="sm" :label="preset.label" @click="loadPreset(preset.size)" />
-        <UiButton size="sm" variant="primary" icon="add" label="Add shadow" @click="addShadow" />
+        <UiButton size="sm" variant="primary" icon="plus" label="Add shadow" @click="addShadow" />
       </template>
       <div class="space-y-4">
         <UiPanel v-for="(shadow, index) in shadows" :key="shadow.id" :title="`Shadow ${index + 1}`" heading-tag="h3">
@@ -32,7 +32,7 @@
             <UiButton
               variant="ghost"
               size="sm"
-              icon="delete"
+              icon="trash-2"
               icon-only
               :label="`Remove shadow ${index + 1}`"
               :disabled="shadows.length === 1"
@@ -145,7 +145,7 @@ const presetButtons = [
 const exportButtons = [
   { format: 'css', icon: 'code', label: 'Export CSS' },
   { format: 'tailwind', icon: 'settings', label: 'Export Tailwind' },
-  { format: 'json', icon: 'data_object', label: 'Export JSON' },
+  { format: 'json', icon: 'braces', label: 'Export JSON' },
 ];
 
 const downloadFile = (content, type, filename) => {

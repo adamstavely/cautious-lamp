@@ -33,6 +33,7 @@ jobs:
       - run: npm ci
       - run: npm run check:sfc --workspace frontend
       - run: npm run check:styles --workspace frontend
+      - run: npm run check:icons --workspace frontend
       - run: npm test --workspace frontend
       - run: npm run build --workspace frontend
 

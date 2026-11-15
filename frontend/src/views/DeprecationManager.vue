@@ -64,7 +64,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">filter_list</span>
+                <AppIcon name="list-filter" class="text-indigo-600" />
                 Filter
               </h3>
               <Dropdown
@@ -83,7 +83,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">warning</span>
+                <AppIcon name="triangle-alert" class="text-indigo-600" />
                 Deprecated Components
               </h3>
               <div class="space-y-2">
@@ -96,7 +96,7 @@
                     ? (isDarkMode ? 'bg-indigo-900/30 border border-indigo-700' : 'bg-indigo-50 border border-indigo-200')
                     : (isDarkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-gray-50 hover:bg-gray-100')"
                 >
-                  <span class="material-symbols-outlined text-indigo-600 flex-shrink-0">widgets</span>
+                  <AppIcon name="blocks" class="text-indigo-600 flex-shrink-0" />
                   <div class="flex-1 min-w-0">
                     <div class="text-sm font-medium mb-1" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                       {{ component.name }}
@@ -122,7 +122,7 @@
             >
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">widgets</span>
+                  <AppIcon name="blocks" class="text-indigo-600" />
                   {{ selectedComponent.name }}
                 </h3>
                 <span 
@@ -196,7 +196,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">calendar_today</span>
+                <AppIcon name="calendar" class="text-indigo-600" />
                 Deprecation Schedule
               </h3>
               <div class="space-y-3">

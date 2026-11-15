@@ -77,7 +77,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">map</span>
+                <AppIcon name="map" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -101,7 +101,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">description</span>
+                <AppIcon name="file-text" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -125,7 +125,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">groups</span>
+                <AppIcon name="users-round" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -149,7 +149,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">insights</span>
+                <AppIcon name="lightbulb" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -182,7 +182,7 @@
                 class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
               >
                 <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <span class="material-symbols-outlined text-5xl">person</span>
+                  <AppIcon name="user" class="text-5xl" />
                 </div>
                 <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">User Persona Generator</h3>
                 <p class="text-white/80 text-sm">Create detailed user personas from research data to inform design decisions.</p>
@@ -194,7 +194,7 @@
                 class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
               >
                 <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <span class="material-symbols-outlined text-5xl">psychology</span>
+                  <AppIcon name="brain" class="text-5xl" />
                 </div>
                 <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">NASA-TLX</h3>
                 <p class="text-white/80 text-sm">Assess task workload across six dimensions for usability analysis.</p>
@@ -230,7 +230,7 @@
                 class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
               >
                 <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <span class="material-symbols-outlined text-5xl">videocam</span>
+                  <AppIcon name="video" class="text-5xl" />
                 </div>
                 <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Session Replay</h3>
                 <p class="text-white/80 text-sm">See exactly what users experience with session replay and heatmaps for your applications.</p>

@@ -34,11 +34,11 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">label</span>
+                      <AppIcon name="tag" class="text-base" />
                       Pattern Library
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
+                      <AppIcon name="refresh-ccw" class="text-base" />
                       Updated Jan 15, 2024
                     </span>
                   </div>
@@ -308,7 +308,7 @@
               <!-- Modal -->
               <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center gap-3 mb-4">
-                  <span class="material-symbols-outlined text-2xl text-indigo-600 dark:text-indigo-400">fullscreen</span>
+                  <AppIcon name="maximize" class="text-2xl text-indigo-600 dark:text-indigo-400" />
                   <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Modal</h3>
                 </div>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -327,7 +327,7 @@
               <!-- Banner -->
               <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center gap-3 mb-4">
-                  <span class="material-symbols-outlined text-2xl text-indigo-600 dark:text-indigo-400">campaign</span>
+                  <AppIcon name="megaphone" class="text-2xl text-indigo-600 dark:text-indigo-400" />
                   <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Banner</h3>
                 </div>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -346,7 +346,7 @@
               <!-- Toast -->
               <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center gap-3 mb-4">
-                  <span class="material-symbols-outlined text-2xl text-indigo-600 dark:text-indigo-400">notifications</span>
+                  <AppIcon name="bell" class="text-2xl text-indigo-600 dark:text-indigo-400" />
                   <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Toast</h3>
                 </div>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -365,7 +365,7 @@
               <!-- Dialog -->
               <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center gap-3 mb-4">
-                  <span class="material-symbols-outlined text-2xl text-indigo-600 dark:text-indigo-400">chat_bubble</span>
+                  <AppIcon name="message-circle" class="text-2xl text-indigo-600 dark:text-indigo-400" />
                   <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Dialog</h3>
                 </div>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -387,7 +387,7 @@
           <div class="max-w-7xl mx-auto mb-16">
             <div class="border rounded-2xl p-8 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
               <div class="flex items-start gap-4">
-                <span class="material-symbols-outlined text-3xl flex-shrink-0 text-blue-600 dark:text-blue-400">accessibility</span>
+                <AppIcon name="accessibility" class="text-3xl flex-shrink-0 text-blue-600 dark:text-blue-400" />
                 <div>
                   <h3 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Accessibility</h3>
                   <ul class="space-y-2 text-gray-700 dark:text-gray-300">
@@ -431,7 +431,7 @@
             <div class="grid md:grid-cols-3 gap-6">
               <router-link to="/patterns/feedback" class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
                 <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-2xl">feedback</span>
+                  <AppIcon name="message-square-warning" class="text-indigo-600 dark:text-indigo-400 text-2xl" />
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     Feedback Patterns
                   </h3>
@@ -443,7 +443,7 @@
 
               <router-link to="/patterns/forms" class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
                 <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-2xl">description</span>
+                  <AppIcon name="file-text" class="text-indigo-600 dark:text-indigo-400 text-2xl" />
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     Form Patterns
                   </h3>
@@ -455,7 +455,7 @@
 
               <router-link to="/patterns/navigation" class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group">
                 <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-2xl">navigation</span>
+                  <AppIcon name="navigation" class="text-indigo-600 dark:text-indigo-400 text-2xl" />
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     Navigation Patterns
                   </h3>

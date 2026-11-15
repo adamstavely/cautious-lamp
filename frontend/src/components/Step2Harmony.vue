@@ -15,8 +15,8 @@
               <UiColorSample class="w-16 h-16 rounded-pill border-2 shadow-control mb-2" :color="color.hex" />
               <span class="font-code text-xs text-ink mb-1">{{ color.hex }}</span>
               <div class="flex items-center gap-1">
-                <UiButton variant="ghost" size="sm" icon="content_copy" icon-only :label="`Copy hex code ${color.hex}`" @click="copyToClipboard(color.hex)" />
-                <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Delete color ${color.hex}`" @click="removeColor(index)" />
+                <UiButton variant="ghost" size="sm" icon="copy" icon-only :label="`Copy hex code ${color.hex}`" @click="copyToClipboard(color.hex)" />
+                <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete color ${color.hex}`" @click="removeColor(index)" />
               </div>
             </li>
           </ul>
@@ -29,7 +29,7 @@
         <section>
           <div class="flex items-center justify-between mb-3">
             <h4 class="flex items-center gap-2 text-sm font-semibold text-ink-strong">
-              <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">palette</span>
+              <AppIcon name="palette" class="text-xl text-accent-text" />
               Harmony check
             </h4>
             <UiButton variant="ghost" size="sm" :aria-expanded="!harmonyCheckCollapsed" @click="toggleHarmonyCheckCollapse">
@@ -68,25 +68,25 @@
                   <p class="text-xs text-ink-secondary mb-3">{{ getActionSuggestion(item) }}</p>
 
                   <p class="flex items-center gap-1 text-xs text-success mb-3">
-                    <span class="material-symbols-outlined text-base" aria-hidden="true">check_circle</span>
+                    <AppIcon name="circle-check" class="text-base" />
                     Contrast-safe
                   </p>
 
                   <div class="flex gap-2">
-                    <UiButton size="sm" icon="close" class="flex-1 justify-center" @click="dismissIssue(index)">Dismiss</UiButton>
+                    <UiButton size="sm" icon="x" class="flex-1 justify-center" @click="dismissIssue(index)">Dismiss</UiButton>
                     <UiButton variant="primary" size="sm" class="flex-1 justify-center" @click="applyFix(item.color, item.fixes[0])">Apply</UiButton>
                   </div>
                 </li>
               </ul>
 
-              <UiButton size="sm" icon="refresh" :loading="loading" class="w-full justify-center mt-4" @click.stop="analyzePalette">
+              <UiButton size="sm" icon="refresh-cw" :loading="loading" class="w-full justify-center mt-4" @click.stop="analyzePalette">
                 {{ loading ? 'Running check...' : 'Run check again' }}
               </UiButton>
             </div>
 
             <div v-else-if="analysis && (!analysis.problematicColors || analysis.problematicColors.length === 0)">
               <UiCallout tone="success" role="status">All colors are balanced!</UiCallout>
-              <UiButton size="sm" icon="refresh" :loading="loading" class="w-full justify-center mt-3" @click.stop="analyzePalette">
+              <UiButton size="sm" icon="refresh-cw" :loading="loading" class="w-full justify-center mt-3" @click.stop="analyzePalette">
                 {{ loading ? 'Running check...' : 'Run check again' }}
               </UiButton>
             </div>
@@ -96,7 +96,7 @@
         <!-- Harmony Diagram Section -->
         <section>
           <h4 class="flex items-center gap-2 text-sm font-semibold text-ink-strong mb-4">
-            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">hub</span>
+            <AppIcon name="waypoints" class="text-xl text-accent-text" />
             Harmony diagram
           </h4>
           <div class="relative w-full aspect-square">
@@ -113,7 +113,7 @@
         <!-- Palette Metrics Section -->
         <section>
           <h4 class="flex items-center gap-2 text-sm font-semibold text-ink-strong mb-4">
-            <span class="material-symbols-outlined text-xl text-accent-text" aria-hidden="true">bar_chart</span>
+            <AppIcon name="chart-column" class="text-xl text-accent-text" />
             Palette metrics
           </h4>
           <div class="space-y-4 mb-4">
@@ -136,8 +136,8 @@
 
     <!-- Navigation -->
     <div class="flex justify-between pt-8 border-t border-line-faint">
-      <UiButton icon="arrow_back" @click="$emit('back')">Back</UiButton>
-      <UiButton variant="primary" trailing-icon="arrow_forward" @click="$emit('next')">Next: Contrast testing</UiButton>
+      <UiButton icon="arrow-left" @click="$emit('back')">Back</UiButton>
+      <UiButton variant="primary" trailing-icon="arrow-right" @click="$emit('next')">Next: Contrast testing</UiButton>
     </div>
   </div>
 </template>

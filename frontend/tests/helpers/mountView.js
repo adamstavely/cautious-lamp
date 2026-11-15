@@ -1,4 +1,5 @@
 import { createApp, nextTick } from 'vue';
+import AppIcon from '../../src/components/ui/AppIcon.vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 
 const catchAll = { render: () => null };
@@ -18,6 +19,7 @@ export async function mountView(component, { path = '/', routes = [] } = {}) {
   const el = document.createElement('div');
   document.body.appendChild(el);
   const app = createApp(component);
+  app.component('AppIcon', AppIcon); // registered globally in main.js
   app.use(router);
   app.config.warnHandler = () => {};
   const vm = app.mount(el);

@@ -9,7 +9,7 @@
         <UiInput v-model="newMemberName" label="Name (optional)" placeholder="John Doe" autocomplete="off" />
         <UiSelect v-model="newMemberRole" label="Role" :options="roleOptions" required />
         <div>
-          <UiButton variant="primary" type="submit" icon="person_add" :disabled="!newMemberEmail.trim() || busy" :loading="busy">Add</UiButton>
+          <UiButton variant="primary" type="submit" icon="user-plus" :disabled="!newMemberEmail.trim() || busy" :loading="busy">Add</UiButton>
         </div>
       </form>
     </section>
@@ -38,7 +38,7 @@
             </div>
             <UiButton
               icon-only
-              icon="delete"
+              icon="trash-2"
               variant="ghost"
               size="sm"
               :disabled="busy"

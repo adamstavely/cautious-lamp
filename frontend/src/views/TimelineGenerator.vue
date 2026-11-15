@@ -58,7 +58,7 @@
             <div class="mt-6 pt-6 border-t border-line">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-semibold text-ink-strong">Events ({{ events.length }})</h3>
-                <UiButton variant="primary" size="sm" icon="add" @click="addEvent">Add event</UiButton>
+                <UiButton variant="primary" size="sm" icon="plus" @click="addEvent">Add event</UiButton>
               </div>
 
               <div class="flex flex-col gap-3 max-h-96 overflow-y-auto">
@@ -66,7 +66,7 @@
                   <legend class="sr-only">Event {{ index + 1 }}</legend>
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-medium text-ink-muted" aria-hidden="true">Event {{ index + 1 }}</span>
-                    <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove event ${index + 1}`" :disabled="events.length <= 1" @click="removeEvent(index)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove event ${index + 1}`" :disabled="events.length <= 1" @click="removeEvent(index)" />
                   </div>
                   <UiInput v-model="event.date" type="date" :aria-label="`Event ${index + 1} date`" />
                   <UiInput v-model="event.title" placeholder="Event title" :aria-label="`Event ${index + 1} title`" />
@@ -99,7 +99,7 @@
                   <div v-for="(event, index) in sortedEvents" :key="event.id" class="timeline-event-vertical">
                     <div class="timeline-marker timeline-marker-vertical">
                       <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
-                      <span v-if="event.icon" class="material-symbols-outlined timeline-marker-icon text-sm">{{ getIconName(event.icon) }}</span>
+                      <AppIcon :name="getIconName(event.icon)" v-if="event.icon" class="timeline-marker-icon text-sm" />
                     </div>
                     <div class="timeline-content-vertical">
                       <div class="timeline-date-vertical text-ink-secondary">{{ formatDate(event.date) }}</div>
@@ -115,7 +115,7 @@
                     <div v-for="(event, index) in sortedEvents" :key="event.id" class="timeline-event-horizontal">
                       <div class="timeline-marker timeline-marker-horizontal">
                         <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
-                        <span v-if="event.icon" class="material-symbols-outlined timeline-marker-icon text-xs">{{ getIconName(event.icon) }}</span>
+                        <AppIcon :name="getIconName(event.icon)" v-if="event.icon" class="timeline-marker-icon text-xs" />
                       </div>
                       <div class="timeline-content-horizontal">
                         <div class="timeline-date-horizontal text-xs text-ink-secondary">{{ formatDate(event.date) }}</div>
@@ -136,7 +136,7 @@
                   >
                     <div class="timeline-marker timeline-marker-zigzag">
                       <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
-                      <span v-if="event.icon" class="material-symbols-outlined timeline-marker-icon text-sm">{{ getIconName(event.icon) }}</span>
+                      <AppIcon :name="getIconName(event.icon)" v-if="event.icon" class="timeline-marker-icon text-sm" />
                     </div>
                     <div class="timeline-content-zigzag" :class="event.position === 'right' ? 'timeline-content-right' : 'timeline-content-left'">
                       <div class="timeline-date-zigzag text-xs text-ink-secondary">{{ formatDate(event.date) }}</div>
@@ -160,7 +160,7 @@
             <ul class="flex flex-col gap-2 text-sm">
               <li v-for="check in accessibilityChecks" :key="check.label" class="flex items-center justify-between">
                 <span class="text-ink-secondary">{{ check.label }}</span>
-                <span class="material-symbols-outlined text-base" :class="check.ok ? 'text-success' : 'text-danger'" aria-hidden="true">{{ check.ok ? 'check_circle' : 'error' }}</span>
+                <AppIcon :name="check.ok ? 'circle-check' : 'circle-alert'" class="text-base" :class="check.ok ? 'text-success' : 'text-danger'" />
                 <span class="sr-only">{{ check.ok ? 'Passes' : 'Needs work' }}</span>
               </li>
             </ul>
@@ -171,7 +171,7 @@
               </ul>
             </UiCallout>
 
-            <UiButton variant="primary" icon="bug_report" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
+            <UiButton variant="primary" icon="bug" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
               {{ axeScanRunning ? 'Scanning...' : 'Run accessibility check' }}
             </UiButton>
 
@@ -181,7 +181,7 @@
                 v-for="(violation, index) in axeScanResults.violations"
                 :key="index"
                 tone="danger"
-                :icon="violation.impact === 'critical' ? 'error' : 'warning'"
+                :icon="violation.impact === 'critical' ? 'circle-alert' : 'triangle-alert'"
                 :title="`${violation.id} (${violation.impact || 'moderate'})`"
               >
                 <p>{{ violation.description }}</p>
@@ -222,9 +222,9 @@ const { notice, showNotice, clearNotice } = useNotice();
 const timelinePreview = ref(null);
 
 const timelineStyles = [
-  { label: 'Vertical', value: 'vertical', icon: 'vertical_align_center', description: 'Events stacked vertically' },
-  { label: 'Horizontal', value: 'horizontal', icon: 'horizontal_rule', description: 'Events in a horizontal line' },
-  { label: 'Zigzag', value: 'zigzag', icon: 'timeline', description: 'Alternating left/right layout' }
+  { label: 'Vertical', value: 'vertical', icon: 'fold-vertical', description: 'Events stacked vertically' },
+  { label: 'Horizontal', value: 'horizontal', icon: 'minus', description: 'Events in a horizontal line' },
+  { label: 'Zigzag', value: 'zigzag', icon: 'chart-gantt', description: 'Alternating left/right layout' }
 ];
 
 const dateFormatOptions = [
@@ -236,9 +236,9 @@ const dateFormatOptions = [
 
 const iconOptions = [
   { value: '', label: 'No icon' },
-  { value: 'event', label: 'Event' },
+  { value: 'calendar-check', label: 'Event' },
   { value: 'star', label: 'Star' },
-  { value: 'check_circle', label: 'Check' },
+  { value: 'circle-check', label: 'Check' },
   { value: 'flag', label: 'Flag' },
   { value: 'location_on', label: 'Location' }
 ];
@@ -287,7 +287,7 @@ const events = ref([
     date: localDateString(),
     title: 'Project Start',
     description: 'Initial project kickoff',
-    icon: 'event',
+    icon: 'calendar-check',
     color: '#6366f1',
     position: 'left'
   },
@@ -317,13 +317,13 @@ const sortedEvents = computed(() => {
 
 const getIconName = (icon) => {
   const iconMap = {
-    event: 'event',
+    event: 'calendar-check',
     star: 'star',
-    check_circle: 'check_circle',
+    check_circle: 'circle-check',
     flag: 'flag',
-    location_on: 'location_on'
+    location_on: 'map-pin'
   };
-  return iconMap[icon] || 'event';
+  return iconMap[icon] || 'calendar-check';
 };
 
 const DATE_FORMATS = {

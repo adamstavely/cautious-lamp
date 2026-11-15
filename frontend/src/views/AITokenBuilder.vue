@@ -34,11 +34,11 @@
                   </p>
                   <div class="flex items-center gap-4 text-sm text-white/70">
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">smart_toy</span>
+                      <AppIcon name="bot" class="text-base" />
                       AI & GenAI
                     </span>
                     <span class="flex items-center gap-2">
-                      <span class="material-symbols-outlined text-base">update</span>
+                      <AppIcon name="refresh-ccw" class="text-base" />
                       Updated {{ new Date().toLocaleDateString() }}
                     </span>
                   </div>
@@ -102,7 +102,7 @@
                 >
                   <div class="mb-6">
                     <h2 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-base text-indigo-600">category</span>
+                      <AppIcon name="shapes" class="text-base text-indigo-600" />
                       AI Token Categories
                     </h2>
                   </div>
@@ -116,7 +116,7 @@
                       :class="getCategoryButtonClass(category.id)"
                     >
                       <div class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-base">{{ category.icon }}</span>
+                        <AppIcon :name="category.icon" class="text-base" />
                         <span>{{ category.name }}</span>
                       </div>
                       <span class="text-xs font-medium" :class="isDarkMode ? 'text-gray-500' : 'text-gray-500'">
@@ -128,7 +128,7 @@
                   <!-- Export Section -->
                   <div class="mt-8 pt-6 border-t" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                     <h3 class="text-sm font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                      <span class="material-symbols-outlined text-base text-indigo-600">swap_horiz</span>
+                      <AppIcon name="arrow-left-right" class="text-base text-indigo-600" />
                       Import / Export
                     </h3>
                     <div class="space-y-2 mb-4">
@@ -137,7 +137,7 @@
                         class="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left"
                         :class="isDarkMode ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                       >
-                        <span class="material-symbols-outlined text-base align-middle mr-2">upload</span>
+                        <AppIcon name="upload" class="text-base align-middle mr-2" />
                         Import JSON
                       </button>
                       <button
@@ -145,7 +145,7 @@
                         class="w-full px-3 py-2 text-sm rounded-lg transition-colors text-left"
                         :class="isDarkMode ? 'bg-indigo-600 text-indigo-100 hover:bg-indigo-500' : 'bg-indigo-600 text-white hover:bg-indigo-700'"
                       >
-                        <span class="material-symbols-outlined text-base align-middle mr-2">save</span>
+                        <AppIcon name="save" class="text-base align-middle mr-2" />
                         Save to Library
                       </button>
                     </div>
@@ -157,7 +157,7 @@
                           ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                       >
-                        <span class="material-symbols-outlined text-base align-middle mr-2">code</span>
+                        <AppIcon name="code" class="text-base align-middle mr-2" />
                         JSON (DTCG)
                       </button>
                       <button
@@ -167,7 +167,7 @@
                           ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                       >
-                        <span class="material-symbols-outlined text-base align-middle mr-2">css</span>
+                        <AppIcon name="file-code" class="text-base align-middle mr-2" />
                         CSS Variables
                       </button>
                       <button
@@ -177,7 +177,7 @@
                           ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                       >
-                        <span class="material-symbols-outlined text-base align-middle mr-2">phone_iphone</span>
+                        <AppIcon name="smartphone" class="text-base align-middle mr-2" />
                         iOS
                       </button>
                       <button
@@ -187,7 +187,7 @@
                           ? 'bg-slate-800 text-gray-300 hover:bg-slate-700' 
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
                       >
-                        <span class="material-symbols-outlined text-base align-middle mr-2">phone_android</span>
+                        <AppIcon name="smartphone" class="text-base align-middle mr-2" />
                         Android
                       </button>
                     </div>
@@ -206,7 +206,7 @@
                   <div class="flex items-center justify-between mb-6">
                     <div>
                       <h2 class="text-xl font-semibold mb-1 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                        <span class="material-symbols-outlined text-lg text-indigo-600">{{ getCategoryIcon(selectedCategory) }}</span>
+                        <AppIcon :name="getCategoryIcon(selectedCategory)" class="text-lg text-indigo-600" />
                         {{ getCategoryName(selectedCategory) }} Tokens
                       </h2>
                       <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
@@ -217,7 +217,7 @@
                       @click="showAddTokenModal = true"
                       class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
                     >
-                      <span class="material-symbols-outlined text-lg">add</span>
+                      <AppIcon name="plus" class="text-lg" />
                       Add Token
                     </button>
                   </div>
@@ -252,9 +252,7 @@
                           class="w-12 h-12 rounded-lg border-2 flex items-center justify-center flex-shrink-0"
                           :class="isDarkMode ? 'border-gray-600 bg-slate-700' : 'border-gray-300 bg-white'"
                         >
-                          <span class="material-symbols-outlined" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'">
-                            {{ getTokenIcon(getTokenType(token)) }}
-                          </span>
+                          <AppIcon :name="getTokenIcon(getTokenType(token))" :class="isDarkMode ? 'text-gray-400' : 'text-gray-500'" />
                         </div>
                         
                         <div class="flex-1 min-w-0">
@@ -285,7 +283,7 @@
                           :class="isDarkMode ? 'text-gray-400 hover:text-indigo-400 hover:bg-slate-700' : 'text-gray-400 hover:text-indigo-600 hover:bg-gray-100'"
                           title="Edit token"
                         >
-                          <span class="material-symbols-outlined text-lg">edit</span>
+                          <AppIcon name="pencil" class="text-lg" />
                         </button>
                         <button
                           @click="deleteToken(token.id)"
@@ -293,7 +291,7 @@
                           :class="isDarkMode ? 'text-gray-400 hover:text-red-400 hover:bg-slate-700' : 'text-gray-400 hover:text-red-600 hover:bg-gray-100'"
                           title="Delete token"
                         >
-                          <span class="material-symbols-outlined text-lg">delete</span>
+                          <AppIcon name="trash-2" class="text-lg" />
                         </button>
                       </div>
                     </div>
@@ -301,9 +299,7 @@
 
                   <!-- Empty State -->
                   <div v-else class="text-center py-12">
-                    <span class="material-symbols-outlined text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'">
-                      {{ getCategoryIcon(selectedCategory) }}
-                    </span>
+                    <AppIcon :name="getCategoryIcon(selectedCategory)" class="text-6xl mb-4" :class="isDarkMode ? 'text-gray-600' : 'text-gray-300'" />
                     <p class="text-lg font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                       No tokens yet
                     </p>
@@ -345,7 +341,7 @@
         >
           <div class="flex items-center justify-between">
             <h3 :id="editingToken ? 'edit-token-title' : 'add-token-title'" class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-              <span class="material-symbols-outlined text-lg text-indigo-600">{{ editingToken ? 'edit' : 'add' }}</span>
+              <AppIcon :name="editingToken ? 'pencil' : 'plus'" class="text-lg text-indigo-600" />
               {{ editingToken ? 'Edit Token' : 'Add Token' }}
             </h3>
             <button
@@ -354,7 +350,7 @@
               :class="isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
               aria-label="Close modal"
             >
-              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+              <AppIcon name="x" />
             </button>
           </div>
         </div>
@@ -591,7 +587,7 @@
               :class="isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-slate-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'"
               aria-label="Close modal"
             >
-              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+              <AppIcon name="x" />
             </button>
           </div>
         </div>
@@ -833,14 +829,14 @@ const aiCategories = ref([
   {
     id: 'agent-identity',
     name: 'Agent Identity',
-    icon: 'smart_toy',
+    icon: 'bot',
     prefix: 'agent.',
     description: 'Represent agent personality, role, trust profile, and visual identity'
   },
   {
     id: 'confidence',
     name: 'Confidence & Uncertainty',
-    icon: 'trending_up',
+    icon: 'trending-up',
     prefix: 'ai.confidence.',
     description: 'Visual and behavioral representation of model uncertainty'
   },
@@ -861,14 +857,14 @@ const aiCategories = ref([
   {
     id: 'prompting',
     name: 'Prompting',
-    icon: 'edit_note',
+    icon: 'notebook-pen',
     prefix: 'prompt.',
     description: 'Tokens for chat UI and internal subsystem hints'
   },
   {
     id: 'message-state',
     name: 'Message State',
-    icon: 'chat_bubble',
+    icon: 'message-circle',
     prefix: 'message.state.',
     description: 'Reflecting streaming, thinking, planning, and tool-use states'
   },
@@ -882,7 +878,7 @@ const aiCategories = ref([
   {
     id: 'memory',
     name: 'Memory',
-    icon: 'memory',
+    icon: 'cpu',
     prefix: 'memory.',
     description: 'Short-term and long-term memory tokens'
   },
@@ -896,21 +892,21 @@ const aiCategories = ref([
   {
     id: 'safety-boundary',
     name: 'Safety & Boundary',
-    icon: 'warning',
+    icon: 'triangle-alert',
     prefix: 'ai.boundary.',
     description: 'GenAI guardrail UI tokens'
   },
   {
     id: 'model-behavior',
     name: 'Model Behavior',
-    icon: 'psychology',
+    icon: 'brain',
     prefix: 'model.behavior.',
     description: 'MCP, LangChain, LangGraph agent states'
   },
   {
     id: 'multi-agent',
     name: 'Multi-Agent Interaction',
-    icon: 'groups',
+    icon: 'users-round',
     prefix: 'agent.interaction.',
     description: 'Agent Crowd / Team-of-Agents design tokens'
   }
@@ -962,7 +958,7 @@ const getCategoryName = (categoryId) => {
 
 const getCategoryIcon = (categoryId) => {
   const category = aiCategories.value.find(c => c.id === categoryId);
-  return category ? category.icon : 'style';
+  return category ? category.icon : 'swatch-book';
 };
 
 const getCategoryDescription = (categoryId) => {
@@ -1053,15 +1049,15 @@ const getTokenDescription = (token) => {
 const getTokenIcon = (type) => {
   const icons = {
     color: 'palette',
-    dimension: 'straighten',
-    fontFamily: 'text_fields',
-    fontWeight: 'format_bold',
-    duration: 'schedule',
-    cubicBezier: 'timeline',
-    number: 'numbers',
-    string: 'text_fields'
+    dimension: 'ruler',
+    fontFamily: 'type',
+    fontWeight: 'bold',
+    duration: 'clock',
+    cubicBezier: 'chart-gantt',
+    number: 'hash',
+    string: 'type'
   };
-  return icons[type] || 'style';
+  return icons[type] || 'swatch-book';
 };
 
 const getValuePlaceholder = (type) => {

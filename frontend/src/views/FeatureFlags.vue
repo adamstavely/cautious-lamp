@@ -11,7 +11,7 @@
 
     <PageSection title="Flags">
       <template #actions>
-        <UiButton variant="primary" icon="add" @click="showCreateModal = true">Create flag</UiButton>
+        <UiButton variant="primary" icon="plus" @click="showCreateModal = true">Create flag</UiButton>
       </template>
 
       <UiSpinner v-if="loading" label="Loading feature flags…" />
@@ -54,13 +54,13 @@
             <UiButton
               icon-only
               variant="ghost"
-              :icon="flag.enabled ? 'toggle_on' : 'toggle_off'"
+              :icon="flag.enabled ? 'toggle-right' : 'toggle-left'"
               :class="{ 'text-success': flag.enabled }"
               :label="`${flag.enabled ? 'Disable' : 'Enable'} ${flag.name}`"
               @click="toggleFlag(flag.id)"
             />
-            <UiButton icon-only variant="ghost" icon="edit" :label="`Edit ${flag.name}`" @click="editFlag(flag)" />
-            <UiButton icon-only variant="ghost" icon="delete" :label="`Delete ${flag.name}`" @click="deleteFlag(flag)" />
+            <UiButton icon-only variant="ghost" icon="pencil" :label="`Edit ${flag.name}`" @click="editFlag(flag)" />
+            <UiButton icon-only variant="ghost" icon="trash-2" :label="`Delete ${flag.name}`" @click="deleteFlag(flag)" />
           </div>
         </li>
       </ul>
@@ -162,7 +162,7 @@
           </optgroup>
               <option value="custom">-- Custom (Manual Entry) --</option>
             </select>
-            <span class="material-symbols-outlined route-select-chevron" aria-hidden="true">expand_more</span>
+            <AppIcon name="chevron-down" class="route-select-chevron" />
           </div>
         </UiField>
 
@@ -224,7 +224,7 @@
       <p class="text-sm text-ink">Are you sure you want to delete the feature flag "{{ flagToDelete?.name }}"? This cannot be undone.</p>
       <template #footer>
         <UiButton @click="flagToDelete = null">Cancel</UiButton>
-        <UiButton variant="danger" icon="delete" @click="confirmDeleteFlag">Delete</UiButton>
+        <UiButton variant="danger" icon="trash-2" @click="confirmDeleteFlag">Delete</UiButton>
       </template>
     </UiDialog>
   </PageShell>

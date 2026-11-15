@@ -20,7 +20,7 @@
             class="inline-flex items-center gap-2 text-sm font-medium transition-colors"
             :class="isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'"
           >
-            <span class="material-symbols-outlined text-base">arrow_back</span>
+            <AppIcon name="arrow-left" class="text-base" />
             Back to Color Palettes
           </router-link>
         </div>
@@ -35,7 +35,7 @@
               <div class="flex-1">
                 <div class="flex items-center gap-3 mb-4">
                   <div class="w-12 h-12 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-white text-5xl">layers</span>
+                    <AppIcon name="layers" class="text-white text-5xl" />
                   </div>
                   <h1 class="text-4xl md:text-5xl font-bold text-white">
                     Neutral Backgrounds
@@ -77,7 +77,7 @@
             <!-- Info Box -->
             <div class="p-6 rounded-lg border mb-8" :class="isDarkMode ? 'bg-indigo-900/20 border-indigo-700' : 'bg-indigo-50 border-indigo-200'">
               <div class="flex items-start gap-3">
-                <span class="material-symbols-outlined" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">info</span>
+                <AppIcon name="info" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 <div>
                   <h4 class="font-semibold mb-2" :class="isDarkMode ? 'text-indigo-300' : 'text-indigo-900'">
                     Neutral Background Options
@@ -182,7 +182,7 @@
                         
                         <!-- Copy Indicator on Hover -->
                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-30 rounded">
-                          <span class="material-symbols-outlined text-white drop-shadow-lg text-2xl">content_copy</span>
+                          <AppIcon name="copy" class="text-white drop-shadow-lg text-2xl" />
                         </div>
                       </td>
                     </tr>

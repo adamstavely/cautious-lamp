@@ -1,7 +1,7 @@
 <template>
   <UiPanel title="Integrations" description="The external tools and services features rely on, and what each still needs." flush>
     <template #actions>
-      <UiButton size="sm" icon="sync" :loading="loading" @click="load(true)">
+      <UiButton size="sm" icon="refresh-cw" :loading="loading" @click="load(true)">
         {{ loading ? 'Checking…' : 'Check connections' }}
       </UiButton>
     </template>
@@ -17,12 +17,7 @@
 
     <ul v-else-if="report" class="divide-y divide-line-faint">
       <li v-for="item in items" :key="item.key" class="p-6 flex gap-4">
-        <span
-          class="material-symbols-outlined shrink-0"
-          :class="stateStyle(item.status.state).icon"
-          :aria-label="stateStyle(item.status.state).label"
-          role="img"
-        >{{ stateStyle(item.status.state).symbol }}</span>
+        <AppIcon :name="stateStyle(item.status.state).symbol" class="shrink-0" :class="stateStyle(item.status.state).icon" :aria-label="stateStyle(item.status.state).label" role="img" />
         <div class="min-w-0">
           <div class="flex flex-wrap items-baseline gap-x-3">
             <span class="font-medium text-ink-strong">{{ item.label }}</span>
@@ -66,10 +61,10 @@ const checkedAtLabel = computed(() => (report.value ? new Date(report.value.chec
 
 const stateStyle = (state) =>
   ({
-    ok: { symbol: 'check_circle', icon: 'text-success', label: 'Working' },
+    ok: { symbol: 'circle-check', icon: 'text-success', label: 'Working' },
     not_configured: { symbol: 'settings', icon: 'text-warning', label: 'Not set up' },
-    unreachable: { symbol: 'error', icon: 'text-danger', label: 'Not answering' },
-  })[state] ?? { symbol: 'help', icon: 'text-ink-muted', label: 'Unknown' };
+    unreachable: { symbol: 'circle-alert', icon: 'text-danger', label: 'Not answering' },
+  })[state] ?? { symbol: 'circle-help', icon: 'text-ink-muted', label: 'Unknown' };
 
 const load = async (check = false) => {
   loading.value = true;

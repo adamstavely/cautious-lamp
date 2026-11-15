@@ -11,9 +11,9 @@
     <!-- Overview -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
       <UiStat icon="palette" label="Total colors" :value="paletteColorsCount" />
-      <UiStat icon="format_color_fill" label="Color scales" :value="colorScalesCount" />
-      <UiStat icon="tune" label="Variants" :value="variantsCount" />
-      <UiStat icon="dark_mode" label="Dark mode" :value="darkModeColorsCount" />
+      <UiStat icon="paint-bucket" label="Color scales" :value="colorScalesCount" />
+      <UiStat icon="sliders-horizontal" label="Variants" :value="variantsCount" />
+      <UiStat icon="moon" label="Dark mode" :value="darkModeColorsCount" />
     </div>
 
     <!-- Progress Steps -->
@@ -22,7 +22,7 @@
         <li v-for="(step, index) in steps" :key="index" class="flex items-start" :class="index < steps.length - 1 ? 'flex-1' : ''">
           <div class="flex flex-col items-center gap-2 shrink-0 w-16" :aria-current="currentStep === index ? 'step' : undefined">
             <span class="wizard-step-dot" :class="stepState(index)">
-              <span v-if="currentStep > index" class="material-symbols-outlined text-lg" aria-hidden="true">check</span>
+              <AppIcon name="check" v-if="currentStep > index" class="text-lg" />
               <span v-else aria-hidden="true">{{ index + 1 }}</span>
             </span>
             <span class="text-sm font-medium text-center" :class="currentStep >= index ? 'text-ink-strong' : 'text-ink-muted'">

@@ -7,7 +7,7 @@
       spot="admin/application-management"
     >
       <template v-if="canRegister" #actions>
-        <UiButton variant="primary" icon="add" to="/admin/applications/register">Register new application</UiButton>
+        <UiButton variant="primary" icon="plus" to="/admin/applications/register">Register new application</UiButton>
       </template>
     </PageHero>
 
@@ -68,8 +68,8 @@
                 <div class="flex items-center gap-2">
                   <span v-if="app.designSystemVersion" class="font-medium" :class="isBehind(app.designSystemVersion) ? 'text-warning' : 'text-success'">v{{ app.designSystemVersion }}</span>
                   <span v-else class="text-ink-muted">Not set</span>
-                  <span v-if="isBehind(app.designSystemVersion)" class="material-symbols-outlined text-base text-warning" title="Needs upgrade" role="img" aria-label="Needs upgrade">warning</span>
-                  <span v-else-if="app.designSystemVersion" class="material-symbols-outlined text-base text-success" title="Up to date" role="img" aria-label="Up to date">check_circle</span>
+                  <AppIcon name="triangle-alert" v-if="isBehind(app.designSystemVersion)" class="text-base text-warning" title="Needs upgrade" role="img" aria-label="Needs upgrade" />
+                  <AppIcon name="circle-check" v-else-if="app.designSystemVersion" class="text-base text-success" title="Up to date" role="img" aria-label="Up to date" />
                 </div>
                 <UiButton
                   v-if="currentVersion && isBehind(app.designSystemVersion) && canWrite(app)"
@@ -99,8 +99,8 @@
               <td class="whitespace-nowrap">{{ formatDate(app.registeredAt) }}</td>
               <td class="whitespace-nowrap text-right">
                 <div v-if="canWrite(app)" class="flex items-center justify-end gap-1">
-                  <UiButton variant="ghost" size="sm" icon="edit" icon-only :label="`Edit ${app.name}`" @click="openEdit(app)" />
-                  <UiButton variant="danger" size="sm" icon="delete" icon-only :label="`Delete ${app.name}`" @click="deleteApplication(app)" />
+                  <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${app.name}`" @click="openEdit(app)" />
+                  <UiButton variant="danger" size="sm" icon="trash-2" icon-only :label="`Delete ${app.name}`" @click="deleteApplication(app)" />
                 </div>
               </td>
             </tr>
@@ -140,7 +140,7 @@
                 <p class="text-xs text-ink-secondary">{{ action.reason }}</p>
                 <p class="flex items-center gap-2 mt-1 text-xs text-ink-muted">
                   <span>{{ action.currentVersion === 'unknown' ? 'unknown' : `v${action.currentVersion}` }}</span>
-                  <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_forward</span>
+                  <AppIcon name="arrow-right" class="text-base" />
                   <span class="sr-only">to</span>
                   <span>v{{ action.targetVersion }}</span>
                 </p>
@@ -148,7 +148,7 @@
               <UiButton
                 v-if="canWriteId(action.applicationId)"
                 size="sm"
-                icon="update"
+                icon="refresh-ccw"
                 :loading="updatingVersion === action.applicationId"
                 @click="updateApplicationVersion(action.applicationId, action.targetVersion)"
               >

@@ -4,7 +4,7 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <span class="material-symbols-outlined text-indigo-600">compare</span>
+            <AppIcon name="git-compare" class="text-indigo-600" />
             Font Comparison
           </h2>
           <p class="text-gray-600">{{ comparisonFonts.length }} fonts selected for comparison</p>
@@ -14,7 +14,7 @@
           @click="startABTest(comparisonFonts[0], comparisonFonts[1])"
           class="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
         >
-          <span class="material-symbols-outlined">compare</span>
+          <AppIcon name="git-compare" />
           A/B Test
         </button>
       </div>
@@ -26,7 +26,7 @@
           class="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
           title="Remove from comparison"
         >
-          <span class="material-symbols-outlined text-xl">close</span>
+          <AppIcon name="x" class="text-xl" />
         </button>
         <div class="flex justify-between items-start mb-4 pb-4 border-b border-gray-200 pr-10">
           <h3 class="text-lg font-semibold text-gray-900">{{ font.name }}</h3>

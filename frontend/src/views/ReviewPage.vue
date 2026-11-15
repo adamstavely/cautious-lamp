@@ -14,7 +14,7 @@
         <div v-else-if="errorState" role="alert">
           <UiEmptyState :title="errorState.title" :body="errorState.message" :spot="errorState.spot">
             <template v-if="errorState.retry" #actions>
-              <UiButton variant="primary" icon="refresh" @click="retryLoad">Try again</UiButton>
+              <UiButton variant="primary" icon="refresh-cw" @click="retryLoad">Try again</UiButton>
             </template>
           </UiEmptyState>
         </div>
@@ -22,7 +22,7 @@
         <!-- Waiting for the password -->
         <UiEmptyState v-else-if="loadState === 'password'" title="Password required" body="This review is password protected." spot="site/building-trust">
           <template v-if="!passwordRequired" #actions>
-            <UiButton variant="primary" icon="lock_open" @click="passwordRequired = true">Enter password</UiButton>
+            <UiButton variant="primary" icon="lock-open" @click="passwordRequired = true">Enter password</UiButton>
           </template>
         </UiEmptyState>
 
@@ -36,10 +36,10 @@
         <UiPanel v-else :title="metadata.filename" :description="metadata.designer ? `Designer: ${metadata.designer}` : ''" heading-tag="h1">
           <template #actions>
             <DemoDataBadge />
-            <UiButton v-if="metadata.versions.length > 1" icon="compare" @click="toggleComparisonMode">
+            <UiButton v-if="metadata.versions.length > 1" icon="git-compare" @click="toggleComparisonMode">
               {{ comparisonMode ? 'Single view' : 'Compare versions' }}
             </UiButton>
-            <UiButton v-if="previewUrl && !comparisonMode" icon="open_in_new" @click="openInNewTab">Open in new tab</UiButton>
+            <UiButton v-if="previewUrl && !comparisonMode" icon="external-link" @click="openInNewTab">Open in new tab</UiButton>
           </template>
 
           <!-- Single View Mode -->
@@ -118,9 +118,9 @@
           <div class="flex flex-wrap gap-2">
             <!-- Set or change the password (the API never returns it, only hasPassword) -->
             <UiButton v-if="can('manage-password')" icon-only icon="key" :label="metadata.hasPassword ? 'Change password' : 'Set password'" @click="handleChangePassword" />
-            <UiButton v-if="can('extend')" icon-only icon="calendar_month" label="Extend expiration" @click="handleExtendExpiration" />
+            <UiButton v-if="can('extend')" icon-only icon="calendar-days" label="Extend expiration" @click="handleExtendExpiration" />
             <UiButton v-if="can('upload-version')" icon-only icon="upload" label="Upload new version" @click="handleUploadNewVersion" />
-            <UiButton v-if="can('manage-sharing')" icon-only icon="share" label="Sharing settings" @click="handleSharingSettings" />
+            <UiButton v-if="can('manage-sharing')" icon-only icon="share-2" label="Sharing settings" @click="handleSharingSettings" />
           </div>
         </UiPanel>
 

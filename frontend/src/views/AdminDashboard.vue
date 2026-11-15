@@ -32,7 +32,7 @@
                 <UiButton
                   variant="danger"
                   size="sm"
-                  icon="delete"
+                  icon="trash-2"
                   :disabled="!selectedIds.length"
                   title="Delete all selected links"
                   @click="openBatchDeleteConfirm"
@@ -58,7 +58,7 @@
                     <th v-for="column in columns" :key="column.key" scope="col" :class="{ 'text-center': column.center }" :aria-sort="ariaSort(column)">
                       <button v-if="column.sortable" type="button" class="sort-button" @click="sortBy(column.key)">
                         {{ column.title }}
-                        <span class="material-symbols-outlined text-base" aria-hidden="true">{{ sortIcon(column) }}</span>
+                        <AppIcon :name="sortIcon(column)" class="text-base" />
                       </button>
                       <template v-else>{{ column.title }}</template>
                     </th>
@@ -85,7 +85,7 @@
                     <td>{{ item.designer }}</td>
                     <td class="text-center">
                       <UiChip v-if="item.hasPassword" tone="danger" icon="lock">Protected</UiChip>
-                      <UiChip v-else tone="success" icon="public">Public</UiChip>
+                      <UiChip v-else tone="success" icon="globe">Public</UiChip>
                     </td>
                     <td class="whitespace-nowrap">{{ formatDate(item.expiresAt) }}</td>
                     <td class="text-center">
@@ -93,12 +93,12 @@
                     </td>
                     <td>
                       <div class="flex gap-1">
-                        <UiButton icon-only size="sm" variant="ghost" icon="content_copy" label="Copy review URL" @click="copyReviewUrl(item)" />
-                        <UiButton v-if="isExpired(item)" icon-only size="sm" variant="ghost" icon="refresh" label="Reactivate expired link" @click="reactivate(item.id)" />
-                        <UiButton v-else icon-only size="sm" variant="ghost" icon="schedule" label="Extend expiration by 7 days" @click="extend(item.id)" />
-                        <UiButton icon-only size="sm" variant="ghost" icon="calendar_month" label="Override expiration date" @click="openOverrideDialog(item.id)" />
+                        <UiButton icon-only size="sm" variant="ghost" icon="copy" label="Copy review URL" @click="copyReviewUrl(item)" />
+                        <UiButton v-if="isExpired(item)" icon-only size="sm" variant="ghost" icon="refresh-cw" label="Reactivate expired link" @click="reactivate(item.id)" />
+                        <UiButton v-else icon-only size="sm" variant="ghost" icon="clock" label="Extend expiration by 7 days" @click="extend(item.id)" />
+                        <UiButton icon-only size="sm" variant="ghost" icon="calendar-days" label="Override expiration date" @click="openOverrideDialog(item.id)" />
                         <UiButton icon-only size="sm" variant="ghost" icon="key" label="Reset password" @click="openPasswordDialog(item.id)" />
-                        <UiButton icon-only size="sm" variant="ghost" icon="delete" label="Delete this link" @click="openDeleteConfirm(item.id)" />
+                        <UiButton icon-only size="sm" variant="ghost" icon="trash-2" label="Delete this link" @click="openDeleteConfirm(item.id)" />
                       </div>
                     </td>
                   </tr>
@@ -108,8 +108,8 @@
               <template v-if="pageCount > 1" #footer>
                 <span>{{ pageStart + 1 }}–{{ Math.min(pageStart + PAGE_SIZE, sortedLinks.length) }} of {{ sortedLinks.length }}</span>
                 <div class="flex gap-2">
-                  <UiButton size="sm" variant="ghost" icon="chevron_left" :disabled="page === 1" @click="page -= 1">Previous</UiButton>
-                  <UiButton size="sm" variant="ghost" trailing-icon="chevron_right" :disabled="page === pageCount" @click="page += 1">Next</UiButton>
+                  <UiButton size="sm" variant="ghost" icon="chevron-left" :disabled="page === 1" @click="page -= 1">Previous</UiButton>
+                  <UiButton size="sm" variant="ghost" trailing-icon="chevron-right" :disabled="page === pageCount" @click="page += 1">Next</UiButton>
                 </div>
               </template>
             </UiPanel>
@@ -121,7 +121,7 @@
           <div class="flex flex-col gap-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <h2 class="text-lg font-semibold text-ink-strong">Teams</h2>
-              <UiButton variant="primary" icon="add" @click="showCreateTeamModal = true">Create team</UiButton>
+              <UiButton variant="primary" icon="plus" @click="showCreateTeamModal = true">Create team</UiButton>
             </div>
 
             <UiEmptyState
@@ -139,8 +139,8 @@
                     <p class="text-sm text-ink-secondary">{{ team.description || 'No description' }}</p>
                   </div>
                   <div class="flex shrink-0">
-                    <UiButton icon-only size="sm" variant="ghost" icon="edit" :label="`Edit ${team.name}`" @click="editTeam(team)" />
-                    <UiButton icon-only size="sm" variant="ghost" icon="delete" :label="`Delete ${team.name}`" @click="confirmDeleteTeam(team)" />
+                    <UiButton icon-only size="sm" variant="ghost" icon="pencil" :label="`Edit ${team.name}`" @click="editTeam(team)" />
+                    <UiButton icon-only size="sm" variant="ghost" icon="trash-2" :label="`Delete ${team.name}`" @click="confirmDeleteTeam(team)" />
                   </div>
                 </div>
 
@@ -166,7 +166,7 @@
                 </div>
 
                 <template #footer>
-                  <UiButton variant="primary" size="sm" icon="group" class="w-full" @click.stop="manageTeamMembers(team)">Manage members</UiButton>
+                  <UiButton variant="primary" size="sm" icon="users" class="w-full" @click.stop="manageTeamMembers(team)">Manage members</UiButton>
                 </template>
               </UiCard>
             </div>
@@ -345,7 +345,7 @@ const pendingDeleteId = ref(null);
 
 const tabs = [
   { value: 'links', label: 'Review links', icon: 'link' },
-  { value: 'teams', label: 'Teams', icon: 'group' },
+  { value: 'teams', label: 'Teams', icon: 'users' },
 ];
 
 // Links table: columns, sorting, paging and selection
@@ -404,8 +404,8 @@ const ariaSort = (column) => {
   return sortDesc.value ? 'descending' : 'ascending';
 };
 const sortIcon = (column) => {
-  if (sortKey.value !== column.key) return 'unfold_more';
-  return sortDesc.value ? 'arrow_downward' : 'arrow_upward';
+  if (sortKey.value !== column.key) return 'chevrons-up-down';
+  return sortDesc.value ? 'arrow-down' : 'arrow-up';
 };
 
 const allOnPageSelected = computed(() => pageLinks.value.length > 0 && pageLinks.value.every((item) => selectedIds.value.includes(item.id)));

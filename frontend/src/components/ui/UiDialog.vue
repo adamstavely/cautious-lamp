@@ -2,7 +2,7 @@
   <dialog ref="dialog" class="ui-dialog" :class="`ui-dialog-${size}`" :aria-labelledby="headingId" @close="$emit('update:open', false)" @cancel.prevent="close">
     <div class="ui-dialog-head">
       <h2 :id="headingId" class="ui-dialog-title">{{ title }}</h2>
-      <UiButton icon-only icon="close" label="Close" variant="ghost" size="sm" @click="close" />
+      <UiButton icon-only icon="x" label="Close" variant="ghost" size="sm" @click="close" />
     </div>
     <div class="ui-dialog-body"><slot /></div>
     <div v-if="$slots.footer" class="ui-dialog-foot"><slot name="footer" /></div>

@@ -13,20 +13,20 @@
     <div v-if="canApproveWorkflow" class="flex flex-col gap-3">
       <p v-if="getWorkflowActionText()" class="text-sm font-semibold text-ink-strong">{{ getWorkflowActionText() }}</p>
       <div class="flex flex-wrap gap-2">
-        <UiButton v-if="can('approve')" variant="primary" icon="approval" @click="handleApprove">Approve</UiButton>
-        <UiButton v-if="can('reject')" icon="source_notes" @click="handleReject">Rework</UiButton>
+        <UiButton v-if="can('approve')" variant="primary" icon="stamp" @click="handleApprove">Approve</UiButton>
+        <UiButton v-if="can('reject')" icon="notebook-text" @click="handleReject">Rework</UiButton>
       </div>
     </div>
 
     <!-- Designer / team actions -->
     <div v-else-if="canDriveWorkflow">
       <!-- Mark as Completed (only after approved) -->
-      <UiButton v-if="workflowState === 'approved' && !reviewCompleted && can('complete')" variant="primary" icon="done_all" @click="handleMarkCompleted">
+      <UiButton v-if="workflowState === 'approved' && !reviewCompleted && can('complete')" variant="primary" icon="check-check" @click="handleMarkCompleted">
         Mark as complete
       </UiButton>
 
       <!-- Draft after a rejection: resubmit to the stage that asked for changes -->
-      <UiButton v-else-if="workflowState === 'draft' && resubmitTarget && can('resubmit')" variant="primary" icon="refresh" @click="handleResubmitForReview">
+      <UiButton v-else-if="workflowState === 'draft' && resubmitTarget && can('resubmit')" variant="primary" icon="refresh-cw" @click="handleResubmitForReview">
         Resubmit for {{ workflowLabel(resubmitTarget) }}
       </UiButton>
 
@@ -34,14 +34,14 @@
       <UiButton
         v-else-if="workflowState === 'draft' && (can('move-to-client-review') || (bypassClientReview && can('move-to-art-director-review')))"
         variant="primary"
-        icon="check_circle"
+        icon="circle-check"
         @click="handleMoveToClientReview"
       >
         {{ bypassClientReview ? 'Send to Art Director review' : 'Send to client review' }}
       </UiButton>
 
       <!-- Request Art Director Review -->
-      <UiButton v-else-if="workflowState === 'client_approved' && can('move-to-art-director-review')" variant="primary" icon="check_circle" @click="handleMoveToArtDirectorReview">
+      <UiButton v-else-if="workflowState === 'client_approved' && can('move-to-art-director-review')" variant="primary" icon="circle-check" @click="handleMoveToArtDirectorReview">
         Request Art Director review
       </UiButton>
 
@@ -49,7 +49,7 @@
       <UiButton
         v-else-if="(workflowState === 'ad_changes_requested' || workflowState === 'cd_changes_requested') && can('resubmit')"
         variant="primary"
-        icon="refresh"
+        icon="refresh-cw"
         @click="handleResubmitForReview"
       >
         Resubmit for review
@@ -64,7 +64,7 @@
     <ol v-else class="history">
       <li v-for="(entry, index) in sortedHistory" :key="`history-${index}-${entry.timestamp}`" class="history-item">
         <span class="history-icon" :class="`history-icon-${historyTone(entry.action)}`" aria-hidden="true">
-          <span class="material-symbols-outlined text-base">{{ historyIcon(entry) }}</span>
+          <AppIcon :name="historyIcon(entry)" class="text-base" />
         </span>
         <div class="min-w-0 flex-1">
           <p class="font-medium text-ink-strong">{{ getHistoryLabel(entry.stage, entry.action) }}</p>
@@ -225,22 +225,22 @@ const getHistoryLabel = (stage, action) => {
 
 // History entry icon and tone
 const HISTORY_ICONS = {
-  uploaded: 'cloud_upload',
-  created_from_url: 'cloud_upload',
-  version_uploaded: 'difference',
-  approved: 'approval',
-  completed: 'done_all',
-  rejected: 'source_notes',
-  moved_to_review: 'graph_1',
+  uploaded: 'cloud-upload',
+  created_from_url: 'cloud-upload',
+  version_uploaded: 'diff',
+  approved: 'stamp',
+  completed: 'check-check',
+  rejected: 'notebook-text',
+  moved_to_review: 'chart-line',
   password_set: 'lock',
   password_removed: 'lock',
-  resubmitted: 'refresh',
-  sharing_changed: 'share',
+  resubmitted: 'refresh-cw',
+  sharing_changed: 'share-2',
 };
 
 const historyIcon = (entry) => {
   if (entry.action === 'extended' || entry.action === 'expiration_extended') {
-    return !entry.days || entry.days <= 7 ? 'schedule' : 'calendar_today';
+    return !entry.days || entry.days <= 7 ? 'clock' : 'calendar';
   }
   return HISTORY_ICONS[entry.action] || 'history';
 };

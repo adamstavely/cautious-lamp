@@ -2,7 +2,7 @@
   <UiChip
     v-if="demo"
     tone="warning"
-    icon="science"
+    icon="flask-conical"
     title="VITE_USE_MOCKS is on: this review section uses sample data stored in your browser, not the review service."
     role="status"
   >

@@ -28,7 +28,7 @@
                 />
                 <UiButton
                   icon-only
-                  :icon="comment.resolved ? 'check_circle' : 'radio_button_unchecked'"
+                  :icon="comment.resolved ? 'circle-check' : 'circle'"
                   variant="ghost"
                   size="sm"
                   :label="comment.resolved ? 'Mark as unresolved' : 'Mark as resolved'"
@@ -115,7 +115,7 @@
       <form class="flex w-full flex-col gap-3" @submit.prevent="submitComment">
         <UiTextarea v-model="newComment" label="Add a comment" placeholder="Write your comment..." :rows="3" />
         <div class="flex justify-end">
-          <UiButton type="submit" variant="primary" icon="chat" :loading="submitting">Add comment</UiButton>
+          <UiButton type="submit" variant="primary" icon="message-square" :loading="submitting">Add comment</UiButton>
         </div>
       </form>
     </template>

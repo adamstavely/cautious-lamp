@@ -6,7 +6,7 @@ const componentMetadata = {
   'button': {
     name: 'Button',
     path: '@design-system/components/button',
-    icon: 'smart_button',
+    icon: 'rectangle-horizontal',
     links: {
       docs: '/components/buttons',
       github: 'https://github.com/your-org/design-system/tree/main/packages/components/src/Button',
@@ -16,7 +16,7 @@ const componentMetadata = {
   'card': {
     name: 'Card',
     path: '@design-system/components/card',
-    icon: 'view_module',
+    icon: 'layout-grid',
     links: {
       docs: '/components/cards',
       github: 'https://github.com/your-org/design-system/tree/main/packages/components/src/Card',
@@ -26,7 +26,7 @@ const componentMetadata = {
   'input': {
     name: 'Input',
     path: '@design-system/components/input',
-    icon: 'input',
+    icon: 'text-cursor-input',
     links: {
       docs: '/components/forms',
       github: 'https://github.com/your-org/design-system/tree/main/packages/components/src/Input',
@@ -36,7 +36,7 @@ const componentMetadata = {
   'dropdown': {
     name: 'Dropdown',
     path: '@design-system/components/dropdown',
-    icon: 'arrow_drop_down',
+    icon: 'chevron-down',
     links: {
       docs: '/components/forms',
       github: 'https://github.com/your-org/design-system/tree/main/packages/components/src/Dropdown',
@@ -76,7 +76,7 @@ const componentMetadata = {
   'breadcrumbs': {
     name: 'Breadcrumbs',
     path: '@design-system/components/breadcrumbs',
-    icon: 'navigate_next',
+    icon: 'chevron-right',
     links: {
       docs: '/components/navigation',
       github: 'https://github.com/your-org/design-system/tree/main/packages/components/src/Breadcrumbs',
@@ -86,7 +86,7 @@ const componentMetadata = {
   'table': {
     name: 'Table',
     path: '@design-system/components/table',
-    icon: 'table_chart',
+    icon: 'table-2',
     links: {
       docs: '/components/data-display',
       github: 'https://github.com/your-org/design-system/tree/main/packages/components/src/Table',
@@ -96,7 +96,7 @@ const componentMetadata = {
   'modal': {
     name: 'Modal',
     path: '@design-system/components/modal',
-    icon: 'fullscreen',
+    icon: 'maximize',
     links: {
       docs: '/components/overlays',
       github: 'https://github.com/your-org/design-system/tree/main/packages/components/src/Modal',
@@ -116,7 +116,7 @@ const componentMetadata = {
   'drawer': {
     name: 'Drawer',
     path: '@design-system/components/drawer',
-    icon: 'left_panel_close',
+    icon: 'panel-left-close',
     links: {
       docs: '/components/overlays',
       github: 'https://github.com/your-org/design-system/tree/main/packages/components/src/Drawer',

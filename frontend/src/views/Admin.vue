@@ -16,7 +16,7 @@
           <UiCard v-else-if="tool.banners && hasPermission('admin:banners')" :title="tool.title" :spot="tool.art">
             {{ tool.body }}
             <template #footer>
-              <UiButton size="sm" icon="campaign" @click="showBannerModal = true">Manage banners</UiButton>
+              <UiButton size="sm" icon="megaphone" @click="showBannerModal = true">Manage banners</UiButton>
             </template>
           </UiCard>
         </template>
@@ -27,7 +27,7 @@
     <UiDialog v-model:open="showBannerModal" title="Site banners" size="lg">
       <div class="mb-6 flex justify-between items-center gap-4">
         <h3 class="text-lg font-semibold text-ink-strong">Active banners</h3>
-        <UiButton variant="primary" size="sm" icon="add" @click="openCreateBanner">Create banner</UiButton>
+        <UiButton variant="primary" size="sm" icon="plus" @click="openCreateBanner">Create banner</UiButton>
       </div>
 
       <UiEmptyState
@@ -53,16 +53,16 @@
               </p>
             </div>
             <div class="flex gap-1">
-              <UiButton variant="ghost" size="sm" icon="edit" icon-only :label="`Edit ${banner.title}`" @click="editBanner(banner)" />
+              <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${banner.title}`" @click="editBanner(banner)" />
               <UiButton
                 variant="ghost"
                 size="sm"
-                :icon="banner.isActive ? 'visibility_off' : 'visibility'"
+                :icon="banner.isActive ? 'eye-off' : 'eye'"
                 icon-only
                 :label="banner.isActive ? `Deactivate ${banner.title}` : `Activate ${banner.title}`"
                 @click="toggleBannerStatus(banner)"
               />
-              <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Delete ${banner.title}`" @click="deleteBanner(banner.id)" />
+              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${banner.title}`" @click="deleteBanner(banner.id)" />
             </div>
           </div>
         </li>

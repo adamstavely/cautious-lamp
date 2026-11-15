@@ -63,7 +63,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">palette</span>
+                <AppIcon name="palette" class="text-indigo-600" />
                 Colors
               </h3>
               <div class="space-y-3">
@@ -102,7 +102,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">text_fields</span>
+                <AppIcon name="type" class="text-indigo-600" />
                 Typography
               </h3>
               <div class="space-y-3">
@@ -135,7 +135,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h3 class="text-lg font-semibold mb-4 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-indigo-600">space_bar</span>
+                <AppIcon name="space" class="text-indigo-600" />
                 Spacing Scale
               </h3>
               <div class="space-y-2">
@@ -187,7 +187,7 @@
             >
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">preview</span>
+                  <AppIcon name="eye" class="text-indigo-600" />
                   Live Preview
                 </h3>
                 <button
@@ -201,7 +201,7 @@
                       ? 'bg-slate-700 text-gray-300 hover:bg-slate-600' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200')"
                 >
-                  <span class="material-symbols-outlined text-base">{{ previewDarkMode ? 'dark_mode' : 'light_mode' }}</span>
+                  <AppIcon :name="previewDarkMode ? 'moon' : 'sun'" class="text-base" />
                   {{ previewDarkMode ? 'Dark' : 'Light' }}
                 </button>
               </div>
@@ -250,7 +250,7 @@
             >
               <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-indigo-600">code</span>
+                  <AppIcon name="code" class="text-indigo-600" />
                   Theme Code
                 </h3>
                 <CodeFormatDropdown v-model="codeFormat" />

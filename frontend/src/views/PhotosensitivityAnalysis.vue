@@ -19,7 +19,7 @@
             label="Video file"
             prompt="Drag and drop a video here, or"
             button-label="Browse files"
-            icon="video_library"
+            icon="clapperboard"
             hint="Supported formats: MP4, AVI, MOV, WebM (max 200MB)"
             @select="handleFileSelect"
             @remove="selectedFile = null"
@@ -39,7 +39,7 @@
         <template #footer>
           <UiButton
             variant="primary"
-            icon="play_arrow"
+            icon="play"
             class="w-full"
             :loading="isAnalyzing"
             :disabled="!selectedFile || irisUnavailable"
@@ -137,7 +137,7 @@ const handleFileSelect = (file) => {
 };
 
 const statusTone = computed(() => ({ failure: 'danger', warning: 'warning' })[analysisResult.value?.summary?.status] ?? 'success');
-const statusIcon = computed(() => ({ failure: 'cancel', warning: 'warning' })[analysisResult.value?.summary?.status] ?? 'check_circle');
+const statusIcon = computed(() => ({ failure: 'circle-x', warning: 'triangle-alert' })[analysisResult.value?.summary?.status] ?? 'circle-check');
 const checkTone = (status) => (status === 'pass' ? 'success' : status === 'warning' ? 'warning' : 'danger');
 
 const analyzeVideo = async () => {

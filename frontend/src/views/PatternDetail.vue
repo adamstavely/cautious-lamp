@@ -65,7 +65,7 @@
                 : 'bg-blue-50 border-blue-200'"
             >
               <div class="flex items-start gap-4">
-                <span class="material-symbols-outlined text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'">accessibility</span>
+                <AppIcon name="accessibility" class="text-3xl flex-shrink-0" :class="isDarkMode ? 'text-blue-400' : 'text-blue-600'" />
                 <div>
                   <h3 class="text-xl font-semibold mb-4" :class="isDarkMode ? 'text-white' : 'text-gray-900'">Accessibility</h3>
                   <ul class="space-y-2" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -105,7 +105,7 @@
             >
               <div class="p-6 border-b" :class="isDarkMode ? 'border-gray-700' : 'border-gray-200'">
                 <h2 class="text-xl font-semibold flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
+                  <AppIcon name="gauge" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                   Pattern Performance
                 </h2>
               </div>
@@ -114,7 +114,7 @@
                 <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">category</span>
+                      <AppIcon name="shapes" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Category
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -127,7 +127,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">check_circle</span>
+                      <AppIcon name="circle-check" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Status
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -140,7 +140,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">devices</span>
+                      <AppIcon name="monitor-smartphone" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       Responsive
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -153,7 +153,7 @@
                   
                   <div class="rounded-lg border p-4" :class="isDarkMode ? 'bg-slate-800 border-gray-700' : 'bg-gray-50 border-gray-200'">
                     <div class="flex items-center gap-2 text-sm font-medium mb-2" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
-                      <span class="material-symbols-outlined text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">accessibility</span>
+                      <AppIcon name="accessibility" class="text-lg" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                       WCAG
                     </div>
                     <div class="text-lg font-bold" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
@@ -221,7 +221,7 @@
                   : 'bg-white border-gray-200 hover:border-indigo-500'"
               >
                 <div class="flex items-center gap-3 mb-3">
-                  <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">{{ related.icon }}</span>
+                  <AppIcon :name="related.icon" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                   <h3 
                     class="text-lg font-semibold transition-colors"
                     :class="isDarkMode 
@@ -277,32 +277,32 @@ const getRelatedItems = () => {
   
   if (path.includes('data-display')) {
     related.push(
-      { path: '/patterns/layout', icon: 'view_quilt', title: 'Layout Patterns', description: 'Explore grid systems and layout structures.' },
-      { path: '/patterns/forms', icon: 'description', title: 'Form Patterns', description: 'Patterns for form design and user input.' },
+      { path: '/patterns/layout', icon: 'layout-dashboard', title: 'Layout Patterns', description: 'Explore grid systems and layout structures.' },
+      { path: '/patterns/forms', icon: 'file-text', title: 'Form Patterns', description: 'Patterns for form design and user input.' },
       { path: '/patterns/navigation', icon: 'navigation', title: 'Navigation Patterns', description: 'Navigation patterns that complement data display.' }
     );
   } else if (path.includes('layout')) {
     related.push(
-      { path: '/patterns/data-display', icon: 'table_chart', title: 'Data Display', description: 'Patterns for displaying data in layouts.' },
+      { path: '/patterns/data-display', icon: 'table-2', title: 'Data Display', description: 'Patterns for displaying data in layouts.' },
       { path: '/patterns/navigation', icon: 'navigation', title: 'Navigation Patterns', description: 'Navigation patterns for layout structures.' },
-      { path: '/patterns/forms', icon: 'description', title: 'Form Patterns', description: 'Form patterns that work with layouts.' }
+      { path: '/patterns/forms', icon: 'file-text', title: 'Form Patterns', description: 'Form patterns that work with layouts.' }
     );
   } else if (path.includes('forms')) {
     related.push(
-      { path: '/patterns/form-validation', icon: 'verified', title: 'Form Validation', description: 'Code patterns for form validation.' },
-      { path: '/patterns/layout', icon: 'view_quilt', title: 'Layout Patterns', description: 'Layout patterns for form design.' },
-      { path: '/patterns/feedback', icon: 'feedback', title: 'Feedback Patterns', description: 'Patterns for form feedback and errors.' }
+      { path: '/patterns/form-validation', icon: 'badge-check', title: 'Form Validation', description: 'Code patterns for form validation.' },
+      { path: '/patterns/layout', icon: 'layout-dashboard', title: 'Layout Patterns', description: 'Layout patterns for form design.' },
+      { path: '/patterns/feedback', icon: 'message-square-warning', title: 'Feedback Patterns', description: 'Patterns for form feedback and errors.' }
     );
   } else if (path.includes('feedback')) {
     related.push(
-      { path: '/patterns/toast-notification', icon: 'notifications', title: 'Toast Notification', description: 'Code pattern for toast notifications.' },
-      { path: '/patterns/forms', icon: 'description', title: 'Form Patterns', description: 'Form patterns with feedback mechanisms.' },
-      { path: '/patterns/data-display', icon: 'table_chart', title: 'Data Display', description: 'Data display patterns with feedback.' }
+      { path: '/patterns/toast-notification', icon: 'bell', title: 'Toast Notification', description: 'Code pattern for toast notifications.' },
+      { path: '/patterns/forms', icon: 'file-text', title: 'Form Patterns', description: 'Form patterns with feedback mechanisms.' },
+      { path: '/patterns/data-display', icon: 'table-2', title: 'Data Display', description: 'Data display patterns with feedback.' }
     );
   } else {
     related.push(
-      { path: '/patterns/layout', icon: 'view_quilt', title: 'Layout Patterns', description: 'Explore layout structures.' },
-      { path: '/patterns/data-display', icon: 'table_chart', title: 'Data Display', description: 'Patterns for displaying data.' },
+      { path: '/patterns/layout', icon: 'layout-dashboard', title: 'Layout Patterns', description: 'Explore layout structures.' },
+      { path: '/patterns/data-display', icon: 'table-2', title: 'Data Display', description: 'Patterns for displaying data.' },
       { path: '/patterns/navigation', icon: 'navigation', title: 'Navigation Patterns', description: 'Navigation patterns and best practices.' }
     );
   }

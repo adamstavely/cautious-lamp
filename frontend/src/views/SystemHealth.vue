@@ -9,24 +9,24 @@
 
     <PageSection title="Overview" description="Measured by the server; figures with no data yet say so.">
       <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <UiStat label="Overall health" icon="check_circle" :tone="scoreTone(overallHealth)">
+        <UiStat label="Overall health" icon="circle-check" :tone="scoreTone(overallHealth)">
           <span class="flex items-baseline gap-2">
             {{ formatPercent(overallHealth) }}
             <span v-if="healthScore?.trend" class="flex items-center gap-1 text-xs font-medium" :class="trendTone">
-              <span class="material-symbols-outlined text-sm" aria-hidden="true">{{ trendIcon }}</span>
+              <AppIcon :name="trendIcon" class="text-sm" />
               {{ healthScore.trend.change >= 0 ? '+' : '' }}{{ healthScore.trend.change.toFixed(1) }}
             </span>
           </span>
         </UiStat>
         <UiStat
           label="Components"
-          icon="widgets"
+          icon="blocks"
           :value="metrics.components.total ?? 'Not collected'"
           :hint="`${metrics.components.productionReady ?? '–'} production ready`"
         />
         <UiStat
           label="Design tokens"
-          icon="style"
+          icon="swatch-book"
           :value="metrics.tokens.total ?? 'Not collected'"
           :hint="`${metrics.tokens.categories ?? '–'} categories`"
         />
@@ -130,7 +130,7 @@
           v-for="rec in healthScoreRecommendations"
           :key="rec.id"
           :tone="priorityTone(rec.priority)"
-          :icon="rec.priority === 'high' ? 'priority_high' : 'info'"
+          :icon="rec.priority === 'high' ? 'circle-alert' : 'info'"
           :title="rec.title"
         >
           <p class="mb-2"><UiChip :tone="priorityTone(rec.priority)">{{ rec.priority.toUpperCase() }}</UiChip></p>
@@ -148,7 +148,7 @@
           v-for="alert in alerts"
           :key="alert.id"
           :tone="priorityTone(alert.severity)"
-          :icon="alert.severity === 'high' ? 'error' : alert.severity === 'medium' ? 'warning' : 'info'"
+          :icon="alert.severity === 'high' ? 'circle-alert' : alert.severity === 'medium' ? 'triangle-alert' : 'info'"
           :title="alert.title"
         >
           {{ alert.message }}
@@ -237,7 +237,7 @@
       <UiPanel v-if="designDebtMetrics.recommendations && designDebtMetrics.recommendations.length > 0" title="Recommendations" heading-tag="h3">
         <ul class="space-y-2">
           <li v-for="(rec, index) in designDebtMetrics.recommendations" :key="index" class="flex items-start gap-2 text-sm text-ink">
-            <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">check_circle</span>
+            <AppIcon name="circle-check" class="text-base text-accent-text" />
             {{ rec }}
           </li>
         </ul>
@@ -278,7 +278,7 @@
       divided
     >
       <template #actions>
-        <UiButton variant="primary" icon="add" :loading="generatingReport" @click="generateAuditReport">
+        <UiButton variant="primary" icon="plus" :loading="generatingReport" @click="generateAuditReport">
           {{ generatingReport ? 'Generating…' : 'Generate report' }}
         </UiButton>
       </template>
@@ -316,7 +316,7 @@
           <h4 class="text-sm font-semibold mb-3 text-ink-strong">Key findings</h4>
           <ul class="space-y-2">
             <li v-for="(finding, idx) in auditReport.executiveSummary.keyFindings" :key="idx" class="flex items-start gap-2 text-sm text-ink">
-              <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">check_circle</span>
+              <AppIcon name="circle-check" class="text-base text-accent-text" />
               {{ finding }}
             </li>
           </ul>
@@ -325,8 +325,8 @@
             <div class="flex flex-wrap items-center gap-3">
               <span class="text-sm font-medium text-ink-secondary">Export report:</span>
               <UiButton size="sm" icon="code" @click="exportReport('json')">JSON</UiButton>
-              <UiButton size="sm" icon="table_chart" @click="exportReport('csv')">CSV</UiButton>
-              <UiButton size="sm" icon="picture_as_pdf" @click="exportReport('pdf')">PDF</UiButton>
+              <UiButton size="sm" icon="table-2" @click="exportReport('csv')">CSV</UiButton>
+              <UiButton size="sm" icon="file-text" @click="exportReport('pdf')">PDF</UiButton>
             </div>
           </template>
         </UiPanel>
@@ -358,7 +358,7 @@
                 :key="idx"
                 class="flex items-start gap-2 text-sm p-3 rounded-tile bg-accent-subtle text-ink"
               >
-                <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">arrow_forward</span>
+                <AppIcon name="arrow-right" class="text-base text-accent-text" />
                 {{ step }}
               </li>
             </ul>
@@ -367,7 +367,7 @@
 
         <UiButton
           variant="ghost"
-          :icon="showDetailedReport ? 'expand_less' : 'expand_more'"
+          :icon="showDetailedReport ? 'chevron-up' : 'chevron-down'"
           :aria-expanded="showDetailedReport"
           @click="showDetailedReport = !showDetailedReport"
         >
@@ -505,7 +505,7 @@ const overallHealth = computed(() => healthScore.value?.score ?? null);
 
 const trendIcon = computed(() => {
   const direction = healthScore.value?.trend?.direction;
-  return direction === 'up' ? 'trending_up' : direction === 'down' ? 'trending_down' : 'trending_flat';
+  return direction === 'up' ? 'trending-up' : direction === 'down' ? 'trending-down' : 'move-right';
 });
 const trendTone = computed(() => {
   const direction = healthScore.value?.trend?.direction;

@@ -71,7 +71,7 @@
 
           <template #footer>
             <div class="flex flex-col gap-3 w-full py-2">
-              <div><UiButton variant="primary" icon="calculate" @click="calculateColor">Calculate color</UiButton></div>
+              <div><UiButton variant="primary" icon="calculator" @click="calculateColor">Calculate color</UiButton></div>
               <InlineNotice :notice="notice" @dismiss="clearNotice" />
             </div>
           </template>
@@ -96,7 +96,7 @@
                 <div class="flex-1 min-w-0">
                   <UiInput :model-value="format.value" :label="format.label" readonly mono />
                 </div>
-                <UiButton icon-only icon="content_copy" :label="`Copy ${format.label} value`" @click="copyToClipboard(format.value)" />
+                <UiButton icon-only icon="copy" :label="`Copy ${format.label} value`" @click="copyToClipboard(format.value)" />
               </div>
             </div>
           </div>

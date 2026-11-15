@@ -23,7 +23,7 @@
                     to="/" 
                     class="inline-flex items-center text-white/80 hover:text-white transition-colors text-sm mb-4"
                   >
-                    <span class="material-symbols-outlined mr-2 text-lg">arrow_back</span>
+                    <AppIcon name="arrow-left" class="mr-2 text-lg" />
                     Back to Home
                   </router-link>
                 </div>
@@ -75,7 +75,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">folder</span>
+                <AppIcon name="folder" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -99,7 +99,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">person</span>
+                <AppIcon name="user" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -123,7 +123,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">map</span>
+                <AppIcon name="map" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -147,7 +147,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">description</span>
+                <AppIcon name="file-text" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -171,7 +171,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">groups</span>
+                <AppIcon name="users-round" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -195,7 +195,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">insights</span>
+                <AppIcon name="lightbulb" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -225,7 +225,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">psychology</span>
+                <AppIcon name="brain" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -249,7 +249,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">psychology</span>
+                <AppIcon name="brain" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -273,7 +273,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">checklist</span>
+                <AppIcon name="list-checks" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -297,7 +297,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">videocam</span>
+                <AppIcon name="video" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -327,7 +327,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">accessibility</span>
+                <AppIcon name="accessibility" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -351,7 +351,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">visibility</span>
+                <AppIcon name="eye" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -375,7 +375,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">lightbulb</span>
+                <AppIcon name="lightbulb" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -399,7 +399,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">gavel</span>
+                <AppIcon name="gavel" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -432,7 +432,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-16 h-16 mb-6 rounded-xl flex items-center justify-center" :class="isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'">
-                <span class="material-symbols-outlined text-4xl">person</span>
+                <AppIcon name="user" class="text-4xl" />
               </div>
               <h3 
                 class="font-bold text-2xl transition-colors mb-3"
@@ -456,7 +456,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-16 h-16 mb-6 rounded-xl flex items-center justify-center" :class="isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'">
-                <span class="material-symbols-outlined text-4xl">psychology</span>
+                <AppIcon name="brain" class="text-4xl" />
               </div>
               <h3 
                 class="font-bold text-2xl transition-colors mb-3"
@@ -480,7 +480,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-16 h-16 mb-6 rounded-xl flex items-center justify-center" :class="isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'">
-                <span class="material-symbols-outlined text-4xl">videocam</span>
+                <AppIcon name="video" class="text-4xl" />
               </div>
               <h3 
                 class="font-bold text-2xl transition-colors mb-3"

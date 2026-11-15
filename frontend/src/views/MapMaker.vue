@@ -85,7 +85,7 @@
         <div class="lg:col-span-2">
           <UiPanel title="Preview">
             <template #actions>
-              <UiButton v-if="country" ref="backButton" icon="arrow_back" size="sm" @click="backFromCountry">Back to {{ areaLabel }}</UiButton>
+              <UiButton v-if="country" ref="backButton" icon="arrow-left" size="sm" @click="backFromCountry">Back to {{ areaLabel }}</UiButton>
               <UiButton
                 v-for="format in ['png', 'svg']"
                 :key="format"
@@ -103,7 +103,7 @@
 
             <nav v-if="country" aria-label="Map level" class="mb-2 flex items-center gap-2 text-sm text-ink-secondary">
               <span>{{ areaLabel }}</span>
-              <span class="material-symbols-outlined text-xs" aria-hidden="true">chevron_right</span>
+              <AppIcon name="chevron-right" class="text-xs" />
               <span aria-current="location">{{ geo?.countryName || 'Loading…' }}</span>
             </nav>
 
@@ -154,8 +154,8 @@ const { notice, showNotice, clearNotice } = useNotice();
 
 const mapTypes = [
   { value: 'choropleth', label: 'Choropleth map', icon: 'map', description: 'Regions coloured by value' },
-  { value: 'bubble', label: 'Proportional symbols', icon: 'bubble_chart', description: 'Circles sized by value, at places or region centres' },
-  { value: 'dot', label: 'Dot map', icon: 'scatter_plot', description: 'Places marked by location, with optional categories' },
+  { value: 'bubble', label: 'Proportional symbols', icon: 'chart-scatter', description: 'Circles sized by value, at places or region centres' },
+  { value: 'dot', label: 'Dot map', icon: 'chart-scatter', description: 'Places marked by location, with optional categories' },
   { value: 'flowMap', label: 'Flow map', icon: 'route', description: 'Movement between places, sized by volume' },
 ];
 const TYPE_NAMES = { choropleth: 'Choropleth map', bubble: 'Proportional symbol map', dot: 'Dot map', flowMap: 'Flow map' };

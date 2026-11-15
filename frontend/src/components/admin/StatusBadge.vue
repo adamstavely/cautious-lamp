@@ -1,5 +1,5 @@
 <template>
-  <UiChip :tone="status === 'active' ? 'success' : 'neutral'" :icon="status === 'active' ? 'check_circle' : 'block'">
+  <UiChip :tone="status === 'active' ? 'success' : 'neutral'" :icon="status === 'active' ? 'circle-check' : 'ban'">
     {{ status === 'active' ? 'Active' : 'Disabled' }}
   </UiChip>
 </template>

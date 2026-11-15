@@ -212,7 +212,7 @@
                       class="ml-4 p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
                       aria-label="Mark as read"
                     >
-                      <span class="material-symbols-outlined text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">check</span>
+                      <AppIcon name="check" class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'" />
                     </button>
                   </div>
                 </div>

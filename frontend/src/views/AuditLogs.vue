@@ -12,9 +12,9 @@
     <PageSection v-if="stats" title="Summary">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <UiStat label="Total events" icon="history" :value="stats.total || 0" />
-        <UiStat label="Success rate" icon="check_circle" tone="success" :value="`${stats.successRate ? stats.successRate.toFixed(1) : '0.0'}%`" />
-        <UiStat label="Errors" icon="error" tone="danger" :value="stats.errors || 0" />
-        <UiStat label="Unique users" icon="people" :value="Object.keys(stats.byUser || {}).length" />
+        <UiStat label="Success rate" icon="circle-check" tone="success" :value="`${stats.successRate ? stats.successRate.toFixed(1) : '0.0'}%`" />
+        <UiStat label="Errors" icon="circle-alert" tone="danger" :value="stats.errors || 0" />
+        <UiStat label="Unique users" icon="users" :value="Object.keys(stats.byUser || {}).length" />
       </div>
     </PageSection>
 
@@ -84,8 +84,8 @@
         <template v-if="total > 0" #footer>
           <span class="text-sm text-ink-secondary">Showing {{ offset + 1 }} to {{ Math.min(offset + logs.length, total) }} of {{ total }} results</span>
           <span class="flex gap-2">
-            <UiButton size="sm" icon="chevron_left" :disabled="offset === 0" @click="previousPage">Previous</UiButton>
-            <UiButton size="sm" trailing-icon="chevron_right" :disabled="offset + logs.length >= total" @click="nextPage">Next</UiButton>
+            <UiButton size="sm" icon="chevron-left" :disabled="offset === 0" @click="previousPage">Previous</UiButton>
+            <UiButton size="sm" trailing-icon="chevron-right" :disabled="offset + logs.length >= total" @click="nextPage">Next</UiButton>
           </span>
         </template>
       </UiPanel>

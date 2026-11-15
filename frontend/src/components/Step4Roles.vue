@@ -4,7 +4,7 @@
       <p class="text-ink-secondary mb-6">Sort colors by their prominence in your design—drag between roles or use dropdowns.</p>
 
       <!-- Role Assignment Guide - Compact -->
-      <UiCallout title="Role assignment guide" icon="help" class="mb-6">
+      <UiCallout title="Role assignment guide" icon="circle-help" class="mb-6">
         <p class="mb-2">Drag colors between sections or use the dropdowns to assign roles.</p>
         <ul class="flex flex-wrap gap-x-4 gap-y-1 text-xs">
           <li>• Hero = your main brand color</li>
@@ -59,8 +59,8 @@
 
     <!-- Navigation -->
     <div class="flex justify-between pt-8 border-t border-line-faint">
-      <UiButton icon="arrow_back" @click="$emit('back')">Back</UiButton>
-      <UiButton variant="primary" trailing-icon="arrow_forward" @click="handleNext">Next: Export and use</UiButton>
+      <UiButton icon="arrow-left" @click="$emit('back')">Back</UiButton>
+      <UiButton variant="primary" trailing-icon="arrow-right" @click="handleNext">Next: Export and use</UiButton>
     </div>
   </div>
 </template>

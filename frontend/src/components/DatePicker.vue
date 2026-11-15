@@ -25,7 +25,7 @@
       ]"
     >
       <span>{{ displayValue || placeholder }}</span>
-      <span class="material-symbols-outlined text-base">calendar_today</span>
+      <AppIcon name="calendar" class="text-base" />
     </button>
   </div>
 </template>

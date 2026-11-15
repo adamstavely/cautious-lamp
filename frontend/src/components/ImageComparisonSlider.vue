@@ -31,7 +31,7 @@
         @touchstart="startDrag"
       >
         <div class="w-8 h-8 bg-indigo-600 rounded-full shadow-lg flex items-center justify-center">
-          <span class="material-symbols-outlined text-white text-sm">drag_indicator</span>
+          <AppIcon name="grip-vertical" class="text-white text-sm" />
         </div>
       </div>
       

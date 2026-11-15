@@ -122,7 +122,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">chat</span>
+                    <AppIcon name="message-square" class="text-5xl" />
                   </div>
                   <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                     Live Chat
@@ -145,7 +145,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">email</span>
+                    <AppIcon name="mail" class="text-5xl" />
                   </div>
                   <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                     Email Support
@@ -169,7 +169,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">forum</span>
+                    <AppIcon name="messages-square" class="text-5xl" />
                   </div>
                   <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                     Community Forum
@@ -193,7 +193,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                    <span class="material-symbols-outlined text-5xl">bug_report</span>
+                    <AppIcon name="bug" class="text-5xl" />
                   </div>
                   <h3 class="text-xl font-semibold mb-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
                     Report Issues

@@ -18,8 +18,8 @@
       <div class="grid lg:grid-cols-2 gap-6">
         <UiPanel title="Input">
           <template #actions>
-            <UiButton size="sm" variant="ghost" icon="close" @click="clearInput">Clear</UiButton>
-            <UiButton size="sm" variant="secondary" icon="content_copy" @click="copyInput">Copy</UiButton>
+            <UiButton size="sm" variant="ghost" icon="x" @click="clearInput">Clear</UiButton>
+            <UiButton size="sm" variant="secondary" icon="copy" @click="copyInput">Copy</UiButton>
           </template>
           <UiTextarea
             v-model="inputText"
@@ -33,7 +33,7 @@
 
         <UiPanel title="Output">
           <template #actions>
-            <UiButton size="sm" variant="primary" icon="content_copy" @click="copyOutput">Copy</UiButton>
+            <UiButton size="sm" variant="primary" icon="copy" @click="copyOutput">Copy</UiButton>
             <UiButton size="sm" variant="secondary" icon="download" @click="downloadOutput">Download</UiButton>
           </template>
           <UiTextarea

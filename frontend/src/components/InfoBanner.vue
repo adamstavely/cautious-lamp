@@ -16,9 +16,7 @@
         >
           <div class="px-4 sm:px-6 lg:px-8 py-3">
             <div class="flex items-start gap-3">
-              <span class="material-symbols-outlined flex-shrink-0 mt-0.5" :class="getIconClasses(banner.type)">
-                {{ getIcon(banner.type) }}
-              </span>
+              <AppIcon :name="getIcon(banner.type)" class="flex-shrink-0 mt-0.5" :class="getIconClasses(banner.type)" />
               <div class="flex-1 min-w-0">
                 <h3 class="font-semibold text-sm mb-1" :class="getTextClasses(banner.type)">
                   {{ banner.title }}
@@ -33,7 +31,7 @@
                 :class="getCloseButtonClasses(banner.type)"
                 aria-label="Dismiss banner"
               >
-                <span class="material-symbols-outlined text-sm">close</span>
+                <AppIcon name="x" class="text-sm" />
               </button>
             </div>
           </div>
@@ -161,11 +159,11 @@ const getCloseButtonClasses = (type) => {
 const getIcon = (type) => {
   switch (type) {
     case 'error':
-      return 'error';
+      return 'circle-alert';
     case 'warning':
-      return 'warning';
+      return 'triangle-alert';
     case 'success':
-      return 'check_circle';
+      return 'circle-check';
     default:
       return 'info';
   }

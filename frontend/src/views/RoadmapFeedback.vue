@@ -14,7 +14,7 @@
       <template #whats-new>
         <PageSection title="Release notes" description="Latest features, improvements, and updates to the design system.">
           <template v-if="canEditReleaseNotes" #actions>
-            <UiButton variant="primary" icon="add" @click="showReleaseNotesModal = true; editingReleaseNote = null">Add release note</UiButton>
+            <UiButton variant="primary" icon="plus" @click="showReleaseNotesModal = true; editingReleaseNote = null">Add release note</UiButton>
           </template>
 
           <div v-if="releaseNotes.length" class="space-y-6">
@@ -28,7 +28,7 @@
                 <template v-for="group in releaseGroups" :key="group.key">
                   <div v-if="release[group.key] && release[group.key].length > 0">
                     <h4 class="text-sm font-semibold mb-2 flex items-center gap-2" :class="group.text">
-                      <span class="material-symbols-outlined text-base" aria-hidden="true">{{ group.icon }}</span>
+                      <AppIcon :name="group.icon" class="text-base" />
                       {{ group.label }}
                     </h4>
                     <ul class="space-y-1 ml-6 list-disc text-sm text-ink">
@@ -52,14 +52,14 @@
       <template #roadmap>
         <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
           <UiSegmented v-model="statusFilter" :options="statusFilterOptions" aria-label="Filter roadmap items by status" />
-          <UiButton v-if="canEditRoadmap" variant="primary" icon="add" @click="showCreateModal = true">Add item</UiButton>
+          <UiButton v-if="canEditRoadmap" variant="primary" icon="plus" @click="showCreateModal = true">Add item</UiButton>
         </div>
 
         <div v-if="filteredRoadmapItems.length" class="space-y-4">
           <UiPanel v-for="item in filteredRoadmapItems" :key="item.id" :title="item.title" heading-tag="h3">
             <template v-if="canEditRoadmap" #actions>
-              <UiButton variant="ghost" size="sm" icon="edit" icon-only :label="`Edit ${item.title}`" @click="editRoadmapItem(item)" />
-              <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Delete ${item.title}`" @click="deleteRoadmapItem(item.id)" />
+              <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${item.title}`" @click="editRoadmapItem(item)" />
+              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${item.title}`" @click="deleteRoadmapItem(item.id)" />
             </template>
             <div class="flex flex-wrap items-center gap-2 mb-3">
               <UiChip :tone="roadmapStatusTone[item.status] || 'info'">{{ item.status }}</UiChip>
@@ -69,11 +69,11 @@
             <p class="text-sm text-ink-secondary mb-3">{{ item.description }}</p>
             <div class="flex items-center gap-4 text-xs text-ink-muted">
               <span v-if="item.targetDate" class="flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm" aria-hidden="true">schedule</span>
+                <AppIcon name="clock" class="text-sm" />
                 Target: {{ formatDate(item.targetDate) }}
               </span>
               <span v-if="item.votes !== undefined" class="flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm" aria-hidden="true">thumb_up</span>
+                <AppIcon name="thumbs-up" class="text-sm" />
                 {{ item.votes }} votes
               </span>
             </div>
@@ -94,9 +94,9 @@
       <!-- Feedback Tab -->
       <template #feedback>
         <div class="mb-8 flex flex-wrap gap-3">
-          <UiButton variant="primary" icon="add_circle" @click="openRequestModal">Request feature</UiButton>
-          <UiButton icon="bug_report" @click="openIssueModal">Report issue</UiButton>
-          <UiButton variant="ghost" icon="refresh" @click="loadRequests">Refresh</UiButton>
+          <UiButton variant="primary" icon="circle-plus" @click="openRequestModal">Request feature</UiButton>
+          <UiButton icon="bug" @click="openIssueModal">Report issue</UiButton>
+          <UiButton variant="ghost" icon="refresh-cw" @click="loadRequests">Refresh</UiButton>
         </div>
 
         <UiTabs v-model="feedbackTab" :tabs="feedbackTabs" label="Feedback">
@@ -130,7 +130,7 @@
                   <UiButton
                     size="sm"
                     :variant="isUserVoted(request.id) ? 'primary' : 'secondary'"
-                    icon="thumb_up"
+                    icon="thumbs-up"
                     :aria-pressed="isUserVoted(request.id)"
                     :aria-label="`Vote for ${request.title}: ${request.votes} votes`"
                     @click.stop="voteRequest(request.id)"
@@ -289,9 +289,7 @@
           <ul class="space-y-3">
             <li v-for="step in approvalSteps" :key="step.stage" class="flex items-center justify-between gap-4">
               <span class="flex items-center gap-2 text-sm text-ink">
-                <span class="material-symbols-outlined text-lg" :class="step.done ? 'text-success' : 'text-ink-muted'" aria-hidden="true">
-                  {{ step.done ? 'check_circle' : 'radio_button_unchecked' }}
-                </span>
+                <AppIcon :name="step.done ? 'circle-check' : 'circle'" class="text-lg" :class="step.done ? 'text-success' : 'text-ink-muted'" />
                 {{ step.label }}
               </span>
               <span v-if="step.approved" class="text-xs text-success">Approved</span>
@@ -399,10 +397,10 @@ const statusFilterOptions = ['all', 'planned', 'in-progress', 'completed', 'canc
 }));
 
 const releaseGroups = [
-  { key: 'features', label: 'New features', icon: 'add_circle', text: 'text-success' },
-  { key: 'improvements', label: 'Improvements', icon: 'trending_up', text: 'text-info' },
-  { key: 'fixes', label: 'Bug fixes', icon: 'bug_report', text: 'text-warning' },
-  { key: 'breaking', label: 'Breaking changes', icon: 'warning', text: 'text-danger' },
+  { key: 'features', label: 'New features', icon: 'circle-plus', text: 'text-success' },
+  { key: 'improvements', label: 'Improvements', icon: 'trending-up', text: 'text-info' },
+  { key: 'fixes', label: 'Bug fixes', icon: 'bug', text: 'text-warning' },
+  { key: 'breaking', label: 'Breaking changes', icon: 'triangle-alert', text: 'text-danger' },
 ];
 
 const roadmapCategoryOptions = [

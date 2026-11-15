@@ -35,9 +35,9 @@
           <UiPanel title="Preview">
             <div class="rounded-tile bg-surface-sunken p-8">
               <span :class="badgeClasses(config.state)">
-                <span v-if="config.icon && config.iconPosition === 'left'" class="material-symbols-outlined mr-1 text-sm" aria-hidden="true">{{ getIconName() }}</span>
+                <AppIcon :name="getIconName()" v-if="config.icon && config.iconPosition === 'left'" class="mr-1 text-sm" />
                 <span>{{ config.text || 'Badge' }}</span>
-                <span v-if="config.icon && config.iconPosition === 'right'" class="material-symbols-outlined ml-1 text-sm" aria-hidden="true">{{ getIconName() }}</span>
+                <AppIcon :name="getIconName()" v-if="config.icon && config.iconPosition === 'right'" class="ml-1 text-sm" />
               </span>
 
               <div class="mt-6 border-t border-line pt-6">
@@ -123,10 +123,10 @@ const sizeOptions = [
 const iconOptions = [
   { value: '', label: 'None' },
   { value: 'check', label: 'Check' },
-  { value: 'close', label: 'Close' },
+  { value: 'x', label: 'Close' },
   { value: 'star', label: 'Star' },
   { value: 'info', label: 'Info' },
-  { value: 'warning', label: 'Warning' }
+  { value: 'triangle-alert', label: 'Warning' }
 ];
 
 const iconPositions = [
@@ -155,10 +155,10 @@ const selectedExportFormat = ref('react');
 const getIconName = () => {
   const iconMap = {
     check: 'check',
-    close: 'close',
+    close: 'x',
     star: 'star',
     info: 'info',
-    warning: 'warning'
+    warning: 'triangle-alert'
   };
   return iconMap[config.value.icon] || 'check';
 };
@@ -291,13 +291,9 @@ export const Badge: React.FC<BadgeProps> = ({
     :class="badgeClasses"
     :style="badgeStyles"
   >
-    <span v-if="icon && iconPosition === 'left'" class="material-symbols-outlined text-sm mr-1" aria-hidden="true">
-      {{ iconName }}
-    </span>
+    <AppIcon :name="iconName" v-if="icon && iconPosition === 'left'" class="text-sm mr-1" />
     {{ text }}
-    <span v-if="icon && iconPosition === 'right'" class="material-symbols-outlined text-sm ml-1" aria-hidden="true">
-      {{ iconName }}
-    </span>
+    <AppIcon :name="iconName" v-if="icon && iconPosition === 'right'" class="text-sm ml-1" />
   </span>
 ` + templateClose + `
 
@@ -372,10 +368,10 @@ const medalSizeClasses = {
 
 const iconMap = {
   check: 'check',
-  close: 'close',
+  close: 'x',
   star: 'star',
   info: 'info',
-  warning: 'warning'
+  warning: 'triangle-alert'
 };
 
 const badgeClasses = computed(() => {

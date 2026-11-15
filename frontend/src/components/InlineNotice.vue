@@ -6,10 +6,10 @@
     :role="notice.type === 'error' ? 'alert' : 'status'"
     aria-live="polite"
   >
-    <span class="material-symbols-outlined text-lg" aria-hidden="true">{{ icon }}</span>
+    <AppIcon :name="icon" class="text-lg" />
     <p class="flex-1">{{ notice.message }}</p>
     <button type="button" class="inline-notice-close" aria-label="Dismiss" @click="$emit('dismiss')">
-      <span class="material-symbols-outlined text-base" aria-hidden="true">close</span>
+      <AppIcon name="x" class="text-base" />
     </button>
   </div>
 </template>
@@ -25,9 +25,9 @@ const props = defineProps({
 defineEmits(['dismiss']);
 
 const icon = computed(() => ({
-  success: 'check_circle',
-  error: 'error',
-  warning: 'warning',
+  success: 'circle-check',
+  error: 'circle-alert',
+  warning: 'triangle-alert',
   info: 'info',
 })[props.notice?.type] ?? 'info');
 </script>

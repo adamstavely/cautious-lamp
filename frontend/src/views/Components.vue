@@ -67,7 +67,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">auto_fix_high</span>
+                <AppIcon name="wand-sparkles" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -91,7 +91,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">smart_button</span>
+                <AppIcon name="rectangle-horizontal" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -139,7 +139,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">description</span>
+                <AppIcon name="file-text" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -163,7 +163,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">view_module</span>
+                <AppIcon name="layout-grid" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -187,7 +187,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">navigation</span>
+                <AppIcon name="navigation" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -211,7 +211,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">table_chart</span>
+                <AppIcon name="table-2" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -235,7 +235,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">bug_report</span>
+                <AppIcon name="bug" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -259,7 +259,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">description</span>
+                <AppIcon name="file-text" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -283,7 +283,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">download</span>
+                <AppIcon name="download" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -316,7 +316,7 @@
                 class="bg-white/10 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all group"
               >
                 <div class="w-12 h-12 mb-4 flex items-center justify-center text-white">
-                  <span class="material-symbols-outlined text-5xl">check_circle</span>
+                  <AppIcon name="circle-check" class="text-5xl" />
                 </div>
                 <h3 class="text-white font-semibold text-xl mb-2 group-hover:text-indigo-200 transition-colors">Component Status</h3>
                 <p class="text-white/80 text-sm">Track component development status and availability.</p>

@@ -37,7 +37,7 @@
               id="icon"
               v-model="newItem.icon"
               label="Icon (Material Symbols name)"
-              placeholder="e.g., smart_button, navigation"
+              placeholder="A Lucide icon name, e.g. rectangle-horizontal"
               hint="Use Material Symbols icon names. Leave empty for default."
             />
 
@@ -75,14 +75,14 @@
                 <tr v-for="component in components" :key="component.name">
                   <th scope="row" class="whitespace-nowrap">
                     <span class="flex items-center gap-3">
-                      <span class="material-symbols-outlined text-accent-text" aria-hidden="true">{{ component.icon }}</span>
+                      <AppIcon :name="component.icon" class="text-accent-text" />
                       <span class="font-medium text-ink-strong">{{ component.name }}</span>
                     </span>
                   </th>
                   <td class="whitespace-nowrap"><UiChip :tone="statusTone(component.status)">{{ component.status }}</UiChip></td>
                   <td class="whitespace-nowrap text-ink-secondary">{{ component.version }}</td>
                   <td class="whitespace-nowrap">
-                    <UiButton size="sm" icon="edit" @click="editItem('component', component)">Edit<span class="sr-only"> {{ component.name }}</span></UiButton>
+                    <UiButton size="sm" icon="pencil" @click="editItem('component', component)">Edit<span class="sr-only"> {{ component.name }}</span></UiButton>
                   </td>
                 </tr>
               </tbody>
@@ -104,7 +104,7 @@
                 <tr v-for="pattern in patterns" :key="pattern.name">
                   <th scope="row" class="whitespace-nowrap">
                     <span class="flex items-center gap-3">
-                      <span class="material-symbols-outlined text-accent-text" aria-hidden="true">{{ pattern.icon }}</span>
+                      <AppIcon :name="pattern.icon" class="text-accent-text" />
                       <span class="font-medium text-ink-strong">{{ pattern.name }}</span>
                     </span>
                   </th>
@@ -112,7 +112,7 @@
                   <td class="whitespace-nowrap"><UiChip :tone="statusTone(pattern.status)">{{ pattern.status }}</UiChip></td>
                   <td class="whitespace-nowrap text-ink-secondary">{{ pattern.category }}</td>
                   <td class="whitespace-nowrap">
-                    <UiButton size="sm" icon="edit" @click="editItem('pattern', pattern)">Edit<span class="sr-only"> {{ pattern.name }}</span></UiButton>
+                    <UiButton size="sm" icon="pencil" @click="editItem('pattern', pattern)">Edit<span class="sr-only"> {{ pattern.name }}</span></UiButton>
                   </td>
                 </tr>
               </tbody>
@@ -126,7 +126,7 @@
     <UiDialog :open="showEditModal" title="Edit status" size="sm" @update:open="(open) => { if (!open) closeEditModal(); }">
       <div v-if="editingItem" class="space-y-5">
         <div class="flex items-center gap-3">
-          <span class="material-symbols-outlined text-accent-text" aria-hidden="true">{{ editingItem.icon || 'widgets' }}</span>
+          <AppIcon :name="editingItem.icon || 'blocks'" class="text-accent-text" />
           <div>
             <div class="font-semibold text-ink-strong">{{ editingItem.name }}</div>
             <div v-if="editingItemType" class="text-sm text-ink-secondary">
@@ -168,12 +168,12 @@ const { components, patterns, updateComponentStatus, updatePatternStatus } = use
 const { notice, showNotice, clearNotice } = useNotice();
 const activeTab = ref('create');
 const tabs = [
-  { value: 'create', label: 'Create new', icon: 'add_circle' },
+  { value: 'create', label: 'Create new', icon: 'circle-plus' },
   { value: 'manage', label: 'Manage existing', icon: 'list' },
 ];
 const contentTypeOptions = [
-  { value: 'component', label: 'Component', icon: 'widgets' },
-  { value: 'pattern', label: 'Pattern', icon: 'pattern' },
+  { value: 'component', label: 'Component', icon: 'blocks' },
+  { value: 'pattern', label: 'Pattern', icon: 'layout-template' },
 ];
 const patternTypeOptions = [
   { value: 'Design Pattern', label: 'Design Pattern' },

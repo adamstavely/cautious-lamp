@@ -12,6 +12,7 @@ if (import.meta.env.VITE_OTEL_ENABLED !== 'false') {
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import App from './App.vue';
+import AppIcon from './components/ui/AppIcon.vue';
 import './style.css';
 import './styles/tokens.css';
 import 'vuetify/styles';
@@ -916,6 +917,8 @@ router.beforeEach(async (to) => {
 setAuthRouter(router);
 
 const app = createApp(App);
+// Icons are used on almost every page, so <AppIcon> is available everywhere
+app.component('AppIcon', AppIcon);
 app.use(router);
 app.use(vuetify);
 // Mount once the first navigation (and its sign-in check) has settled, so the

@@ -13,7 +13,7 @@
           </span>
         </template>
         <template #actions>
-          <UiButton variant="primary" icon="open_in_new" :href="session.replayUrl" target="_blank" rel="noopener noreferrer">Open in OpenReplay</UiButton>
+          <UiButton variant="primary" icon="external-link" :href="session.replayUrl" target="_blank" rel="noopener noreferrer">Open in OpenReplay</UiButton>
         </template>
       </PageHero>
 

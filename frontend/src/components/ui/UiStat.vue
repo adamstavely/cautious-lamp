@@ -1,7 +1,7 @@
 <template>
   <div class="ui-stat">
     <p class="ui-stat-label">
-      <span v-if="icon" class="material-symbols-outlined text-base" aria-hidden="true">{{ icon }}</span>
+      <AppIcon :name="icon" v-if="icon" class="text-base" />
       {{ label }}
     </p>
     <p class="ui-stat-value" :class="`ui-stat-${tone}`"><slot>{{ value }}</slot></p>

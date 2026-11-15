@@ -23,7 +23,7 @@
                     to="/" 
                     class="inline-flex items-center text-white/80 hover:text-white transition-colors text-sm mb-4"
                   >
-                    <span class="material-symbols-outlined mr-2 text-lg">arrow_back</span>
+                    <AppIcon name="arrow-left" class="mr-2 text-lg" />
                     Back to Home
                   </router-link>
                 </div>
@@ -72,7 +72,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">gradient</span>
+                <AppIcon name="blend" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -96,7 +96,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">palette</span>
+                <AppIcon name="palette" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -120,7 +120,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">swap_horiz</span>
+                <AppIcon name="arrow-left-right" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -144,7 +144,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">contrast</span>
+                <AppIcon name="contrast" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -174,7 +174,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">text_fields</span>
+                <AppIcon name="type" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -198,7 +198,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">format_size</span>
+                <AppIcon name="a-large-small" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -222,7 +222,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">layers</span>
+                <AppIcon name="layers" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -252,7 +252,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">image</span>
+                <AppIcon name="image" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -276,7 +276,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">style</span>
+                <AppIcon name="swatch-book" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -306,7 +306,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">design_services</span>
+                <AppIcon name="pen-tool" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -330,7 +330,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">brush</span>
+                <AppIcon name="brush" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -354,7 +354,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">sync</span>
+                <AppIcon name="refresh-cw" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -387,7 +387,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-16 h-16 mb-6 rounded-xl flex items-center justify-center" :class="isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'">
-                <span class="material-symbols-outlined text-4xl">palette</span>
+                <AppIcon name="palette" class="text-4xl" />
               </div>
               <h3 
                 class="font-bold text-2xl transition-colors mb-3"
@@ -411,7 +411,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-16 h-16 mb-6 rounded-xl flex items-center justify-center" :class="isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'">
-                <span class="material-symbols-outlined text-4xl">sync</span>
+                <AppIcon name="refresh-cw" class="text-4xl" />
               </div>
               <h3 
                 class="font-bold text-2xl transition-colors mb-3"
@@ -435,7 +435,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-16 h-16 mb-6 rounded-xl flex items-center justify-center" :class="isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-100 text-indigo-600'">
-                <span class="material-symbols-outlined text-4xl">download</span>
+                <AppIcon name="download" class="text-4xl" />
               </div>
               <h3 
                 class="font-bold text-2xl transition-colors mb-3"

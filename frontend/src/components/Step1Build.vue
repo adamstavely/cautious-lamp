@@ -8,7 +8,7 @@
         <UiInput :model-value="paletteName" label="Palette name" placeholder="My Palette" @update:model-value="setPaletteName" />
       </div>
       <UiButton icon="upload" @click="triggerFileInput">Import palette</UiButton>
-      <UiButton variant="danger" icon="delete" @click="clearPalette">Clear palette</UiButton>
+      <UiButton variant="danger" icon="trash-2" @click="clearPalette">Clear palette</UiButton>
       <input ref="fileInput" type="file" accept=".json" class="hidden" aria-label="Palette file" @change="handleFileImport" />
     </div>
 
@@ -32,7 +32,7 @@
           @dragstart="handleDragStart(index, $event)"
           @dragend="handleDragEnd"
         >
-          <span class="material-symbols-outlined text-base" aria-hidden="true">drag_handle</span>
+          <AppIcon name="grip-horizontal" class="text-base" />
         </div>
 
         <!-- Color Swatch -->
@@ -57,8 +57,8 @@
           <div class="flex items-center justify-between">
             <span class="font-code text-sm font-semibold text-ink-strong">{{ color.hex }}</span>
             <div class="flex items-center gap-1">
-              <UiButton variant="ghost" size="sm" icon="content_copy" icon-only :label="`Copy hex code ${color.hex}`" @click.stop="copyToClipboard(color.hex)" />
-              <UiButton variant="ghost" size="sm" icon="delete" icon-only :label="`Delete color ${color.hex}`" @click.stop="removeColor(index)" />
+              <UiButton variant="ghost" size="sm" icon="copy" icon-only :label="`Copy hex code ${color.hex}`" @click.stop="copyToClipboard(color.hex)" />
+              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete color ${color.hex}`" @click.stop="removeColor(index)" />
             </div>
           </div>
 
@@ -77,7 +77,7 @@
         <button type="button" class="add-card-pick" @click="openColorPicker(null, $event)">
           <span class="absolute inset-0 bg-checkered opacity-20" aria-hidden="true"></span>
           <span class="relative z-10 text-center">
-            <span class="material-symbols-outlined text-4xl text-ink-muted mb-2" aria-hidden="true">format_color_fill</span>
+            <AppIcon name="paint-bucket" class="text-4xl text-ink-muted mb-2" />
             <span class="block text-sm font-medium text-ink">Click to Pick Color</span>
             <span class="block text-xs mt-1 text-ink-secondary">Colors auto-add when selected</span>
           </span>
@@ -100,7 +100,7 @@
     <section v-if="suggestions.length > 0" class="mb-8" aria-labelledby="smart-suggestions-heading">
       <div class="flex items-center justify-between mb-4">
         <h3 id="smart-suggestions-heading" class="text-lg font-semibold text-ink-strong">✨ Smart suggestions</h3>
-        <UiButton variant="ghost" size="sm" icon="refresh" @click="regenerateSuggestions">Regenerate</UiButton>
+        <UiButton variant="ghost" size="sm" icon="refresh-cw" @click="regenerateSuggestions">Regenerate</UiButton>
       </div>
 
       <div v-for="group in suggestionGroups" :key="group.title" class="mb-6">
@@ -120,7 +120,7 @@
                 <UiButton
                   variant="ghost"
                   size="sm"
-                  icon="refresh"
+                  icon="refresh-cw"
                   icon-only
                   :label="`Regenerate the ${suggestion.type.replace('-', ' ')} color`"
                   class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
@@ -224,7 +224,7 @@
         </div>
 
         <!-- Eyedropper Button -->
-        <UiButton class="w-full justify-center" icon="colorize" @click="toggleEyedropper">Use eyedropper</UiButton>
+        <UiButton class="w-full justify-center" icon="pipette" @click="toggleEyedropper">Use eyedropper</UiButton>
 
         <!-- Buttons -->
         <div class="flex gap-2">
@@ -236,7 +236,7 @@
 
     <!-- Navigation -->
     <div class="flex justify-end mt-8">
-      <UiButton variant="primary" trailing-icon="arrow_forward" :disabled="palette.colors.length === 0" @click="$emit('next')">
+      <UiButton variant="primary" trailing-icon="arrow-right" :disabled="palette.colors.length === 0" @click="$emit('next')">
         Next: Harmony check
       </UiButton>
     </div>

@@ -92,7 +92,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">view_quilt</span>
+                <AppIcon name="layout-dashboard" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -116,7 +116,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">navigation</span>
+                <AppIcon name="navigation" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -140,7 +140,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">table_chart</span>
+                <AppIcon name="table-2" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -164,7 +164,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">description</span>
+                <AppIcon name="file-text" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -188,7 +188,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">feedback</span>
+                <AppIcon name="message-square-warning" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -201,9 +201,7 @@
               <p class="text-sm" :class="isDarkMode ? 'text-gray-400' : 'text-gray-600'">
                 Alerts, notifications, and user feedback patterns.
               </p>
-              <span class="material-symbols-outlined absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'">
-                chevron_right
-              </span>
+              <AppIcon name="chevron-right" class="absolute top-4 right-4 text-xl" :class="isDarkMode ? 'text-gray-500' : 'text-gray-400'" />
             </router-link>
 
             <!-- Pattern Card 6: Notifications -->
@@ -215,7 +213,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">notifications</span>
+                <AppIcon name="bell" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -249,7 +247,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">description</span>
+                <AppIcon name="file-text" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -275,7 +273,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">fullscreen</span>
+                <AppIcon name="maximize" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -301,7 +299,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">table_chart</span>
+                <AppIcon name="table-2" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -327,7 +325,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">lock</span>
+                <AppIcon name="lock" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -353,7 +351,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">menu</span>
+                <AppIcon name="menu" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"
@@ -379,7 +377,7 @@
                 : 'border-gray-300 bg-white hover:border-indigo-500'"
             >
               <div class="w-12 h-12 mb-4" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">
-                <span class="material-symbols-outlined text-5xl">notifications</span>
+                <AppIcon name="bell" class="text-5xl" />
               </div>
               <h3 
                 class="font-semibold text-lg transition-colors mb-2"

@@ -1,3 +1,4 @@
+export { default as AppIcon } from './AppIcon.vue';
 export { default as PageHero } from './PageHero.vue';
 export { default as PageSection } from './PageSection.vue';
 export { default as PageShell } from './PageShell.vue';

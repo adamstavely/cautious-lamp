@@ -20,7 +20,7 @@
       @keydown="onButtonKey"
     >
       <span class="truncate">{{ selectedLabel }}</span>
-      <span class="material-symbols-outlined dropdown-chevron" :class="{ 'rotate-180': isOpen }" aria-hidden="true">expand_more</span>
+      <AppIcon name="chevron-down" class="dropdown-chevron" :class="{ 'rotate-180': isOpen }" />
     </button>
 
     <Transition
@@ -57,7 +57,7 @@
           @mousemove="activeIndex = index"
         >
           <span class="truncate">{{ option.label }}</span>
-          <span v-if="option.value === modelValue" class="material-symbols-outlined text-base" aria-hidden="true">check</span>
+          <AppIcon name="check" v-if="option.value === modelValue" class="text-base" />
         </li>
       </ul>
     </Transition>

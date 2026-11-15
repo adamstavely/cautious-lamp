@@ -7,13 +7,13 @@
       spot="site/session-replay"
     >
       <template #actions>
-        <UiButton variant="primary" icon="add" @click="openCreateProjectModal">Create new project</UiButton>
+        <UiButton variant="primary" icon="plus" @click="openCreateProjectModal">Create new project</UiButton>
       </template>
     </PageHero>
 
     <PageSection title="Projects" :description="loading ? '' : `${projects.length} ${projects.length === 1 ? 'project' : 'projects'}`">
       <template #actions>
-        <UiButton icon="add" @click="openCreateProjectModal">New project</UiButton>
+        <UiButton icon="plus" @click="openCreateProjectModal">New project</UiButton>
       </template>
 
       <UiSpinner v-if="loading" label="Loading projects…" class="py-12" />
@@ -34,11 +34,11 @@
           {{ project.description || 'No description' }}
           <template #footer>
             <span v-if="project.applicationUrl" class="flex items-center gap-1 text-xs">
-              <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">link</span>
+              <AppIcon name="link" class="text-base text-ink-muted" />
               {{ getHostname(project.applicationUrl) }}
             </span>
             <span class="flex items-center gap-1 text-xs">
-              <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">group</span>
+              <AppIcon name="users" class="text-base text-ink-muted" />
               <span class="sr-only">Team</span>
               {{ project.teamId }}
             </span>

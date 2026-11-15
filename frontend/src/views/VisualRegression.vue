@@ -8,22 +8,22 @@
       size="tool"
     >
       <template #actions>
-        <UiButton variant="primary" icon="add" @click="openCreateProjectModal">Create new project</UiButton>
+        <UiButton variant="primary" icon="plus" @click="openCreateProjectModal">Create new project</UiButton>
       </template>
     </PageHero>
 
     <PageSection title="Overview" description="Across the latest runs of every project you can see.">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
         <UiStat label="Total projects" icon="folder" :value="projects.length" />
-        <UiStat label="Pass rate" icon="check_circle" :value="`${overallPassRate}%`" />
-        <UiStat label="Total runs" icon="play_arrow" :value="totalRuns" />
-        <UiStat label="Pending diffs" icon="warning" :value="pendingDiffs" />
+        <UiStat label="Pass rate" icon="circle-check" :value="`${overallPassRate}%`" />
+        <UiStat label="Total runs" icon="play" :value="totalRuns" />
+        <UiStat label="Pending diffs" icon="triangle-alert" :value="pendingDiffs" />
       </div>
     </PageSection>
 
     <PageSection title="Projects" divided>
       <template #actions>
-        <UiButton icon="add" @click="openCreateProjectModal">New project</UiButton>
+        <UiButton icon="plus" @click="openCreateProjectModal">New project</UiButton>
       </template>
 
       <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
@@ -51,11 +51,11 @@
           <p>{{ project.description || 'No description' }}</p>
           <dl class="flex flex-wrap items-center gap-4 mt-3 text-sm text-ink-secondary">
             <div class="flex items-center gap-1">
-              <dt><span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">code</span><span class="sr-only">Branch</span></dt>
+              <dt><AppIcon name="code" class="text-base text-ink-muted" /><span class="sr-only">Branch</span></dt>
               <dd>{{ project.argosBranch }}</dd>
             </div>
             <div class="flex items-center gap-1">
-              <dt><span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">group</span><span class="sr-only">Team</span></dt>
+              <dt><AppIcon name="users" class="text-base text-ink-muted" /><span class="sr-only">Team</span></dt>
               <dd>{{ project.teamId }}</dd>
             </div>
           </dl>

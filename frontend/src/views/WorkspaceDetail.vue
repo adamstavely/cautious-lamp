@@ -65,7 +65,7 @@
                   </div>
                   <p class="text-xs text-ink-muted">Status: {{ component.status }}</p>
                   <div v-if="component.workspaceId === workspace.id && canEdit">
-                    <UiButton size="sm" icon="share" @click="openComponentShare(component)">Share</UiButton>
+                    <UiButton size="sm" icon="share-2" @click="openComponentShare(component)">Share</UiButton>
                   </div>
                 </li>
               </ul>
@@ -73,7 +73,7 @@
 
             <UiPanel title="Applications">
               <template v-if="canAdmin" #actions>
-                <UiButton variant="primary" size="sm" icon="add" to="/admin/applications/register">Register application</UiButton>
+                <UiButton variant="primary" size="sm" icon="plus" to="/admin/applications/register">Register application</UiButton>
               </template>
               <p v-if="applications.length === 0" class="py-6 text-center text-sm text-ink-muted">No applications registered in this workspace</p>
               <ul v-else class="divide-y divide-line-faint">
@@ -162,7 +162,7 @@
             <UiCallout v-if="canDelete" tone="danger" title="Delete workspace">
               Deletes the workspace and its items. Applications and components that belong to it must be moved or deleted first.
               <template #actions>
-                <UiButton variant="danger" icon="delete" @click="deleteWorkspace">Delete workspace</UiButton>
+                <UiButton variant="danger" icon="trash-2" @click="deleteWorkspace">Delete workspace</UiButton>
               </template>
             </UiCallout>
           </div>

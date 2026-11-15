@@ -161,7 +161,7 @@
           @click="toggleEyedropper"
           class="w-full px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
         >
-          <span class="material-symbols-outlined eyedropper-icon">colorize</span>
+          <AppIcon name="pipette" class="eyedropper-icon" />
           Use Eyedropper
         </button>
       </div>

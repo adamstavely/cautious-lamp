@@ -22,7 +22,7 @@
             />
           </td>
           <td>
-            <UiButton icon-only icon="delete" variant="ghost" size="sm" :label="`Remove ${itemLabel.toLowerCase()} ${index + 1}`" @click="remove(index)" />
+            <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove ${itemLabel.toLowerCase()} ${index + 1}`" @click="remove(index)" />
           </td>
         </tr>
       </tbody>
@@ -30,7 +30,7 @@
     <p v-if="rows.length > limit" class="text-sm text-ink-muted">
       Showing the first {{ limit }} of {{ rows.length.toLocaleString() }} rows. Edit larger tables in a spreadsheet and import them.
     </p>
-    <UiButton icon="add" size="sm" class="self-start" @click="add">Add {{ itemLabel.toLowerCase() }}</UiButton>
+    <UiButton icon="plus" size="sm" class="self-start" @click="add">Add {{ itemLabel.toLowerCase() }}</UiButton>
   </fieldset>
 </template>
 

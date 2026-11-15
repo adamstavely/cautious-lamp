@@ -22,7 +22,7 @@
             <button type="button" class="picker-button" :aria-label="`Pick ${field.type} color`" title="Pick color" @click="openColorPicker(field.type, $event)">
               <span class="block h-32"><UiSwatch :color="colorRefs[field.type].value" size="fill" :label="`${field.label}: ${colorRefs[field.type].value}`" /></span>
               <span class="picker-button-label">
-                <span class="material-symbols-outlined text-base" aria-hidden="true">colorize</span>
+                <AppIcon name="pipette" class="text-base" />
                 Pick color
               </span>
             </button>

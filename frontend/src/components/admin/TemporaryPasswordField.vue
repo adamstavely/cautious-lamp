@@ -19,14 +19,14 @@
           variant="ghost"
           size="sm"
           icon-only
-          :icon="visible ? 'visibility_off' : 'visibility'"
+          :icon="visible ? 'eye-off' : 'eye'"
           :label="visible ? 'Hide password' : 'Show password'"
           :aria-pressed="visible ? 'true' : 'false'"
           @click="visible = !visible"
         />
       </div>
-      <UiButton v-if="!readonly" icon="casino" @click="generate">Generate</UiButton>
-      <UiButton icon="content_copy" :disabled="!modelValue" @click="copy">Copy</UiButton>
+      <UiButton v-if="!readonly" icon="dices" @click="generate">Generate</UiButton>
+      <UiButton icon="copy" :disabled="!modelValue" @click="copy">Copy</UiButton>
     </div>
     <p class="sr-only" role="status" aria-live="polite">{{ copyStatus }}</p>
     <p v-if="copyStatus" class="text-xs text-ink-secondary" aria-hidden="true">{{ copyStatus }}</p>

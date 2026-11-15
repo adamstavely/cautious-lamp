@@ -45,7 +45,7 @@
           </div>
 
           <template #footer>
-            <UiButton variant="primary" icon="compress" class="w-full" :loading="isCompressing" :disabled="!selectedFile" @click="compressImage">
+            <UiButton variant="primary" icon="shrink" class="w-full" :loading="isCompressing" :disabled="!selectedFile" @click="compressImage">
               {{ isCompressing ? 'Compressing...' : 'Compress image' }}
             </UiButton>
           </template>

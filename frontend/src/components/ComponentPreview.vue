@@ -8,7 +8,7 @@
         :class="[buttonVariantClass, buttonSizeClass, { 'opacity-75': componentProps.loading }]"
         :disabled="componentProps.disabled || componentProps.loading"
       >
-        <span v-if="componentProps.loading" class="material-symbols-outlined text-base animate-spin" aria-hidden="true">progress_activity</span>
+        <AppIcon name="loader-circle" v-if="componentProps.loading" class="text-base animate-spin" />
         {{ componentProps.label || 'Button' }}
       </button>
     </div>
@@ -96,12 +96,12 @@
     <!-- Alert -->
     <div v-else-if="component === 'alert'" class="w-full max-w-md">
       <div class="preview-alert" :class="`preview-tone-${alertTone}`">
-        <span class="material-symbols-outlined flex-shrink-0 mt-0.5" aria-hidden="true">{{ alertIcon }}</span>
+        <AppIcon :name="alertIcon" class="flex-shrink-0 mt-0.5" />
         <div class="flex-1">
           <h4 v-if="componentProps.title" class="font-semibold mb-1">{{ componentProps.title }}</h4>
           <p class="text-sm text-ink-secondary">{{ componentProps.message || 'Alert message' }}</p>
         </div>
-        <UiButton v-if="componentProps.dismissible" variant="ghost" size="sm" icon="close" icon-only label="Dismiss" />
+        <UiButton v-if="componentProps.dismissible" variant="ghost" size="sm" icon="x" icon-only label="Dismiss" />
       </div>
     </div>
   </div>
@@ -167,7 +167,7 @@ const tone = computed(() => ({ success: 'success', warning: 'warning', error: 'd
 const badgeSizeClass = computed(() => ({ sm: 'text-xs px-2 py-0.5', lg: 'text-sm px-4 py-1.5' })[componentProps.value.size] || 'text-xs px-3 py-1');
 
 const alertTone = computed(() => ({ success: 'success', warning: 'warning', error: 'danger' })[componentProps.value.variant] || 'info');
-const alertIcon = computed(() => ({ success: 'check_circle', warning: 'warning', danger: 'error', info: 'info' })[alertTone.value]);
+const alertIcon = computed(() => ({ success: 'circle-check', warning: 'triangle-alert', danger: 'circle-alert', info: 'info' })[alertTone.value]);
 </script>
 
 <style scoped>

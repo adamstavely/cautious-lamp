@@ -34,8 +34,8 @@
         </UiPanel>
 
         <div class="flex flex-wrap justify-end gap-3">
-          <UiButton icon="restart_alt" @click="resetForm">Reset</UiButton>
-          <UiButton type="submit" variant="primary" icon="person">Generate persona</UiButton>
+          <UiButton icon="rotate-ccw" @click="resetForm">Reset</UiButton>
+          <UiButton type="submit" variant="primary" icon="user">Generate persona</UiButton>
         </div>
       </form>
     </PageSection>

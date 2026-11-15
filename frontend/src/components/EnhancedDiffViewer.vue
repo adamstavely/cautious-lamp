@@ -5,14 +5,14 @@
       <UiSegmented v-model="currentViewMode" :options="viewModeOptions" aria-label="Comparison view" />
 
       <div class="flex items-center gap-2">
-        <UiButton size="sm" variant="ghost" icon="remove" icon-only label="Zoom out" :disabled="zoomLevel <= minZoom" @click="zoomOut" />
+        <UiButton size="sm" variant="ghost" icon="minus" icon-only label="Zoom out" :disabled="zoomLevel <= minZoom" @click="zoomOut" />
         <span class="text-sm px-1 tabular-nums text-ink-secondary" aria-live="polite">{{ Math.round(zoomLevel * 100) }}%</span>
-        <UiButton size="sm" variant="ghost" icon="add" icon-only label="Zoom in" :disabled="zoomLevel >= maxZoom" @click="zoomIn" />
+        <UiButton size="sm" variant="ghost" icon="plus" icon-only label="Zoom in" :disabled="zoomLevel >= maxZoom" @click="zoomIn" />
         <UiButton size="sm" variant="ghost" label="Reset" @click="resetZoom" />
         <UiButton
           size="sm"
           variant="ghost"
-          :icon="isFullscreen ? 'fullscreen_exit' : 'fullscreen'"
+          :icon="isFullscreen ? 'minimize' : 'maximize'"
           icon-only
           :label="isFullscreen ? 'Exit full screen' : 'Full screen'"
           @click="toggleFullscreen"
@@ -57,7 +57,7 @@
             @keydown="onHandleKey"
           >
             <span class="diff-handle-grip">
-              <span class="material-symbols-outlined text-sm" aria-hidden="true">drag_indicator</span>
+              <AppIcon name="grip-vertical" class="text-sm" />
             </span>
           </div>
 
@@ -219,10 +219,10 @@ const gridImages = computed(() =>
 
 const getViewModeIcon = (mode) => {
   const icons = {
-    'slider': 'compare',
-    'side-by-side': 'view_column',
+    'slider': 'git-compare',
+    'side-by-side': 'columns-2',
     'overlay': 'layers',
-    'grid': 'grid_view'
+    'grid': 'layout-grid'
   };
   return icons[mode] || 'image';
 };

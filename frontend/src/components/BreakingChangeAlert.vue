@@ -1,6 +1,6 @@
 <template>
   <div v-if="shouldShow" class="mt-8">
-    <UiCallout tone="danger" icon="warning" role="alert">
+    <UiCallout tone="danger" icon="triangle-alert" role="alert">
       <div class="flex flex-wrap items-center gap-2 mb-1">
         <p class="font-semibold text-danger">Breaking changes detected</p>
         <UiChip tone="danger">{{ breakingChangesCount }} {{ breakingChangesCount === 1 ? 'change' : 'changes' }}</UiChip>
@@ -9,7 +9,7 @@
 
       <ul class="flex flex-col gap-2 mb-4">
         <li v-for="(change, idx) in breakingChangesList" :key="idx" class="breaking-change">
-          <span class="material-symbols-outlined text-base text-danger" aria-hidden="true">error</span>
+          <AppIcon name="circle-alert" class="text-base text-danger" />
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium text-ink">{{ change.description }}</p>
             <p v-if="change.version" class="text-xs text-ink-muted mt-0.5">Introduced in v{{ change.version }}</p>
@@ -18,7 +18,7 @@
       </ul>
 
       <div class="flex flex-wrap items-center gap-3">
-        <UiButton variant="danger" size="sm" icon="arrow_downward" label="View migration guide" @click="scrollToMigration" />
+        <UiButton variant="danger" size="sm" icon="arrow-down" label="View migration guide" @click="scrollToMigration" />
         <UiButton variant="ghost" size="sm" label="Dismiss" @click="dismissAlert" />
       </div>
     </UiCallout>

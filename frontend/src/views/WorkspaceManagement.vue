@@ -7,7 +7,7 @@
       spot="admin/workspace-management"
     >
       <template v-if="isUser" #actions>
-        <UiButton variant="primary" icon="add" @click="openCreate">Create workspace</UiButton>
+        <UiButton variant="primary" icon="plus" @click="openCreate">Create workspace</UiButton>
       </template>
     </PageHero>
 
@@ -44,18 +44,18 @@
               <h3 class="text-lg font-semibold text-ink-strong break-words">{{ workspace.name }}</h3>
               <p v-if="workspace.description" class="mt-1 text-sm text-ink-secondary line-clamp-2">{{ workspace.description }}</p>
               <p class="flex flex-wrap items-center gap-2 mt-2 text-xs text-ink-muted">
-                <span class="material-symbols-outlined text-sm" aria-hidden="true">people</span>
+                <AppIcon name="users" class="text-sm" />
                 <span>{{ memberCount(workspace) }} member{{ memberCount(workspace) !== 1 ? 's' : '' }}</span>
                 <UiChip :tone="roleTone(workspace.myRole || 'viewer')" class="capitalize">{{ workspace.myRole || 'admin access' }}</UiChip>
               </p>
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <UiButton variant="ghost" size="sm" icon="visibility" icon-only :label="`View ${workspace.name}`" @click="viewWorkspace(workspace.id)" />
+              <UiButton variant="ghost" size="sm" icon="eye" icon-only :label="`View ${workspace.name}`" @click="viewWorkspace(workspace.id)" />
               <UiButton
                 v-if="atLeast(workspace.effectiveRole, 'admin')"
                 variant="ghost"
                 size="sm"
-                icon="edit"
+                icon="pencil"
                 icon-only
                 :label="`Edit ${workspace.name}`"
                 @click="openPanel(workspace, 'settings')"
@@ -87,12 +87,12 @@
 
           <div class="flex items-center gap-2 pt-4 mt-auto border-t border-line">
             <UiButton variant="primary" size="sm" class="flex-1" @click="viewWorkspace(workspace.id)">View details</UiButton>
-            <UiButton size="sm" icon="group" icon-only :label="`Members of ${workspace.name}`" @click="openPanel(workspace, 'members')" />
+            <UiButton size="sm" icon="users" icon-only :label="`Members of ${workspace.name}`" @click="openPanel(workspace, 'members')" />
             <UiButton
               v-if="atLeast(workspace.effectiveRole, 'owner')"
               variant="danger"
               size="sm"
-              icon="delete"
+              icon="trash-2"
               icon-only
               :label="`Delete ${workspace.name}`"
               @click="deleteWorkspace(workspace)"

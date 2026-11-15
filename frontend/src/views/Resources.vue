@@ -64,7 +64,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">design_services</span>
+                    <AppIcon name="pen-tool" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Penpot Library
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -86,7 +86,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">style</span>
+                    <AppIcon name="swatch-book" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Design Tokens
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -108,7 +108,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">image</span>
+                    <AppIcon name="image" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Icon Library
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -130,7 +130,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">palette</span>
+                    <AppIcon name="palette" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Color Palette
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -160,7 +160,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code</span>
+                    <AppIcon name="code" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     GitHub Repository
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -182,7 +182,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">inventory</span>
+                    <AppIcon name="package" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     NPM Package
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -203,7 +203,7 @@
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
                       title="Copy to clipboard"
                     >
-                      <span class="material-symbols-outlined text-lg">{{ copiedText === 'npm install @design-system/core' ? 'check' : 'content_copy' }}</span>
+                      <AppIcon :name="copiedText === 'npm install @design-system/core' ? 'check' : 'copy'" class="text-lg" />
                     </button>
                   </div>
                   <a
@@ -222,7 +222,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">terminal</span>
+                    <AppIcon name="terminal" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     CLI Tool
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -243,7 +243,7 @@
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
                       title="Copy to clipboard"
                     >
-                      <span class="material-symbols-outlined text-lg">{{ copiedText === 'npm install -g @design-system/cli' ? 'check' : 'content_copy' }}</span>
+                      <AppIcon :name="copiedText === 'npm install -g @design-system/cli' ? 'check' : 'copy'" class="text-lg" />
                     </button>
                   </div>
                 </div>
@@ -255,7 +255,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">api</span>
+                    <AppIcon name="webhook" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     SDK & API
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -277,7 +277,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">extension</span>
+                    <AppIcon name="puzzle" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     VS Code Extension
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -299,7 +299,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">rule</span>
+                    <AppIcon name="list-checks" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     ESLint Plugin
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -320,7 +320,7 @@
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
                       title="Copy to clipboard"
                     >
-                      <span class="material-symbols-outlined text-lg">{{ copiedText === 'npm install eslint-plugin-design-system' ? 'check' : 'content_copy' }}</span>
+                      <AppIcon :name="copiedText === 'npm install eslint-plugin-design-system' ? 'check' : 'copy'" class="text-lg" />
                     </button>
                   </div>
                 </div>
@@ -340,7 +340,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">play_circle</span>
+                    <AppIcon name="circle-play" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Video Tutorials
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -362,7 +362,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">code_blocks</span>
+                    <AppIcon name="square-code" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Code Examples
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -384,7 +384,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">article</span>
+                    <AppIcon name="newspaper" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Design System Blog
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -406,7 +406,7 @@
                     : 'bg-white border-gray-200'"
                 >
                   <h3 class="text-xl font-semibold mb-3 flex items-center gap-2" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                    <span class="material-symbols-outlined text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">forum</span>
+                    <AppIcon name="messages-square" class="text-2xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                     Community Forum
                   </h3>
                   <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">

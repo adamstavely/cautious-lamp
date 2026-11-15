@@ -1,7 +1,7 @@
 <template>
   <UiPanel title="Workspace members" heading-tag="h3" flush>
     <template v-if="isAdmin" #actions>
-      <UiButton variant="primary" size="sm" icon="person_add" @click="openAdd">Add member</UiButton>
+      <UiButton variant="primary" size="sm" icon="user-plus" @click="openAdd">Add member</UiButton>
     </template>
 
     <div v-if="notice" class="px-6 pt-4">
@@ -12,7 +12,7 @@
       <li v-for="member in workspace.members" :key="member.userId" class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
         <div class="flex items-center gap-3 min-w-0">
           <span class="flex items-center justify-center w-10 h-10 shrink-0 rounded-pill bg-fill text-ink-muted">
-            <span class="material-symbols-outlined" aria-hidden="true">person</span>
+            <AppIcon name="user" />
           </span>
           <div class="min-w-0">
             <p class="font-medium text-ink-strong truncate">
@@ -39,7 +39,7 @@
             v-if="isOwner && member.role !== 'owner'"
             variant="ghost"
             size="sm"
-            icon="workspace_premium"
+            icon="award"
             icon-only
             :label="`Make ${member.email} the owner`"
             @click="transfer(member)"
@@ -48,7 +48,7 @@
             v-if="canRemove(member)"
             variant="danger"
             size="sm"
-            :icon="member.userId === currentUserId ? 'logout' : 'delete'"
+            :icon="member.userId === currentUserId ? 'log-out' : 'trash-2'"
             icon-only
             :label="member.userId === currentUserId ? 'Leave workspace' : `Remove ${member.email}`"
             @click="remove(member)"

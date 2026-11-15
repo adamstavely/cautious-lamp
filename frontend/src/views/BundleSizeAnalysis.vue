@@ -8,7 +8,7 @@
       size="tool"
     >
       <template #actions>
-        <UiButton variant="primary" icon="refresh" :loading="loading" @click="loadAnalysis">Refresh analysis</UiButton>
+        <UiButton variant="primary" icon="refresh-cw" :loading="loading" @click="loadAnalysis">Refresh analysis</UiButton>
       </template>
     </PageHero>
 

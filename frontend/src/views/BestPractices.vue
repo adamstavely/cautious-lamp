@@ -58,7 +58,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">style</span>
+                <AppIcon name="swatch-book" class="text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Use Design Tokens
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -102,7 +102,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">widgets</span>
+                <AppIcon name="blocks" class="text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Use Existing Components
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -124,7 +124,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">accessibility</span>
+                <AppIcon name="accessibility" class="text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Prioritize Accessibility
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -148,7 +148,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">speed</span>
+                <AppIcon name="gauge" class="text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Optimize for Performance
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -171,7 +171,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">view_module</span>
+                <AppIcon name="layout-grid" class="text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Maintain Consistency
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -194,7 +194,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">update</span>
+                <AppIcon name="refresh-ccw" class="text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Stay Up to Date
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">
@@ -217,7 +217,7 @@
                 : 'bg-white border-gray-200'"
             >
               <h2 class="text-2xl font-bold mb-4 flex items-center gap-3" :class="isDarkMode ? 'text-white' : 'text-gray-900'">
-                <span class="material-symbols-outlined text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'">science</span>
+                <AppIcon name="flask-conical" class="text-3xl" :class="isDarkMode ? 'text-indigo-400' : 'text-indigo-600'" />
                 Test Thoroughly
               </h2>
               <p class="mb-4" :class="isDarkMode ? 'text-gray-300' : 'text-gray-700'">

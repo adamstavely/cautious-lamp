@@ -14,7 +14,7 @@
         <span class="text-xs text-gray-500 dark:text-gray-400">{{ font.weights?.length || 1 }} styles</span>
       </div>
       <button @click.stop="toggleFavorite(font)" class="tooltip-wrapper p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center justify-center" :class="{ 'text-red-500 dark:text-red-400': selected }" :data-tooltip="selected ? 'Remove from favorites' : 'Add to favorites'">
-        <span class="material-symbols-outlined text-xl leading-none">{{ selected ? 'favorite' : 'favorite_border' }}</span>
+        <AppIcon name="heart" class="text-xl leading-none" :class="{ 'fill-current': selected }" />
       </button>
     </div>
 
@@ -70,7 +70,7 @@
         :class="isDark ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'"
         data-tooltip="Copy font name"
       >
-        <span class="material-symbols-outlined text-lg leading-none">content_copy</span>
+        <AppIcon name="copy" class="text-lg leading-none" />
       </button>
       <a 
         :href="font.url" 
@@ -79,7 +79,7 @@
         :class="isDark ? 'border-gray-600 bg-slate-800 text-gray-300 hover:bg-slate-700' : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'"
         data-tooltip="Download font"
       >
-        <span class="material-symbols-outlined text-lg leading-none">download</span>
+        <AppIcon name="download" class="text-lg leading-none" />
       </a>
       <button 
         @click="toggleCompare(font)" 
@@ -90,7 +90,7 @@
         "
         :data-tooltip="isInComparison ? 'Remove from comparison' : 'Add to comparison'"
       >
-        <span class="material-symbols-outlined text-lg leading-none">{{ isInComparison ? 'remove_circle' : 'compare' }}</span>
+        <AppIcon :name="isInComparison ? 'circle-minus' : 'git-compare'" class="text-lg leading-none" />
       </button>
     </div>
   </div>

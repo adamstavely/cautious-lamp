@@ -19,14 +19,14 @@
           <UiRange v-model="spacing" label="Spacing" :min="4" :max="32" unit="px" />
           <UiInput v-model="color" type="color" label="Color" />
           <div class="flex gap-3">
-            <UiButton icon="refresh" class="flex-1" @click="refresh">Refresh</UiButton>
+            <UiButton icon="refresh-cw" class="flex-1" @click="refresh">Refresh</UiButton>
             <UiButton variant="primary" icon="download" class="flex-1" @click="downloadSVG">Download</UiButton>
           </div>
         </UiPanel>
 
         <UiPanel title="Preview" class="lg:col-span-2">
           <template #actions>
-            <UiButton variant="ghost" size="sm" icon="content_copy" icon-only label="Copy SVG" @click="copySVG" />
+            <UiButton variant="ghost" size="sm" icon="copy" icon-only label="Copy SVG" @click="copySVG" />
           </template>
           <InlineNotice :notice="notice" @dismiss="clearNotice" />
           <div class="preview-well">
@@ -72,9 +72,9 @@ const spacing = ref(8);
 const color = ref('#9ca3af');
 
 const alignOptions = [
-  { value: 'left', label: 'Left', icon: 'format_align_left' },
-  { value: 'center', label: 'Center', icon: 'format_align_center' },
-  { value: 'right', label: 'Right', icon: 'format_align_right' },
+  { value: 'left', label: 'Left', icon: 'align-left' },
+  { value: 'center', label: 'Center', icon: 'align-center' },
+  { value: 'right', label: 'Right', icon: 'align-right' },
 ];
 
 const MAX_LINE_WIDTH = 600; // Maximum width of a line, in px

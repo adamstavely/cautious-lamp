@@ -31,7 +31,7 @@
 
             <div v-if="componentData && componentData.props && componentData.props.length > 0" class="props-well">
               <h3 class="text-xs font-semibold text-ink-secondary flex items-center gap-2">
-                <span class="material-symbols-outlined text-base text-accent-text" aria-hidden="true">tune</span>
+                <AppIcon name="sliders-horizontal" class="text-base text-accent-text" />
                 Component props ({{ componentData.props.length }})
               </h3>
               <ul class="flex flex-col gap-2">
@@ -138,7 +138,7 @@
             <div class="grid md:grid-cols-2 gap-3">
               <div class="runner-note">
                 <p class="flex items-center gap-2 text-sm font-medium text-ink-strong">
-                  <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">block</span>
+                  <AppIcon name="ban" class="text-base text-ink-muted" />
                   Unit &amp; integration tests: not available here
                 </p>
                 <p class="text-xs text-ink-secondary">
@@ -147,7 +147,7 @@
               </div>
               <div class="runner-note">
                 <p class="flex items-center gap-2 text-sm font-medium text-ink-strong">
-                  <span class="material-symbols-outlined text-base text-ink-muted" aria-hidden="true">image</span>
+                  <AppIcon name="image" class="text-base text-ink-muted" />
                   Visual regression: not available here
                 </p>
                 <p class="text-xs text-ink-secondary">
@@ -190,12 +190,12 @@
 
               <div v-if="a11yTestResults" class="flex flex-col gap-3" role="status">
                 <div class="flex flex-wrap items-center gap-2">
-                  <UiChip tone="danger" icon="cancel">Violations: {{ a11yTestResults.violations.length }}</UiChip>
-                  <UiChip tone="success" icon="check_circle">Passed rules: {{ a11yTestResults.passes.length }}</UiChip>
-                  <UiChip tone="warning" icon="help">Needs review: {{ a11yTestResults.incomplete.length }}</UiChip>
+                  <UiChip tone="danger" icon="circle-x">Violations: {{ a11yTestResults.violations.length }}</UiChip>
+                  <UiChip tone="success" icon="circle-check">Passed rules: {{ a11yTestResults.passes.length }}</UiChip>
+                  <UiChip tone="warning" icon="circle-help">Needs review: {{ a11yTestResults.incomplete.length }}</UiChip>
                 </div>
 
-                <UiCallout v-for="violation in a11yTestResults.violations" :key="violation.id" tone="danger" icon="close" :title="violation.help">
+                <UiCallout v-for="violation in a11yTestResults.violations" :key="violation.id" tone="danger" icon="x" :title="violation.help">
                   <p class="text-xs">
                     <span v-if="violation.impact" class="uppercase">{{ violation.impact }} · </span>
                     Rule <UiCode>{{ violation.id }}</UiCode> ·
@@ -206,7 +206,7 @@
                   </ul>
                 </UiCallout>
 
-                <UiCallout v-for="item in a11yTestResults.incomplete" :key="`incomplete-${item.id}`" tone="warning" icon="help" :title="item.help">
+                <UiCallout v-for="item in a11yTestResults.incomplete" :key="`incomplete-${item.id}`" tone="warning" icon="circle-help" :title="item.help">
                   Needs manual review.
                 </UiCallout>
 
@@ -214,7 +214,7 @@
                   <summary class="cursor-pointer text-ink-secondary">Show {{ a11yTestResults.passes.length }} passed rules</summary>
                   <ul class="mt-2 flex flex-col gap-1">
                     <li v-for="pass in a11yTestResults.passes" :key="`pass-${pass.id}`" class="pass-item">
-                      <span class="material-symbols-outlined text-base text-success" aria-hidden="true">check</span>
+                      <AppIcon name="check" class="text-base text-success" />
                       {{ pass.help }}
                     </li>
                   </ul>
@@ -257,7 +257,7 @@
                 v-if="selectedComponent && !loadingCoverage"
                 size="sm"
                 variant="ghost"
-                icon="refresh"
+                icon="refresh-cw"
                 icon-only
                 label="Refresh coverage"
                 @click="loadTestCoverage"
