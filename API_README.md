@@ -6,8 +6,8 @@ Complete REST API implementation for accessing design tokens and components.
 
 - ✅ REST API endpoints for tokens and components
 - ✅ API key authentication
-- ✅ JavaScript SDK (`@designsystem/api`)
-- ✅ CLI tool (`@designsystem/cli`)
+- ✅ JavaScript SDK (`@adamstavely/design-system-sdk`)
+- ✅ CLI tool (`@adamstavely/design-system-cli`)
 - ✅ Filtering and search capabilities
 - ✅ Health check endpoint
 
@@ -50,14 +50,23 @@ curl -X GET http://localhost:3000/api/v1/components \
 
 ### JavaScript SDK
 
+The SDK and CLI are published to GitHub Packages under the `@adamstavely` scope (nothing is on the public npm registry). Tell npm where the scope lives, in the project's `.npmrc` (or `~/.npmrc` for a global install):
+
+```ini
+@adamstavely:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+`GITHUB_TOKEN` is a GitHub personal access token (classic) with `read:packages`. See [sdk/README.md](sdk/README.md) and [cli/README.md](cli/README.md).
+
 Install:
 ```bash
-npm install @designsystem/api
+npm install @adamstavely/design-system-sdk
 ```
 
 Use:
 ```javascript
-import { DesignSystemAPI } from '@designsystem/api';
+import { DesignSystemAPI } from '@adamstavely/design-system-sdk';
 
 const api = new DesignSystemAPI({
   apiKey: 'YOUR_API_KEY',
@@ -72,7 +81,7 @@ const button = await api.component('button');
 
 Install:
 ```bash
-npm install -g @designsystem/cli
+npm install -g @adamstavely/design-system-cli
 ```
 
 Configure:
