@@ -12,8 +12,13 @@
               left: `${((bp.minWidth || 0) / maxBreakpoint) * 100}%`,
               color: getBreakpointColor(bp.id)
             }"
-            :title="`${bp.label || bp.id}: ${formatBreakpointRange(bp)} - Click to jump`"
+            role="button"
+            tabindex="0"
+            :title="`${bp.label || bp.id}: ${formatBreakpointRange(bp)} - open the page at this width`"
+            :aria-label="`Open this page at ${bp.minWidth || 0}px (${bp.label || bp.id})`"
             @click.stop="jumpToBreakpoint(bp)"
+            @keydown.enter.prevent.stop="jumpToBreakpoint(bp)"
+            @keydown.space.prevent.stop="jumpToBreakpoint(bp)"
           >
             <div class="marker-line-vertical"></div>
             <div class="marker-label">{{ bp.minWidth || 0 }}px</div>
@@ -193,8 +198,12 @@
               </span>
             </div>
             <div class="breakpoint-range">{{ formatBreakpointRange(bp) }}</div>
+            <button v-if="bp.minWidth !== undefined" type="button" class="breakpoint-open" @click="jumpToBreakpoint(bp)">
+              Open at {{ Math.max(bp.minWidth, 320) }}px
+            </button>
           </div>
         </div>
+        <p v-if="breakpointMessage" class="breakpoint-message" role="status">{{ breakpointMessage }}</p>
       </div>
 
       <!-- Layout Inspector Section -->
@@ -535,9 +544,22 @@ const maxBreakpoint = computed(() => {
   return Math.max(...maxValues, viewportWidth.value, 1920);
 });
 
+// Pages can't resize their own window, so a breakpoint opens this page in a
+// window whose viewport is exactly that wide (one window, reused)
+const breakpointMessage = ref('');
 const jumpToBreakpoint = (breakpoint) => {
-  if (breakpoint.minWidth !== undefined) {
-    alert(`To test at ${breakpoint.minWidth}px, resize your browser window or use dev tools.`);
+  if (breakpoint.minWidth === undefined) return;
+  const width = Math.max(breakpoint.minWidth, 320);
+  const opened = window.open(
+    window.location.href,
+    'loupe-breakpoint-preview',
+    `popup,width=${width},height=${Math.min(window.innerHeight, window.screen?.availHeight || window.innerHeight)}`,
+  );
+  if (opened) {
+    breakpointMessage.value = `Opened this page in a ${width}px wide window (${breakpoint.label || breakpoint.id}).`;
+    opened.focus?.();
+  } else {
+    breakpointMessage.value = `The browser blocked the ${width}px preview window. Allow pop-ups for this site, or resize the window to ${width}px.`;
   }
 };
 
@@ -1459,6 +1481,15 @@ kbd {
 
 .dark .breakpoint-name {
   color: #f1f5f9;
+}
+
+.breakpoint-open {
+  @apply mt-2 text-xs font-medium text-accent-text underline underline-offset-2 rounded-control;
+  @apply focus-visible:outline focus-visible:outline-2 outline-focus;
+}
+
+.breakpoint-message {
+  @apply mt-2 text-xs text-ink-secondary;
 }
 
 .breakpoint-range {

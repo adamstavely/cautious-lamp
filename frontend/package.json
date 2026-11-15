@@ -20,7 +20,6 @@
   "dependencies": {
     "@adamstavely/trenchcoat": "file:vendor/adamstavely-trenchcoat-0.28.5.tgz",
     "@evilmartians/harmony": "^1.4.0",
-    "@mdi/font": "^7.4.47",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.223.2",
     "@opentelemetry/exporter-trace-otlp-http": "^0.223.2",
@@ -56,8 +55,7 @@
     "topojson-client": "^3.0.1",
     "vue": "^3.3.4",
     "vue-chartjs": "^5.3.3",
-    "vue-router": "^4.2.5",
-    "vuetify": "^3.10.9"
+    "vue-router": "^4.2.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.4.0",

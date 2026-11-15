@@ -33,5 +33,9 @@ export const RESOURCE_SAMPLES: Record<string, { create: Record<string, unknown>;
   'usg-seals': { create: { name: 'Great Seal', organization: 'Department of State', url: 'https://cdn.example.com/seals/great-seal.svg' }, update: { usage: 'Authorized use only' } },
   'internal-seals': { create: { name: 'Agency seal', organization: 'Our agency', url: 'https://cdn.example.com/seals/agency.png', format: 'png' }, update: { format: 'svg' } },
   'style-dictionaries': { create: { name: 'Brand', format: 'json', tokens: { color: { primary: { $value: '#000' } } } }, update: { format: 'css' } },
+  compositions: {
+    create: { name: 'Login form', layout: 'stack', components: [{ name: 'Form', type: 'component', props: {}, children: [{ name: 'Input', type: 'component', props: { placeholder: 'Email' } }] }] },
+    update: { layout: 'grid' },
+  },
   guidelines: { create: { title: 'Writing errors', category: 'content', content: '# Errors\n\nSay what happened.' }, update: { category: 'design' } },
 };

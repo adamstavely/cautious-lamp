@@ -15,16 +15,11 @@ import App from './App.vue';
 import AppIcon from './components/ui/AppIcon.vue';
 import './style.css';
 import './styles/tokens.css';
-import 'vuetify/styles';
-import { createVuetify } from 'vuetify';
-import * as components from 'vuetify/components';
-import * as directives from 'vuetify/directives';
-import '@mdi/font/css/materialdesignicons.css';
 import { checkFeatureFlagGuard } from './router/featureFlagGuards';
 import { checkRbacGuard } from './router/rbacGuards';
 import { consumeSessionExpired, ensureSession, safeRedirect, setAuthRouter } from './services/auth.js';
 
-// Initialize dark mode before creating Vuetify
+// Apply the saved (or system) theme before the app renders
 const initDarkMode = () => {
   const saved = localStorage.getItem('darkMode');
   let isDark = false;
@@ -45,7 +40,7 @@ const initDarkMode = () => {
   return isDark ? 'dark' : 'light';
 };
 
-const initialTheme = initDarkMode();
+initDarkMode();
 
 // Trench Coat's tokens read the theme from color-scheme, and in browsers
 // without light-dark() from data-theme; keep it in step with the .dark class
@@ -64,49 +59,6 @@ new MutationObserver(syncThemeAttribute).observe(document.documentElement, { att
   } catch {
     // storage unavailable
   }
-});
-
-const vuetify = createVuetify({
-  components,
-  directives,
-  theme: {
-    defaultTheme: initialTheme,
-    themes: {
-      light: {
-        colors: {
-          primary: '#4f46e5', // indigo-600
-          secondary: '#6366f1', // indigo-500
-          background: '#ffffff',
-          surface: '#ffffff',
-        },
-      },
-      dark: {
-        colors: {
-          primary: '#818cf8', // indigo-400 (lighter for dark mode)
-          secondary: '#6366f1', // indigo-500
-          background: '#0f172a', // slate-900
-          surface: '#1e293b', // slate-800
-        },
-      },
-    },
-  },
-  defaults: {
-    global: {
-      ripple: false,
-    },
-    VMain: {
-      style: 'background: transparent;',
-    },
-    VApp: {
-      style: 'background: transparent;',
-    },
-    VSwitch: {
-      color: 'primary',
-    },
-    VCheckbox: {
-      color: 'primary',
-    },
-  },
 });
 
 const router = createRouter({
@@ -946,7 +898,6 @@ const app = createApp(App);
 // Icons are used on almost every page, so <AppIcon> is available everywhere
 app.component('AppIcon', AppIcon);
 app.use(router);
-app.use(vuetify);
 // Mount once the first navigation (and its sign-in check) has settled, so the
 // app chrome never renders, or calls the API, for a signed-out visitor.
 router.isReady().finally(() => app.mount('#app'));

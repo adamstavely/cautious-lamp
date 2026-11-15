@@ -10,7 +10,7 @@
         <template #actions>
           <UiButton variant="primary" to="/getting-started" trailing-icon="arrow-right">Get started</UiButton>
           <UiButton to="/components">Browse components</UiButton>
-          <UiButton variant="ghost" to="/search" icon="search">Search</UiButton>
+          <UiButton variant="ghost" icon="search" @click="openSearch">Search</UiButton>
         </template>
       </PageHero>
 
@@ -112,6 +112,12 @@
 
 <script setup>
 import { PageHero, PageSection, SpotArt, UiButton, UiCallout, UiCard, UiChip, UiCode, UiLink, UiLinkRow, UiPanel } from '../components/ui';
+
+// /search only redirects home; the search box is in the top bar (behind a button on phones)
+const openSearch = () => {
+  window.dispatchEvent(new CustomEvent('open-top-search'));
+  document.querySelector('input[aria-label="Search design system"]')?.focus();
+};
 
 const foundations = [
   { title: 'Guidelines', to: '/guidelines', art: 'site/guidelines', body: 'Principles and best practices for consistent, accessible interfaces.' },

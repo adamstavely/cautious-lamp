@@ -28,8 +28,10 @@ import { PageHero, PageSection, PageShell, UiButton, UiCode, UiLinkRow } from '.
 
 const route = useRoute();
 
-// The search box lives in the top bar on every page; move focus straight to it
+// The search box lives in the top bar on every page. On phones it is behind a
+// button, so ask the top bar to open it; where it is visible, focus it now.
 const focusSearch = () => {
+  window.dispatchEvent(new CustomEvent('open-top-search'));
   document.querySelector('input[aria-label="Search design system"]')?.focus();
 };
 

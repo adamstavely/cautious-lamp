@@ -3,11 +3,11 @@
     id="navigation" 
     data-ds-component="sidebar"
     data-ds-path="@design-system/components/sidebar"
-    class="side sticky top-0 h-screen flex flex-col flex-shrink-0 w-24 transition-colors z-50" 
+    class="side sticky top-0 h-screen flex flex-col flex-shrink-0 w-16 sm:w-24 transition-colors z-50" 
     aria-label="Main navigation"
   >
     <!-- Navigation Items -->
-    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4 px-2" role="navigation" aria-label="Main navigation">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4 px-1 sm:px-2" role="navigation" aria-label="Main navigation">
       <template v-for="(item, index) in menuItems" :key="item.path">
         <router-link
           :to="item.path"
@@ -55,11 +55,9 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { useTheme } from 'vuetify';
 import { canAccessPath } from '../router/rbacGuards.js';
 
 const route = useRoute();
-const theme = useTheme();
 
 // Handle sidebar click - set flag to auto-open drawer
 const handleSidebarClick = () => {
@@ -84,9 +82,8 @@ const getInitialDarkMode = () => {
 
 const darkTheme = ref(getInitialDarkMode());
 
-// Load dark mode preference from localStorage and sync with Vuetify
+// Apply the saved theme, and follow the system while nothing is saved
 onMounted(() => {
-  // Ensure Vuetify theme matches current state
   applyDarkMode();
   
   // Listen for system preference changes
@@ -110,10 +107,8 @@ const applyDarkMode = () => {
   // Update Tailwind dark class first
   if (darkTheme.value) {
     document.documentElement.classList.add('dark');
-    theme.change('dark');
   } else {
     document.documentElement.classList.remove('dark');
-    theme.change('light');
   }
 };
 
@@ -175,8 +170,9 @@ const isActive = (path) => {
 .side-item.on .side-ic {
   @apply text-accent-text;
 }
+/* Icons only on phones; the label stays for assistive technology */
 .side-label {
-  @apply text-xs font-medium text-center leading-tight;
+  @apply sr-only sm:not-sr-only text-xs font-medium text-center leading-tight;
 }
 .side-item.on .side-label {
   @apply font-semibold;

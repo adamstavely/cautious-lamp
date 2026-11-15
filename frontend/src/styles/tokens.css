@@ -18,11 +18,6 @@
 :root.dark {
   color-scheme: dark;
 }
-/* Vuetify's wrapper resets color-scheme to normal, which would resolve every
-   light-dark() token inside the app as light; let it inherit the app's theme. */
-:root .v-application {
-  color-scheme: inherit;
-}
 
 /* Accent: the illustrations' ink. Trench Coat elements given look="clean" (Eero's
    widget) re-declare the clean look's cobalt on themselves, so the override

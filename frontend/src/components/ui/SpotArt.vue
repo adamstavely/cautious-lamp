@@ -56,8 +56,9 @@ const sizeClass = computed(
 </script>
 
 <style scoped>
+/* Never wider than its column (cards on phones) */
 .spot-art {
-  @apply shrink-0;
+  @apply shrink-0 max-w-full;
 }
 .spot-art :deep(svg) {
   @apply block w-full h-full;

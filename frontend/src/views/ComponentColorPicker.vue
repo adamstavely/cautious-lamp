@@ -273,59 +273,22 @@
 
     <ComponentDependencyGraphCard :component-id="getComponentId()" />
 
-    <PageSection title="Version history" description="Track component versions, view changelogs, and manage breaking changes." divided>
-      <UiPanel
-        v-if="currentVersion.version"
-        :title="`Current version: v${currentVersion.version}`"
-        :description="currentVersion.description"
-        class="mb-6"
-      >
-        <template #actions>
-          <UiChip :tone="versionTone(currentVersion.status)">{{ currentVersion.status }}</UiChip>
-        </template>
-        <div class="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
-          <span>Released: {{ formatDate(currentVersion.releasedAt) }}</span>
-          <span v-if="currentVersion.lastUpdated">Last Updated: {{ formatDate(currentVersion.lastUpdated) }}</span>
-        </div>
-      </UiPanel>
-
-      <UiPanel v-if="componentVersions.length > 0" flush>
-        <ol class="divide-y divide-line">
-          <li v-for="version in componentVersions" :key="version.version" class="p-6">
-            <div class="flex flex-wrap items-center gap-3 mb-2">
-              <h3 class="text-lg font-semibold text-ink-strong">v{{ version.version }}</h3>
-              <UiChip :tone="versionTone(version.status)">{{ version.status }}</UiChip>
-              <UiChip v-if="version.breaking" tone="danger">Breaking Changes</UiChip>
-            </div>
-            <p class="text-sm mb-3 text-ink">{{ version.description }}</p>
-            <p class="text-xs mb-3 text-ink-muted">Released: {{ formatDate(version.releasedAt) }}</p>
-
-            <div v-if="version.changelog && version.changelog.length > 0" class="ml-6 border-l-2 border-solid border-line pl-4 mb-4">
-              <h4 class="text-sm font-semibold mb-2 text-ink">Changelog</h4>
-              <ul class="space-y-1 text-sm text-ink-secondary">
-                <li v-for="(change, idx) in version.changelog" :key="idx" class="flex items-start gap-2">
-                  <span :class="getChangeTypeColor(change.type)" aria-hidden="true">{{ getChangeTypeIcon(change.type) }}</span>
-                  <span><span class="sr-only">{{ change.type }}: </span>{{ change.description }}</span>
-                </li>
-              </ul>
-            </div>
-
-            <UiCallout v-if="version.migrationGuide" tone="warning" title="Migration Guide" class="mt-4">
-              {{ version.migrationGuide }}
-            </UiCallout>
-          </li>
-        </ol>
-      </UiPanel>
-
-      <UiEmptyState
-        v-else
-        title="No version history"
-        body="Version history will appear here once versions are added"
-        spot="admin/deprecation-manager"
+    <!-- Version history: recorded in the design-system changelog -->
+    <PageSection title="Version history" description="Versions and changes recorded for this component in the design-system changelog." divided>
+      <ComponentVersionHistory
+        :versions="componentVersions"
+        :unversioned="unversionedChanges"
+        :loading="changelogLoading"
+        :loaded="changelogLoaded"
+        :error="changelogError"
+        @retry="loadChangelog"
       />
     </PageSection>
 
     <PageSection title="Component migration" description="Migrate this component from one version to another with step-by-step guidance." divided>
+      <UiCallout v-if="changelogLoaded && componentVersions.length < 2" class="mb-6">
+        A migration guide needs two recorded versions of this component. The changelog has {{ componentVersions.length === 1 ? 'one' : 'none' }} so far.
+      </UiCallout>
       <UiPanel title="Component migration setup">
         <div class="space-y-4">
           <UiSelect
@@ -387,6 +350,8 @@ import ColorPicker from '../components/ColorPicker.vue';
 import Dropdown from '../components/Dropdown.vue';
 import ComponentDependencyGraphCard from '../components/ComponentDependencyGraphCard.vue';
 import BreakingChangeAlert from '../components/BreakingChangeAlert.vue';
+import ComponentVersionHistory from '../components/ComponentVersionHistory.vue';
+import { useComponentChangelog } from '../composables/useComponentChangelog.js';
 import { useComponentStatus } from '../composables/useComponentPatternStatus.js';
 import { useDarkMode } from '../composables/useDarkMode.js';
 import { useNotice } from '../composables/useNotice.js';
@@ -560,68 +525,17 @@ const handleColorApply = (color) => {
   showPicker.value = false;
 };
 
-// Component-specific version data - in a real app, this would come from an API
-const componentVersions = ref([
-  {
-    version: '1.0.0',
-    status: 'Current',
-    description: 'Initial release with full WCAG 2.1 AA compliance',
-    releasedAt: '2024-01-15',
-    lastUpdated: '2024-01-15',
-    breaking: false,
-    changelog: [
-      { type: 'added', description: 'Initial release of ColorPicker component' },
-      { type: 'added', description: 'Gradient selector for saturation and lightness' },
-      { type: 'added', description: 'Hue slider with full color spectrum' },
-      { type: 'added', description: 'RGB, Hex, and CMYK color format support' },
-      { type: 'added', description: 'Eyedropper tool integration' },
-      { type: 'added', description: 'Full keyboard navigation support' },
-      { type: 'added', description: 'WCAG 2.1 AA compliant with ARIA labels and roles' },
-      { type: 'added', description: 'Dark mode support via previewDarkMode prop' },
-      { type: 'added', description: 'Smart positioning to prevent off-screen display' },
-    ]
-  },
-]);
+// Version history from the design-system changelog (GET /api/v1/changelog/components/color-picker)
+const {
+  versions: componentVersions,
+  unversioned: unversionedChanges,
+  loading: changelogLoading,
+  loaded: changelogLoaded,
+  error: changelogError,
+  load: loadChangelog,
+} = useComponentChangelog('color-picker');
 
-const currentVersion = computed(() => {
-  return componentVersions.value.find(v => v.status === 'Current') || componentVersions.value[0] || {};
-});
-
-
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-};
-
-const versionTone = (status) => ({ Current: 'success', Stable: 'info', Deprecated: 'danger', Beta: 'warning' })[status] || 'neutral';
-
-
-const getChangeTypeIcon = (type) => {
-  const icons = {
-    'added': '✓',
-    'changed': '→',
-    'deprecated': '⚠',
-    'removed': '✗',
-    'fixed': '🔧',
-    'improved': '↑',
-    'breaking': '⚠',
-  };
-  return icons[type] || '•';
-};
-
-const getChangeTypeColor = (type) => {
-  const colors = {
-    added: 'text-success',
-    changed: 'text-info',
-    deprecated: 'text-warning',
-    removed: 'text-danger',
-    fixed: 'text-accent-text',
-    improved: 'text-accent-text',
-    breaking: 'text-danger font-bold',
-  };
-  return colors[type] || 'text-ink-secondary';
-};
+const currentVersion = computed(() => componentVersions.value[0] || {});
 
 const openExamplePicker1 = (event) => {
   const rect = event.target.getBoundingClientRect();

@@ -32,12 +32,64 @@ export function evaluateFlag(flag, context = {}) {
   return false;
 }
 
-// Simple OpenFeature-compatible provider
+/** How long a loaded flag list is used before it is fetched again */
+export const FLAG_TTL_MS = 60 * 1000;
+const SESSION_KEY = 'featureFlags';
+
+/**
+ * OpenFeature-compatible provider. Every flag comes from one list request
+ * (GET /feature-flags), shared by every caller: the list is kept for
+ * FLAG_TTL_MS (in sessionStorage too, so reloading pages in quick succession
+ * doesn't fetch it again), and callers that ask while it is loading wait for
+ * the same request. A key that isn't in the list doesn't exist, so its
+ * callers get their default without another request.
+ */
 class DesignSystemFeatureFlagProvider {
   constructor() {
-    this.flagsCache = new Map();
-    this.cacheExpiry = 5 * 60 * 1000; // 5 minutes
+    this.flags = null; // Map of key → flag, once loaded
     this.lastFetch = 0;
+    this.inFlight = null;
+    this.restore();
+  }
+
+  restore() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+      if (saved && Array.isArray(saved.flags) && Date.now() - saved.fetchedAt < FLAG_TTL_MS) {
+        this.flags = new Map(saved.flags.map((flag) => [flag.key, flag]));
+        this.lastFetch = saved.fetchedAt;
+      }
+    } catch {
+      // No storage (private mode): load from the API
+    }
+  }
+
+  isFresh() {
+    return !!this.flags && Date.now() - this.lastFetch < FLAG_TTL_MS;
+  }
+
+  /** The flag list: cached while fresh, one shared request otherwise (or always, with force) */
+  async loadAll({ force = false } = {}) {
+    if (!force && this.isFresh()) return this.flags;
+    if (this.inFlight) return this.inFlight;
+    if (!isMockAuth() && !getToken()) throw signedOutError();
+    this.inFlight = apiClient
+      .get(`${API_BASE_URL}/api/v1/feature-flags`)
+      .then((response) => {
+        const list = Array.isArray(response.data) ? response.data : [];
+        this.flags = new Map(list.map((flag) => [flag.key, flag]));
+        this.lastFetch = Date.now();
+        try {
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify({ fetchedAt: this.lastFetch, flags: list }));
+        } catch {
+          // Kept in memory only
+        }
+        return this.flags;
+      })
+      .finally(() => {
+        this.inFlight = null;
+      });
+    return this.inFlight;
   }
 
   // A stored flag decides; the caller's default applies only when the flag
@@ -64,52 +116,27 @@ class DesignSystemFeatureFlagProvider {
     return boolValue ? 1 : defaultValue;
   }
 
+  /** One flag, or null when no such flag exists */
   async getFlag(flagKey) {
-    // Check cache first
-    const cached = this.flagsCache.get(flagKey);
-    if (cached && Date.now() - cached.timestamp < this.cacheExpiry) {
-      return cached.flag;
-    }
+    const flags = await this.loadAll();
+    return flags.get(flagKey) ?? null;
+  }
 
-    if (!isMockAuth() && !getToken()) throw signedOutError();
-
-    // Fetch from API
+  /** Every flag (for preloading); an empty list when signed out or unavailable */
+  async getAllFlags() {
     try {
-      const response = await apiClient.get(`${API_BASE_URL}/api/v1/feature-flags/key/${flagKey}`);
-      const flag = response.data;
-      
-      // Cache the flag
-      this.flagsCache.set(flagKey, {
-        flag,
-        timestamp: Date.now(),
-      });
-
-      return flag;
+      return [...(await this.loadAll()).values()];
     } catch (error) {
-      if (error.response?.status === 404) {
-        // No such flag: remembered as missing, so callers use their default
-        this.flagsCache.set(flagKey, { flag: null, timestamp: Date.now() });
-        return null;
-      }
-      throw error;
+      if (error?.code !== 'SIGNED_OUT') console.warn('Error loading feature flags:', error);
+      return [];
     }
   }
 
-  async refreshCache() {
+  /** Reload the list when it is stale; `force` reloads it now (after a flag changed) */
+  async refreshCache({ force = false } = {}) {
     if (!isMockAuth() && !getToken()) return;
     try {
-      const response = await apiClient.get(`${API_BASE_URL}/api/v1/feature-flags`);
-      const flags = response.data;
-      
-      // Update cache
-      flags.forEach(flag => {
-        this.flagsCache.set(flag.key, {
-          flag,
-          timestamp: Date.now(),
-        });
-      });
-
-      this.lastFetch = Date.now();
+      await this.loadAll({ force });
     } catch (error) {
       // Keep what is cached; flags that can't be loaded fall back to each caller's default
       console.warn('Error refreshing feature flags cache:', error);
@@ -117,25 +144,23 @@ class DesignSystemFeatureFlagProvider {
   }
 
   clearCache() {
-    this.flagsCache.clear();
+    this.flags = null;
     this.lastFetch = 0;
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      // Nothing stored
+    }
   }
 }
 
 // Singleton instance
 const featureFlagProvider = new DesignSystemFeatureFlagProvider();
 
-// Initialize cache on load
-featureFlagProvider.refreshCache().catch(err => {
-  console.warn('Failed to initialize feature flags cache:', err);
-});
-
-// Refresh cache periodically
-setInterval(() => {
-  featureFlagProvider.refreshCache().catch(err => {
-    console.warn('Failed to refresh feature flags cache:', err);
-  });
-}, 5 * 60 * 1000); // Every 5 minutes
+// Keep the list current while the app is open (one request per interval at most)
+if (typeof window !== 'undefined') {
+  setInterval(() => featureFlagProvider.refreshCache(), 5 * 60 * 1000);
+}
 
 export default featureFlagProvider;
 
@@ -150,8 +175,9 @@ export const OpenFeature = {
   getNumberValue: (flagKey, defaultValue = 0, context = {}) => {
     return featureFlagProvider.getNumberValue(flagKey, defaultValue, context);
   },
-  refreshCache: () => {
-    return featureFlagProvider.refreshCache();
+  getAllFlags: () => featureFlagProvider.getAllFlags(),
+  refreshCache: (options) => {
+    return featureFlagProvider.refreshCache(options);
   },
   clearCache: () => {
     return featureFlagProvider.clearCache();
@@ -164,9 +190,7 @@ if (typeof window !== 'undefined') {
   
   // Listen for flag update events
   window.addEventListener('feature-flags-updated', () => {
-    featureFlagProvider.refreshCache().catch(err => {
-      console.warn('Failed to refresh feature flags cache after update:', err);
-    });
+    featureFlagProvider.refreshCache({ force: true });
   });
 }
 

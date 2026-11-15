@@ -2,10 +2,11 @@
   <div class="page-shell">
     <DocumentationDrawer :is-open="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="openDoc" />
 
-    <div class="page-main" :class="drawerOpen ? 'ml-drawer-open' : 'ml-drawer-closed'">
+    <!-- On phones the open drawer covers the page instead of pushing it off screen -->
+    <div class="page-main" :class="drawerOpen ? 'ml-drawer-closed sm:ml-drawer-open' : 'ml-drawer-closed'">
       <!-- A reference document opened from the drawer replaces the page -->
       <div v-if="activeDoc" class="flex flex-col h-full">
-        <Breadcrumbs :custom-path="activeDoc" :on-navigate="leaveDoc" />
+        <Breadcrumbs :custom-path="docTrail || activeDoc" :on-navigate="leaveDoc" />
         <div class="flex-1 overflow-hidden">
           <MarkdownViewer :doc-path="activeDoc" />
         </div>
@@ -23,7 +24,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import Breadcrumbs from '../Breadcrumbs.vue';
 import DocumentationDrawer from '../DocumentationDrawer.vue';
 import MarkdownViewer from '../MarkdownViewer.vue';
@@ -40,11 +41,14 @@ const props = defineProps({
   breadcrumbs: { type: Boolean, default: true },
   /** Control the reference document from the route (index pages such as /tools/references/*); otherwise the shell keeps it */
   docLink: { type: String, default: undefined },
+  /** The breadcrumb trail for that document when it differs from its path (e.g. /guidelines/colors for /colors) */
+  docTrail: { type: String, default: null },
 });
 
 const emit = defineEmits(['update:docLink']);
 
 const route = useRoute();
+const router = useRouter();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
 const ownDoc = ref(null);
 const activeDoc = computed(() => (props.docLink !== undefined ? props.docLink : ownDoc.value));
@@ -54,9 +58,11 @@ const openDoc = (link) => {
   emit('update:docLink', link);
   drawerOpen.value = true;
 };
-const leaveDoc = () => {
+/** A breadcrumb closes the document and goes where it points */
+const leaveDoc = (path) => {
   ownDoc.value = null;
   emit('update:docLink', null);
+  if (path && path !== route.path) router.push(path);
 };
 
 // Leaving the page closes any reference document it had open
@@ -78,9 +84,9 @@ onMounted(() => {
 const widthClass = computed(
   () =>
     ({
-      default: 'max-w-6xl px-6 md:px-10',
-      wide: 'max-w-7xl px-6 md:px-10',
-      full: 'max-w-none px-6',
+      default: 'max-w-6xl px-4 sm:px-6 md:px-10',
+      wide: 'max-w-7xl px-4 sm:px-6 md:px-10',
+      full: 'max-w-none px-4 sm:px-6',
     })[props.width],
 );
 </script>
