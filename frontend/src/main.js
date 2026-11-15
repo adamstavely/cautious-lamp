@@ -303,6 +303,16 @@ const router = createRouter({
       redirect: '/feedback',
     },
     {
+      // Release notes on the feedback page are built from the changelog
+      path: '/components/versions',
+      redirect: '/feedback',
+    },
+    {
+      // Each component's page carries its own examples
+      path: '/components/examples',
+      redirect: '/components',
+    },
+    {
       path: '/feedback',
       component: () => import('./views/RoadmapFeedback.vue'),
     },
@@ -567,11 +577,8 @@ const router = createRouter({
       component: () => import('./views/SessionReplayViewer.vue'),
     },
     {
-      path: '/hcd/session-replay/:id/sessions',
-      component: () => import('./views/SessionReplayProject.vue'),
-    },
-    {
-      path: '/hcd/session-replay/:id',
+      // One record for every tab, so switching tabs keeps the page (and its search)
+      path: '/hcd/session-replay/:id/:tab(sessions|heatmaps|settings)?',
       component: () => import('./views/SessionReplayProject.vue'),
     },
     {

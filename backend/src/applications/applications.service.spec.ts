@@ -103,6 +103,28 @@ describe('ApplicationsService linked projects', () => {
     expect((await vr.getProject(vrId)).argosBranch).toBe('release');
   });
 
+  it('stores privacy in the current shape, translating the older fields, and passes the OpenReplay project id on', async () => {
+    const app = await service.register(governance, {
+      name: 'Shop',
+      capabilities: { sessionReplay: { enabled: true, openreplayProjectKey: 'key-1', openreplayProjectId: 42, privacySettings: { defaultInputMode: 'ignored' } } },
+    } as any);
+    const srId = app.capabilities.sessionReplay.projectId!;
+    expect(app.capabilities.sessionReplay).toMatchObject({ openreplayProjectId: 42, privacySettings: { defaultInputMode: 'ignored' } });
+    expect(await projects.sessionReplay.getProject(srId)).toMatchObject({ openreplayProjectId: 42, privacySettings: { defaultInputMode: 'ignored' } });
+
+    // An older client's fields become the current ones, on the application and the project
+    const legacy = await service.updateCapabilities(governance, app.id, {
+      sessionReplay: { enabled: true, privacySettings: { maskAllInputs: false, maskAllText: true } },
+    } as any);
+    expect(legacy.capabilities.sessionReplay.privacySettings).toEqual({ defaultInputMode: 'plain', privateMode: true });
+    expect(await projects.sessionReplay.getProject(srId)).toMatchObject({ privacySettings: { defaultInputMode: 'plain', privateMode: true } });
+
+    // null clears the id
+    const cleared = await service.updateCapabilities(governance, app.id, { sessionReplay: { enabled: true, openreplayProjectId: null } } as any);
+    expect(cleared.capabilities.sessionReplay).not.toHaveProperty('openreplayProjectId');
+    expect((await projects.sessionReplay.getProject(srId)).openreplayProjectId).toBeUndefined();
+  });
+
   it('recreates a linked project that has gone missing when the capability is enabled', async () => {
     const app = await service.register(governance, { name: 'Shop', capabilities: { ...enableVr, ...enableSr } } as any);
     const vrId = app.capabilities.visualRegression.projectId!;

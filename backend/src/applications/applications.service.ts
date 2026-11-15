@@ -13,6 +13,7 @@ import { createHash } from 'crypto';
 import { AuthPrincipal, hasPermission } from '../auth/principal';
 import { Permission } from '../rbac/rbac.service';
 import { DocumentStore, DuplicateDocumentError, VersionConflictError } from '../reviews/document-store';
+import { translateLegacyPrivacy } from '../session-replay/capture-settings';
 import { ProjectExistsError as SrProjectExistsError, SessionReplayService } from '../session-replay/session-replay.service';
 import { ProjectCreator } from '../visual-regression/project-access';
 import { ProjectExistsError as VrProjectExistsError, VisualRegressionService } from '../visual-regression/visual-regression.service';
@@ -623,11 +624,16 @@ export class ApplicationsService {
         ...current,
         enabled: sr.enabled,
         openreplayProjectKey: sr.openreplayProjectKey ?? current.openreplayProjectKey,
+        openreplayProjectId: sr.openreplayProjectId === null ? undefined : (sr.openreplayProjectId ?? current.openreplayProjectId),
         openreplayBaseUrl: sr.openreplayBaseUrl ?? current.openreplayBaseUrl,
-        privacySettings: sr.privacySettings ? { ...current.privacySettings, ...sr.privacySettings } : current.privacySettings,
+        // Older clients send maskAllInputs/maskAllText; stored and sent settings are kept in the current shape
+        privacySettings: sr.privacySettings
+          ? { ...translateLegacyPrivacy(current.privacySettings), ...translateLegacyPrivacy(sr.privacySettings) }
+          : current.privacySettings,
       };
       const changes = stripUndefined({
         openreplayProjectKey: sr.openreplayProjectKey,
+        openreplayProjectId: sr.openreplayProjectId,
         openreplayBaseUrl: sr.openreplayBaseUrl,
         openreplayApiKey: sr.openreplayApiKey,
         privacySettings: sr.privacySettings ? next.privacySettings : undefined,
@@ -649,6 +655,7 @@ export class ApplicationsService {
                 description: `Session replay for ${app.name}`,
                 applicationUrl: app.applicationUrl,
                 openreplayProjectKey: next.openreplayProjectKey,
+                openreplayProjectId: next.openreplayProjectId,
                 openreplayBaseUrl: next.openreplayBaseUrl,
                 openreplayApiKey: sr.openreplayApiKey,
                 privacySettings: next.privacySettings,
@@ -657,6 +664,8 @@ export class ApplicationsService {
             );
             next.projectId = project.id;
             next.openreplayBaseUrl = project.openreplayBaseUrl ?? next.openreplayBaseUrl;
+            // Confirmed with OpenReplay when an API key was given
+            next.openreplayProjectId = project.openreplayProjectId ?? next.openreplayProjectId;
             created.sessionReplay = project.id;
           } catch (error) {
             if (!(error instanceof SrProjectExistsError)) throw error;

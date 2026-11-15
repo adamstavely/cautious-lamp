@@ -3,6 +3,11 @@
 export const DELIVERY_ATTEMPTS_INDEX = 'design-system-delivery-attempts';
 
 export const DELIVERY_ATTEMPT_STORE = Symbol('DELIVERY_ATTEMPT_STORE');
+/** Markers for delivery's scheduled jobs (the retention run's claim) */
+export const DELIVERY_META_INDEX = 'design-system-delivery-meta';
+export const DELIVERY_META_STORE = Symbol('DELIVERY_META_STORE');
+/** Deletes old attempts in bulk; tests swap in one over an in-memory store */
+export const DELIVERY_ATTEMPT_PRUNER = Symbol('DELIVERY_ATTEMPT_PRUNER');
 /** Overrides for DeliveryOptions (tests use it for short delays and a local HTTP target) */
 export const DELIVERY_OPTIONS = Symbol('DELIVERY_OPTIONS');
 /** Builds the mail sender from the SMTP settings; tests swap in a fake transport */
@@ -101,4 +106,34 @@ export const DELIVERY_ATTEMPT_PROPERTIES = {
   test: { type: 'boolean' },
   createdAt: date,
   finishedAt: date,
+};
+
+export interface DeliveryAttemptPruner {
+  /** Deletes attempts created before `cutoff` (ISO time); returns how many */
+  deleteCreatedBefore(cutoff: string): Promise<number>;
+}
+
+/** The retention run's marker: one claim per UTC day (delivery-retention.ts) */
+export interface DeliveryMetaDoc {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  /** The UTC day (YYYY-MM-DD) the marker's run is for */
+  period: string;
+  state: 'claimed' | 'completed' | 'failed';
+  /** Identifies the claiming run, so a run whose lease was taken over changes nothing */
+  token?: string;
+  leaseUntil?: string;
+  lastRunAt?: string;
+  lastDeleted?: number;
+  lastCutoff?: string;
+  lastError?: string;
+}
+
+export const DELIVERY_META_PROPERTIES = {
+  id: keyword,
+  period: keyword,
+  state: keyword,
+  createdAt: date,
+  updatedAt: date,
 };
