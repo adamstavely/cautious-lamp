@@ -102,6 +102,8 @@ COPY --from=iris /opt/iris /opt/iris
 # Fail the build if IrisApp would miss a library at run time
 RUN if ldd /opt/iris/IrisApp | grep -q 'not found'; then ldd /opt/iris/IrisApp; exit 1; fi
 COPY --from=build /app/backend/dist backend/dist
+# Guideline docs the AI assistant (Eero, AI suggestions) gives Claude as context
+COPY frontend/public/docs frontend/public/docs
 
 WORKDIR /app/backend
 RUN mkdir -p uploads results && chown -R node:node uploads results

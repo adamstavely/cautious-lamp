@@ -145,14 +145,11 @@ describe('Design system HTTP API', () => {
       expect((await call('POST', '/components/alpha-secret/variants', { as: 'bob', body: { name: 'x' } })).status).toBe(400);
     });
 
-    it('leaves hidden components out of the Loupe metadata and AI chat context', async () => {
+    // AI chat context: ai-assistant.http.spec.ts
+    it('leaves hidden components out of the Loupe metadata', async () => {
       const metadata = await call('GET', '/component-metadata', { as: 'bob' });
       expect(Object.keys(metadata.body)).not.toContain('alpha-secret');
       expect(Object.keys((await call('GET', '/component-metadata', { as: 'alice' })).body)).toContain('alpha-secret');
-
-      const chat = await call('POST', '/ai/chat', { as: 'bob', body: { message: 'tell me about alphasecret' } });
-      expect(chat.status).toBe(201);
-      expect(JSON.stringify(chat.body)).not.toMatch(/alpha-?secret/i);
     });
 
     it('only lets a workspace editor add components to it, without sharing them', async () => {

@@ -31,6 +31,7 @@ import { CustomThrottlerGuard } from './common/rate-limiting/rate-limit.guard';
 import { AppElasticsearchModule } from './common/elasticsearch/elasticsearch.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { AltTextModule } from './alt-text/alt-text.module';
+import { AiAssistantModule } from './ai-assistant/ai-assistant.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/auth.guard';
 import { ApplicationsModule } from './applications/applications.module';
@@ -41,6 +42,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     ThrottlerModule.forRoot(rateLimitConfig),
     AppElasticsearchModule,
     AltTextModule,
+    AiAssistantModule,
     ColorPaletteModule,
     DesignSystemModule,
     AuditModule,
