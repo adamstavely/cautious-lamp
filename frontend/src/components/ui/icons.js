@@ -267,6 +267,8 @@ import {
   Hand,
   LifeBuoy,
   CalendarClock,
+  ScanSearch,
+  CircleGauge,
 } from 'lucide-vue-next';
 
 export const ICONS = {
@@ -533,6 +535,8 @@ export const ICONS = {
   'hand': Hand,
   'life-buoy': LifeBuoy,
   'calendar-clock': CalendarClock,
+  'scan-search': ScanSearch,
+  'circle-gauge': CircleGauge,
 };
 
 /**

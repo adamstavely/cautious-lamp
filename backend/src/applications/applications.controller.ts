@@ -8,7 +8,7 @@ import {
   UpdateApplicationDto,
   UpdateDesignSystemVersionDto,
 } from './application.dto';
-import { CAPABILITY_NAMES, CapabilityName } from './application.types';
+import { CAPABILITY_NAMES, CapabilityName, ENVIRONMENTS } from './application.types';
 import { ApplicationsService } from './applications.service';
 
 /**
@@ -36,16 +36,35 @@ export class ApplicationsController {
     @Query('teamId') teamId?: string,
     @Query('workspaceId') workspaceId?: string,
     @Query('capability') capability?: string,
+    @Query('environment') environment?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    if (capability !== undefined && !CAPABILITY_NAMES.includes(capability as CapabilityName)) {
+    if (capability && !CAPABILITY_NAMES.includes(capability as CapabilityName)) {
       throw new BadRequestException(`capability must be one of ${CAPABILITY_NAMES.join(', ')}`);
     }
-    const applications = await this.applications.listFor(principal, {
-      teamId: teamId || undefined,
-      workspaceId: workspaceId || undefined,
-      capability: capability as CapabilityName | undefined,
-    });
-    return { applications, count: applications.length };
+    if (environment && !(ENVIRONMENTS as readonly string[]).includes(environment)) {
+      throw new BadRequestException(`environment must be one of ${ENVIRONMENTS.join(', ')}`);
+    }
+    if (search !== undefined && search.length > 200) throw new BadRequestException('search must be 200 characters or fewer');
+    const whole = (value: string | undefined, name: string, min: number, max: number) => {
+      if (value === undefined || value === '') return undefined;
+      const n = Number(value);
+      if (!Number.isInteger(n) || n < min || n > max) throw new BadRequestException(`${name} must be a whole number from ${min} to ${max}`);
+      return n;
+    };
+    return this.applications.pageFor(
+      principal,
+      {
+        teamId: teamId || undefined,
+        workspaceId: workspaceId || undefined,
+        capability: (capability || undefined) as CapabilityName | undefined,
+        environment: environment || undefined,
+        search: search?.trim() || undefined,
+      },
+      { limit: whole(limit, 'limit', 1, 100), offset: whole(offset, 'offset', 0, 1_000_000) },
+    );
   }
 
   @Post('applications/register')

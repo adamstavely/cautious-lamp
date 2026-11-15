@@ -130,9 +130,15 @@ Request Body:
 GET /api/v1/applications
 ```
 
-Query Parameters:
-- `teamId` (optional): Filter by team
-- `capability` (optional): Filter by enabled capability (governance, visualRegression, sessionReplay)
+Query Parameters (all optional):
+- `search`: case-insensitive text in the name, description, repository, application URL, team or tags (up to 200 characters)
+- `teamId`: filter by team
+- `workspaceId`: filter by workspace
+- `environment`: `development`, `staging` or `production` (`metadata.environment`)
+- `capability`: filter by enabled capability (`governance`, `visualRegression`, `sessionReplay`)
+- `limit` (1–100) and `offset` (0+): one page, newest first. Without `limit` every match is returned.
+
+Response: `{ applications, count, total, offset, limit, facets: { teams, environments } }`. `count` is how many are in this page, `total` how many match, and `facets` the teams and environments among the applications the caller can read (for filter menus).
 
 ### Get Application
 ```
@@ -192,17 +198,23 @@ DELETE /api/v1/applications/:id
    - Language input
    - Tags input
 
-### Application Management Page
+### Application Management Page (`/admin/applications`)
 
-- List of all registered applications
-- Filter by team, capability, environment
-- Quick actions:
-  - View details
-  - Edit capabilities
-  - Run scan (governance)
-  - View test runs (visual regression)
-  - View sessions (session replay)
-  - Delete application
+- Registered applications the user can read, 20 per page
+- Search, and filters by capability, team and environment (applied on the server); workspace admins can also limit the list to the workspaces they administer
+- Quick actions on each row:
+  - View details (opens the detail page)
+  - Run scan (governance), when governance is enabled and the user can change the application
+  - View test runs (visual regression), when it has a visual-regression project
+  - View sessions (session replay), when it has a session-replay project
+  - Edit (details, capabilities and workspace) and Delete, for users who can change it
+- `?edit=<id>` opens the edit dialog for that application (the detail page's Edit uses it)
+
+### Application Detail Page (`/admin/applications/:id`)
+
+- Overview: workspace, team, environment, framework, language, tags, versions (with an upgrade flag), repository and application URL, who registered and last changed it
+- Status: governance (schedule, last scan and recent scans), accessibility (latest report's score and conformance), visual regression (test runs) and session replay (sessions); each loads on its own, so one failing doesn't hide the others
+- Actions: run a governance scan, view test runs, view sessions, edit, delete
 
 ## Integration Points
 
