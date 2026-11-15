@@ -1,6 +1,8 @@
 # Design System 3.0: Launch Presentation
 ## Unifying the Mission; One UI at a Time
 
+Feature claims checked against the code at `main` (`69076bb`), 15 November 2026. The full feature status is in [docs/FEATURE_IDEAS.md](docs/FEATURE_IDEAS.md). Percentages on the mission-impact slides are targets; nothing in the platform measures them yet.
+
 ---
 
 ## Slide 1: Title Slide
@@ -117,7 +119,7 @@
 **Modern Architecture:**
 - Vue 3 with Composition API (frontend)
 - NestJS with TypeScript (backend)
-- Elasticsearch for scalable data storage
+- Elasticsearch for application data (review files and video uploads are kept on local disk)
 - OpenTelemetry for full observability
 - RESTful API with SDK and CLI tools
 
@@ -163,9 +165,7 @@
 ---
 
 ## Slide 10: Core Capabilities Overview
-**54+ Major Features Implemented**
-
-Organized into 7 key categories:
+**Features organized into 7 key categories** (status of each in docs/FEATURE_IDEAS.md):
 1. Core Design System Features
 2. Developer Experience Tools
 3. Governance & Compliance
@@ -179,11 +179,10 @@ Organized into 7 key categories:
 ## Slide 11: Core Design System Features
 **The Foundation:**
 
-✅ **Comprehensive Component Library**
-- Full documentation with live examples
-- Props editors and code exports
+✅ **Component Library**
+- Component inventory and status management (Production, In Progress, Deprecated)
+- Detailed pages with live examples, props editors and code exports for Button and Color picker (other components have no detail page yet)
 - Versioning and changelog tracking
-- Status management (Production, In Progress, Deprecated)
 
 ✅ **Design Tokens Management**
 - Token Studio with Style Dictionary integration
@@ -207,27 +206,26 @@ Organized into 7 key categories:
 ## Slide 12: Developer Experience
 **Tools That Accelerate Development:**
 
-✅ **Component Playground**
-- Live code editor
-- Vue/React export
-- Real-time preview
+✅ **Component Playground** (Button and Color picker pages)
+- Live props with real-time preview
+- Copy as Vue, React, React Native or HTML
 
 ✅ **Component Testing Framework**
 - Automated test generation (Vitest/Jest/Cypress/Playwright)
 - Prop-aware test creation
-- Visual regression testing
-- Accessibility testing
-- Performance testing
+- Accessibility (axe-core) and timing checks on the live preview
+- Visual tests run in your project through the visual regression integration
 
 ✅ **Component Scaffolding Wizard**
 - Interactive step-by-step component creation
 - Pre-built templates
 - Auto-generated props, code, docs, and tests
 
-✅ **Migration Assistant**
-- Component version migration tools
-- Auto-generated migration guides
+✅ **Migration Support**
+- Version history and migration notes on component pages
 - Breaking change alerts
+- Token migration: rewrite token references in your files
+- CLI `migrate` writes a component's current source into a project
 
 ---
 
@@ -244,13 +242,13 @@ Organized into 7 key categories:
 
 ✅ **ESLint Plugin**
 - Design system rule enforcement
-- 33+ compliance rules
+- 5 built-in rules, plus governance rules converted at run time
 
 ✅ **VS Code Extension**
 - Autocomplete for components
 - Hover documentation
 - Code snippets
-- Design system rules
+- Replace hardcoded values with tokens
 
 ✅ **Loupe Tool**
 - Component inspector
@@ -262,9 +260,9 @@ Organized into 7 key categories:
 **Ensuring Quality at Scale:**
 
 ✅ **Governance Engine**
-- 34+ compliance rules across 3 categories:
-  - Design System Compliance (14 rules)
-  - UX/HCD Best Practices (15 rules)
+- 19 built-in rules across 3 categories, plus axe-core's WCAG rule set:
+  - Design System Compliance (10 rules)
+  - UX/HCD Best Practices (4 rules)
   - Accessibility (5 rules)
 
 ✅ **Application Compliance Scanning**
@@ -272,13 +270,13 @@ Organized into 7 key categories:
 - Multi-application dashboard
 - Compliance SLA tracking
 
-✅ **Custom Rule Templates**
-- 12 pre-built rule templates
-- Custom rule creation
-- Template browser with search
+✅ **Custom Rules**
+- Write and test your own rules
+- Import and export rule sets
+- Versioned rules (no pre-built templates yet)
 
 ✅ **Automated Accessibility Reports**
-- WCAG 2.1 AA compliance monitoring
+- WCAG 2.x A/AA compliance monitoring with axe-core
 - Scheduled reports (daily/weekly/monthly)
 - Prioritized fix recommendations
 - Trend tracking over time
@@ -289,22 +287,22 @@ Organized into 7 key categories:
 ## Slide 15: Design-Dev Collaboration
 **Breaking Down Silos:**
 
-✅ **Design-to-Code Sync**
-- Sync components from Figma/Penpot
-- Auto-component generation
-- Bidirectional sync
+✅ **Design Sync**
+- Compare Figma/Penpot components with the library (read-only)
+- Link components to design nodes
 - Version tracking
+- Not built: code generation from design files, writing back to them
 
 ✅ **Design Token Sync**
-- Sync tokens from design tools
-- Automatic updates
-- Conflict resolution
+- Pull tokens from Figma or Penpot
+- Scheduled pulls prepared for review (never applied automatically)
+- Three-way conflict resolution
 - Validation
 
 ✅ **Design-Dev Handoff Tools**
-- Spec generation
-- Asset export
-- Measurement tools
+- Read SVG and token files
+- Match values to design tokens
+- Export specs as HTML, PDF, Markdown or JSON
 
 ✅ **Review System**
 - Design review workflow
@@ -352,9 +350,9 @@ Organized into 7 key categories:
 **Data-Driven Decision Making:**
 
 ✅ **Design System Health Dashboard**
-- Real-time system health metrics
+- System health metrics from measured data
 - 5-factor health score calculation
-- 90-day trend tracking
+- Trend tracking (30 days by default)
 - Automated alerts and recommendations
 
 ✅ **Design System Analytics**
@@ -377,18 +375,16 @@ Organized into 7 key categories:
 **Powerful Capabilities:**
 
 ✅ **Visual Regression Testing (Argos)**
-- Automated visual testing
+- Automated visual testing with Argos
 - Enhanced diff viewer
-- CI/CD integration
-- Webhook support
-- Real-time updates
-- Baseline management
+- CI/CD setup generated from project settings
+- Build notifications (email, Slack, Teams, webhooks)
+- Baseline management with rollback
 
 ✅ **Session Replay (OpenReplay)**
-- User session recording
-- Heatmap analysis
-- Error debugging
-- User behavior insights
+- Tracker setup with privacy settings
+- Session lists and events, filtered by user and date
+- Replay and heatmap links into OpenReplay
 
 ✅ **Photosensitivity Analysis (IRIS)**
 - Video content analysis
@@ -419,8 +415,7 @@ Organized into 7 key categories:
 - User Persona Generator
 
 ✅ **Developer Utilities**
-- Code quality checks
-- Vulnerability scanner
+- Contribution checks on submitted code
 - PNG to ICO converter
 - Dependency graph visualization
 
@@ -450,12 +445,11 @@ Organized into 7 key categories:
 - PDF documentation
 - Markdown export
 - PenPot/Adobe XD export
-- React Native export
+- React Native snippets from the component playground
 
 ✅ **Webhook Support**
-- Real-time notifications
-- CI/CD integration
-- Custom event triggers
+- Notifications delivered to signed webhooks, Slack and Teams
+- CI posts signed build notifications for visual regression
 
 ---
 
@@ -478,7 +472,7 @@ Organized into 7 key categories:
 - Automated testing and validation
 - Rapid iteration and deployment
 
-**Impact:**
+**Impact (targets, not yet measured):**
 - **50-70% reduction** in component development time
 - **Faster feature delivery** to end users
 - **More capabilities** reach users sooner
@@ -496,12 +490,12 @@ Organized into 7 key categories:
 - Compliance enforcement
 
 **Automated Quality Assurance:**
-- 34+ compliance rules
+- 19 built-in governance rules plus axe-core
 - Automated accessibility scanning
 - Visual regression testing
-- Code quality checks
+- Contribution checks
 
-**Impact:**
+**Impact (targets, not yet measured):**
 - **Reduced accessibility issues** by 80%+
 - **Fewer production bugs**
 - **Better user experience** across all capabilities
@@ -650,7 +644,7 @@ Organized into 7 key categories:
 ## Slide 29: Mission Outcomes Summary
 **The Bottom Line:**
 
-| Outcome | Impact |
+| Outcome | Impact (targets) |
 |---------|--------|
 | **Speed** | 50-70% faster development, faster mission delivery |
 | **Quality** | 80%+ reduction in accessibility issues, fewer bugs |
@@ -727,9 +721,9 @@ Organized into 7 key categories:
 **What's Coming Next:**
 
 **Near-Term (Next Quarter):**
-- Enhanced OpenReplay integration
 - CI/CD pipeline improvements
-- Additional component templates
+- Component detail pages beyond Button and Color picker
+- Pre-built governance rule templates
 - Performance optimizations
 
 **Medium-Term (Next 6 Months):**
@@ -838,9 +832,9 @@ Organized into 7 key categories:
 ## Appendix: Key Statistics
 
 **Platform Capabilities:**
-- 54+ major features implemented
-- 34+ compliance rules
-- 12 custom rule templates
+- Feature status: docs/FEATURE_IDEAS.md
+- 19 built-in governance rules (10 design system, 4 UX/HCD, 5 accessibility), plus axe-core
+- 5 ESLint plugin rules
 - 3 compliance categories
 - Full REST API with SDK and CLI
 
@@ -850,10 +844,10 @@ Organized into 7 key categories:
 - Modern, scalable architecture
 - Enterprise-grade security
 
-**Mission Impact:**
+**Mission Impact (targets, not yet measured):**
 - 50-70% faster development
 - 80%+ reduction in accessibility issues
-- Unlimited scalability
+- Scales across teams and replicas
 - Significant cost savings
 
 

@@ -2,7 +2,7 @@
 
 Governance checks code against compliance rules. Accessibility reports run axe-core against a page and track WCAG results, schedules and SLAs over time. Both need a signed-in caller (see [AUTH.md](AUTH.md)). Every change needs `admin:governance`.
 
-This replaces the old rules engine, which ran rule code (`scannerCode`) with `new Function` on the server and in the browser. No route takes code now, and nothing evaluates it. `RULES_ENGINE_GUIDE.md` and `AUTOMATED_ACCESSIBILITY_REPORTS.md` describe the old behaviour.
+This replaces the old rules engine, which ran rule code (`scannerCode`) with `new Function` on the server and in the browser. No route takes code now, and nothing evaluates it. [RULES_ENGINE_GUIDE.md](./RULES_ENGINE_GUIDE.md) is a how-to for writing and testing rules on this engine.
 
 ## Rules
 

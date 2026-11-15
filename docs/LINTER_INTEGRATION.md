@@ -1,320 +1,111 @@
-# Design System Linter Integration Guide
+# Linter integration
 
-## Overview
+`eslint-plugin-design-system` brings design system checks into ESLint, so they show up in the editor (through the VS Code ESLint extension or any ESLint integration) and in CI. It has five built-in rules that work offline, and it can also load the governance rules from the server and check the ones that apply to JavaScript source.
 
-The Design System Linter integrates your Rules Engine with ESLint and Prettier, providing real-time feedback in your IDE/editor as developers write code. This bridges the gap between compliance scanning (which happens after code is written) and development-time enforcement (which prevents issues before they're committed).
+What isn't built: there is no Prettier plugin, and the plugin isn't published to a package registry.
 
-## Implementation Status
+The plugin's [README](../eslint-plugin-design-system/README.md) is the reference for each rule's exact behaviour.
 
-✅ **Backend API**: Export endpoint created (`GET /api/v1/rules/export`)
-✅ **ESLint Plugin Package**: Created in `eslint-plugin-design-system/`
-✅ **Rule Converter**: Converts scanner code to ESLint AST visitors
-✅ **Integration Guide**: This document
+## Install
 
-### Next Steps
-
-1. **Build Plugin**: Run `npm run build` in `eslint-plugin-design-system/`
-2. **Install Plugin**: `npm install ./eslint-plugin-design-system`
-3. **Configure ESLint**: Add plugin to `.eslintrc.js`
-4. **Test**: Run `npx eslint . --plugin design-system`
-
-## Quick Start
+The plugin is an npm workspace in this repository. Build it, then install it into your project from its folder:
 
 ```bash
-# Build the plugin
-cd eslint-plugin-design-system
-npm install
-npm run build
+# In this repository
+npm run build --workspace eslint-plugin-design-system
 
-# Install in your project
-cd ../your-project
-npm install ../eslint-plugin-design-system
-
-# Configure ESLint
-# Add to .eslintrc.js (see Configuration section)
+# In your project
+npm install --save-dev /path/to/cautious-lamp/eslint-plugin-design-system
 ```
 
-## Architecture
+It supports ESLint 8 (eslintrc or flat config) and ESLint 9 (flat config).
 
-```
-Rules Engine (Backend)
-  ↓ Export Rules
-ESLint/Prettier Plugin Generator
-  ↓ Generate Plugin Config
-ESLint Plugin (npm package)
-  ↓ Runs in IDE
-Developer sees real-time errors/warnings
-```
+## Built-in rules
 
-## How It Works
+Defined in `eslint-plugin-design-system/src/rules.ts`:
 
-### 1. Rule Export
+| Rule | Reports | In `recommended` |
+| --- | --- | --- |
+| `design-system/hardcoded-design-tokens` | Hardcoded colours (`#hex`, `rgb()`, `hsl()`) in strings and template literals | `error` |
+| `design-system/accessibility-attributes` | Native JSX `<button>`, `<input>`, `<select>` and `<textarea>` with no accessible name | `error` |
+| `design-system/component-naming` | Component declarations that aren't PascalCase | `warn` |
+| `design-system/spacing-consistency` | Hardcoded px spacing values | `warn` |
+| `design-system/typography-scale` | Hardcoded font sizes and line heights | `warn` |
 
-The Rules Engine exports rules in a format that ESLint can understand:
+**Autofix.** `eslint --fix` only changes code where a rule supports it. On `main` today no rule provides a fixer, so the plugin reports problems and fixes nothing.
+
+## Configure
+
+The plugin exports three presets: `flat/recommended` for flat config, and `recommended` (alias `legacy-recommended`) for eslintrc. ESLint 9 has no `--plugin` command-line flag; the plugin is set up in the config file.
+
+### Flat config (`eslint.config.js`, ESLint 9)
 
 ```javascript
-// Rules Engine Rule (from Governance.vue)
-{
-  id: 1,
-  name: 'Hardcoded Design Tokens',
-  category: 'design-system',
-  severity: 'error',
-  scannerCode: `// Scanner logic...`
-}
+const designSystem = require('eslint-plugin-design-system');
 
-// Converted to ESLint Rule
-{
-  name: 'hardcoded-design-tokens',
-  meta: {
-    type: 'problem',
-    docs: {
-      description: 'Prevent hardcoded design token values',
-      category: 'Design System'
-    },
-    messages: {
-      hardcodedToken: 'Found hardcoded value: {{value}}. Use design token {{token}} instead.'
+module.exports = [
+  designSystem.configs['flat/recommended'],
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    rules: {
+      'design-system/component-naming': 'error'
     }
-  },
-  create(context) {
-    // ESLint rule implementation
   }
-}
+];
 ```
 
-### 2. Integration Points
-
-#### A. Rule Synchronization
-
-The linter plugin fetches rules from the Rules Engine API:
+### eslintrc (`.eslintrc.js`, ESLint 8)
 
 ```javascript
-// eslint-plugin-design-system/src/index.js
-const fetchRules = async () => {
-  const response = await fetch('http://localhost:3000/api/v1/rules/export', {
-    headers: { Authorization: `Bearer ${API_KEY}` }
-  });
-  return response.json();
-};
-```
-
-#### B. Rule Conversion
-
-Convert Rules Engine scanner code to ESLint rules:
-
-```javascript
-function convertToESLintRule(rule) {
-  return {
-    name: rule.name.toLowerCase().replace(/\s+/g, '-'),
-    meta: {
-      type: rule.severity === 'error' ? 'problem' : 'suggestion',
-      docs: {
-        description: rule.description,
-        category: rule.category
-      }
-    },
-    create(context) {
-      // Convert scanner code to ESLint AST traversal
-      return {
-        // ESLint visitor methods
-      };
-    }
-  };
-}
-```
-
-#### C. Real-time Linting
-
-ESLint runs as developers type, showing violations immediately:
-
-```javascript
-// Example: Hardcoded color detection
-create(context) {
-  return {
-    Literal(node) {
-      const value = node.value;
-      if (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/i.test(value)) {
-        // Check if it's a design token
-        const tokens = getDesignTokens();
-        const isToken = tokens.some(t => t.value === value);
-        
-        if (!isToken) {
-          context.report({
-            node,
-            messageId: 'hardcodedToken',
-            data: { value, token: 'color.primary' }
-          });
-        }
-      }
-    }
-  };
-}
-```
-
-## Implementation
-
-### Step 1: Create ESLint Plugin Package
-
-```bash
-npm create eslint-plugin-design-system
-```
-
-### Step 2: Export Rules API Endpoint
-
-Add to `backend/src/design-system/design-system.controller.ts`:
-
-```typescript
-@Get('rules/export')
-exportRules(@Headers('authorization') authHeader?: string) {
-  this.validateRequest(authHeader);
-  return this.designSystemService.exportRulesForLinter();
-}
-```
-
-### Step 3: Rule Converter Service
-
-Create `backend/src/design-system/linter-export.service.ts`:
-
-```typescript
-export class LinterExportService {
-  convertToESLintRule(rule: Rule): ESLintRule {
-    // Convert scanner code to ESLint rule structure
-  }
-  
-  convertToPrettierRule(rule: Rule): PrettierRule {
-    // Convert formatting rules to Prettier config
-  }
-}
-```
-
-### Step 4: ESLint Plugin Implementation
-
-The plugin would:
-1. Fetch rules from API on initialization
-2. Convert scanner code to ESLint AST visitors
-3. Report violations using ESLint's reporting API
-4. Support auto-fix where possible
-
-## Benefits
-
-1. **Real-time Feedback**: Developers see violations as they type
-2. **Consistent Rules**: Same rules used in scanning and linting
-3. **Prevention**: Catch issues before commit/PR
-4. **Auto-fix**: Automatically fix violations where possible
-5. **IDE Integration**: Works with VS Code, WebStorm, etc.
-
-## Example Usage
-
-### ESLint Configuration
-
-```javascript
-// .eslintrc.js
 module.exports = {
-  plugins: ['design-system'],
+  extends: ['plugin:design-system/recommended'],
+  parserOptions: { ecmaVersion: 2022, sourceType: 'module', ecmaFeatures: { jsx: true } },
   rules: {
-    'design-system/hardcoded-tokens': 'error',
-    'design-system/component-naming': 'warn',
-    'design-system/accessibility-attributes': 'error'
-  },
-  settings: {
-    'design-system': {
-      apiUrl: 'http://localhost:3000/api/v1',
-      apiKey: process.env.DS_API_KEY
-    }
+    'design-system/component-naming': 'error'
   }
 };
 ```
 
-### Prettier Configuration
-
-```javascript
-// .prettierrc.js
-module.exports = {
-  plugins: ['prettier-plugin-design-system'],
-  designSystem: {
-    apiUrl: 'http://localhost:3000/api/v1',
-    apiKey: process.env.DS_API_KEY
-  }
-};
-```
-
-## Rule Mapping
-
-| Rules Engine Rule | ESLint Rule | Prettier Rule |
-|------------------|-------------|---------------|
-| Hardcoded Design Tokens | `hardcoded-tokens` | Format token usage |
-| Component Naming | `component-naming` | Format component names |
-| Spacing Consistency | `spacing-consistency` | Auto-format spacing |
-| Typography Scale | `typography-scale` | Format font sizes |
-| Accessibility Attributes | `accessibility-attributes` | N/A (ESLint only) |
-
-## Auto-fix Support
-
-Some rules can auto-fix violations:
-
-```javascript
-// Example: Replace hardcoded color with token
-create(context) {
-  return {
-    Literal(node) {
-      if (isHardcodedColor(node.value)) {
-        context.report({
-          node,
-          message: 'Use design token',
-          fix(fixer) {
-            const token = findMatchingToken(node.value);
-            return fixer.replaceText(node, `tokens.${token.name}`);
-          }
-        });
-      }
-    }
-  };
-}
-```
-
-## CLI Integration
+Then run ESLint as usual:
 
 ```bash
-# Lint files
-npx eslint . --plugin design-system
-
-# Fix auto-fixable issues
-npx eslint . --plugin design-system --fix
-
-# Check specific rules
-npx eslint . --rule 'design-system/hardcoded-tokens: error'
+npx eslint .
+npx eslint . --max-warnings 0   # in CI, fail on warnings too
 ```
 
-## CI/CD Integration
+## Rules from the server
 
-```yaml
-# .github/workflows/lint.yml
-- name: Run Design System Linter
-  run: |
-    npm install -g eslint-plugin-design-system
-    eslint . --plugin design-system --max-warnings 0
+The plugin can also load governance rules (see [RULES_ENGINE_GUIDE.md](RULES_ENGINE_GUIDE.md)). ESLint rules run synchronously, so the rules have to be loaded before linting, by awaiting `loadRulesFromAPI()` in the config file. The plugin doesn't read ESLint `settings` and fetches nothing when it is loaded.
+
+```javascript
+// eslint.config.mjs
+import designSystem from 'eslint-plugin-design-system';
+
+const { loaded } = await designSystem.loadRulesFromAPI({
+  apiUrl: process.env.DS_API_URL,   // e.g. http://localhost:3000/api/v1
+  apiKey: process.env.DS_API_KEY,   // sent as "Authorization: Bearer <key>"
+  timeout: 5000,                    // ms, default 5000
+  cacheTimeout: 300000              // ms, default 5 minutes
+});
+
+export default [
+  designSystem.configs['flat/recommended'],
+  { rules: Object.fromEntries(loaded.map((id) => [`design-system/${id}`, 'warn'])) }
+];
 ```
 
-## Future Enhancements
+- It calls `GET {apiUrl}/governance/rules/export` on the backend (`governance.controller.ts`), which returns the full rule definitions. `GET /rules/export?format=eslint` exists too, but it leaves out each rule's type and pattern, so the plugin doesn't use it.
+- The route needs any valid credential. Get an API key from an administrator: keys are created with `POST /api/v1/auth/api-keys`, which needs `admin:users` (see [AUTH.md](AUTH.md#api-keys)). Keep it in an environment variable, not in the config file.
+- Each rule becomes `design-system/<rule-name-hyphenated>`; `loaded` lists the ids that were registered.
+- Only some rule types can be checked on a source file: `regex-present` and `regex-absent` on `javascript`, `token-usage` on CSS-in-JS, `selector-attribute` with a plain tag selector (on JSX), and the `component-naming` built-in check. Every other rule is skipped and listed in `skipped`, with the reason in `warnings`.
+- It never rejects. If the server is down or slow, it logs one warning and returns whatever it could load (cached rules for that URL, if any).
+- You can pass definitions directly with `rules: [...]` instead of, or as well as, `apiUrl`.
 
-1. **VS Code Extension**: Direct IDE integration
-2. **Pre-commit Hooks**: Automatic linting before commit
-3. **Rule Sync**: Auto-update ESLint config when rules change
-4. **Custom Rule Builder**: Visual rule builder that generates ESLint rules
-5. **Performance**: Cache rules locally, sync periodically
+## Editors
 
-## Summary
+With the VS Code ESLint extension (or any editor's ESLint integration), the plugin's problems appear inline as you type. The repository's own VS Code extension is a separate tool for autocomplete, hover and snippets; it doesn't lint. See [VSCODE_EXTENSION_VS_ESLINT.md](VSCODE_EXTENSION_VS_ESLINT.md).
 
-The Design System Linter bridges your Rules Engine with development tools, providing:
-- **Real-time enforcement** during development
-- **Same rules** as compliance scanning
-- **Auto-fix** capabilities
-- **IDE integration** for better DX
+## Relation to governance scans
 
-This creates a complete compliance pipeline:
-1. **Development**: ESLint/Prettier catch issues
-2. **Pre-commit**: Git hooks validate
-3. **CI/CD**: Automated scanning
-4. **Post-deploy**: Application scanning
-
-All using the same Rules Engine!
-
+The plugin checks source files while you write them. Governance scans (`POST /api/v1/governance/scans`) check whole components, code bundles or deployed pages on the server, including the rule types the plugin can't (selector counts, axe, heading order, form labels). The same rule definitions drive both.

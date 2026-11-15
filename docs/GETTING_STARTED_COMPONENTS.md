@@ -164,6 +164,6 @@ Use the component scaffolding wizard to generate component boilerplate:
 ## Next Steps
 
 - [Token Setup Guide](./GETTING_STARTED_TOKENS.md) - Use tokens in components
-- [Patterns Library](./GETTING_STARTED_PATTERNS.md) - Combine components into patterns
+- [Patterns guidance](../frontend/public/docs/patterns.md) - Combine components into patterns (in the app at `/patterns`)
 - [Component Request Workflow](./COMPONENT_REQUEST_WORKFLOW_ANALYSIS.md) - Learn about the request process
 

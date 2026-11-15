@@ -207,5 +207,5 @@ Reference tokens in component code:
 
 - [Component Creation Guide](./GETTING_STARTED_COMPONENTS.md) - Use tokens in components
 - [Token Sync Documentation](./TOKEN_SYNC.md) - Learn about token synchronization
-- [Color Palette Guide](./docs/colors.md) - Detailed color token management
+- [Color Palette Guide](../frontend/public/docs/colors.md) - Detailed color token management
 

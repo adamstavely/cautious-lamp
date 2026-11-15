@@ -1,431 +1,61 @@
-# Argos Visual Regression Testing Service
+# Visual regression service
 
-## Overview
+Teams connect an [Argos](https://argos-ci.com) project to the workbench and review its builds here. Argos does the screenshot comparison; the workbench keeps projects, runs, baselines, sharing and notifications, and reads builds from the Argos API ([ARGOS_API_INTEGRATION.md](ARGOS_API_INTEGRATION.md)). Builds come from screenshot uploads in CI ([ARGOS_CI_CD_INTEGRATION.md](ARGOS_CI_CD_INTEGRATION.md)); nothing here starts a run.
 
-Integrate Argos visual regression testing as a service capability that teams can use to test their applications. This service allows teams to configure, run, and monitor visual regression tests for their apps without needing to set up and maintain their own Argos infrastructure.
+## Where it lives
 
-## Architecture
+| Part | Location |
+| --- | --- |
+| Backend | `backend/src/visual-regression/`: controller, service, Argos client, `ci-setup.ts`, notifier, project access |
+| Frontend | `/tools/visual-regression` (`VisualRegression.vue`, project list and create), `/tools/visual-regression/:id` (`VisualRegressionProject.vue`), `/tools/visual-regression/:id/runs/:runId` (`VisualRegressionResults.vue`); panels in `frontend/src/components/visual-regression/` |
+| Storage | Elasticsearch: `design-system-visual-regression-projects` (projects with their baselines, baseline history, shares and notification channels) and `design-system-visual-regression-runs` (runs with their results). There is no SQL database. |
 
-### Service Components
+Argos tokens, webhook secrets and notification URLs are encrypted at rest (`ENCRYPTION_KEY`) and never returned.
 
-1. **Visual Regression Testing Dashboard** (`/tools/visual-regression`)
-   - Project management interface
-   - Test configuration UI
-   - Results dashboard with diff visualization
-   - Team/project access management
+## Pages
 
-2. **Backend Service** (`/api/v1/visual-regression`)
-   - Argos API integration
-   - Project configuration management
-   - Test execution orchestration
-   - Results storage and retrieval
-   - Webhook handling for CI/CD integration
+- **Project list**: projects the caller can read with totals (projects, pass rate, runs, pending diffs), and a form to create one (name, description, workspace, Argos project `owner/project`, token, optional self-hosted URL, branch).
+- **Project page** tabs:
+  - **Overview**: analytics for a chosen period (builds, passed, to review, failed, average test time, counts by day).
+  - **Test runs**: the project's Argos builds, newest first, paged.
+  - **Baselines**: record a run as the baseline, see versions and history, roll back.
+  - **CI setup**: the generated Playwright config, screenshot helper, upload command and, with a secret, the build notification command.
+  - **Settings**: project details, test settings (test folders, browsers, viewports, ignore patterns, screenshot options), sharing, build notification secret, and where build results are sent.
+- **Results page**: one run's screenshots with a diff viewer (slider, side by side, overlay, grid; zoom, pan and full screen), search, status filter, filter and sort by review date, approve or reject one or several, keyboard shortcuts (`j`/`k` move, `a`/`r` approve/reject, `/` search), auto-refresh, CSV export and a PDF report (drawn in the browser with jsPDF).
 
-3. **API Endpoints**
-   - REST API for teams to integrate into their CI/CD pipelines
-   - Webhook endpoints for Argos callbacks
-   - Authentication and authorization
+## API
 
-4. **CLI Integration**
-   - Command-line tool for teams to trigger tests
-   - Configuration file management
-   - Local test preview
+All under `/api/v1/visual-regression`. Every route needs a signed-in user or API key and checks access to the project; see [WORKSPACES.md](WORKSPACES.md#visual-regression-and-session-replay-projects) for who gets read, run and manage.
 
-## Implementation Plan
+| Method and path | Access | Notes |
+| --- | --- | --- |
+| `GET /projects` | | Readable projects; `teamId`, `workspaceId` filters |
+| `POST /projects` | editor in the workspace | Checks the Argos token first |
+| `GET`, `PUT`, `DELETE /projects/:id` | read; manage | |
+| `GET /projects/:id/ci-setup` | read | See [ARGOS_CI_CD_INTEGRATION.md](ARGOS_CI_CD_INTEGRATION.md) |
+| `GET /projects/:id/runs` | read | `{ data, pagination }`; `page`, `limit` (max 100), `from`, `to` (YYYY-MM-DD) |
+| `GET /runs/:id` | read | One run |
+| `GET /runs/:id/results` | read | `{ data, pagination }`, by test name |
+| `POST /results/:id/approve`, `/reject` | run | Recorded in Argos first (needs a personal access token), then on the result |
+| `GET /projects/:id/analytics` | read | `startDate`, `endDate` |
+| `GET /projects/:id/shares`, `POST /projects/:id/share`, `DELETE /projects/:id/share/:userId` | manage | Share with one active user as `viewer` or `editor` |
+| `GET /projects/:id/teams` | read | Workspace, application and creator |
+| `POST`, `GET /projects/:id/baselines`, `GET /projects/:id/baselines/history`, `POST /projects/:id/baselines/:baselineId/rollback` | run to change, read to list | |
+| `POST`, `DELETE /projects/:id/webhook-secret` | manage | The secret CI signs build notifications with; shown once |
+| `GET`, `POST /projects/:id/notifications`, `DELETE /projects/:id/notifications/:type`, `POST /projects/:id/notifications/:type/test` | manage | See [Notifications](#notifications) |
+| `POST /webhooks/argos` | public, signed | CI's build notification (`x-argos-signature: sha256=<HMAC of the raw body>`) |
 
-### Phase 1: Core Infrastructure
+## Runs and results
 
-#### 1.1 Backend Service (`backend/src/visual-regression/`)
+A run is one Argos build. Runs are created when the workbench reads builds from Argos: when runs are listed (at most every 15 seconds per project), when a run's results are opened, or when CI posts a build notification. Run `status` is `pending`, `running`, `completed` or `failed`; Argos's own status is kept as `argosStatus`. A finished build's screenshot diffs become the run's results (`passed`, `failed`, `new`, `removed`), each with baseline, current and diff image URLs from Argos.
 
-```typescript
-// visual-regression.service.ts
-export class VisualRegressionService {
-  // Create/manage projects
-  async createProject(teamId: string, config: ProjectConfig): Promise<Project>
-  async updateProject(projectId: string, config: Partial<ProjectConfig>): Promise<Project>
-  async deleteProject(projectId: string): Promise<void>
-  async getProjects(teamId: string): Promise<Project[]>
-  
-  // Test execution
-  async triggerTest(projectId: string, options: TestOptions): Promise<TestRun>
-  async getTestRun(runId: string): Promise<TestRun>
-  async getTestRuns(projectId: string, filters: RunFilters): Promise<TestRun[]>
-  
-  // Results management
-  async getTestResults(runId: string): Promise<TestResult[]>
-  async approveDiff(resultId: string, userId: string): Promise<void>
-  async rejectDiff(resultId: string, userId: string): Promise<void>
-  
-  // Argos integration
-  private async syncWithArgos(project: Project): Promise<void>
-  private async handleArgosWebhook(payload: ArgosWebhook): Promise<void>
-}
-```
+## Baselines
 
-#### 1.2 Database Schema
+Baselines are versions. Recording one (from a run) makes it current and keeps the earlier ones; rolling back makes an earlier one current again, and each change is kept in the history. The current baseline's commit becomes the `--reference-commit` of the CI upload command, so Argos compares new builds against it. With no baseline, builds compare against the project's branch.
 
-```sql
--- Projects table
-CREATE TABLE visual_regression_projects (
-  id UUID PRIMARY KEY,
-  team_id VARCHAR(255) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  argos_project_id VARCHAR(255),
-  argos_branch VARCHAR(255) DEFAULT 'main',
-  argos_token_encrypted TEXT,
-  config JSONB,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+## Not built
 
--- Test runs table
-CREATE TABLE visual_regression_runs (
-  id UUID PRIMARY KEY,
-  project_id UUID REFERENCES visual_regression_projects(id),
-  argos_build_id VARCHAR(255),
-  status VARCHAR(50), -- 'pending', 'running', 'completed', 'failed'
-  commit_sha VARCHAR(40),
-  branch VARCHAR(255),
-  triggered_by VARCHAR(255),
-  started_at TIMESTAMP,
-  completed_at TIMESTAMP,
-  results_summary JSONB
-);
-
--- Test results table
-CREATE TABLE visual_regression_results (
-  id UUID PRIMARY KEY,
-  run_id UUID REFERENCES visual_regression_runs(id),
-  test_name VARCHAR(255),
-  status VARCHAR(50), -- 'passed', 'failed', 'new', 'removed'
-  diff_image_url TEXT,
-  baseline_image_url TEXT,
-  current_image_url TEXT,
-  diff_percentage DECIMAL(5,2),
-  approved BOOLEAN DEFAULT FALSE,
-  approved_by VARCHAR(255),
-  approved_at TIMESTAMP
-);
-```
-
-#### 1.3 API Routes (`backend/src/routes/visual-regression.routes.ts`)
-
-```typescript
-// Project management
-POST   /api/v1/visual-regression/projects
-GET    /api/v1/visual-regression/projects
-GET    /api/v1/visual-regression/projects/:id
-PUT    /api/v1/visual-regression/projects/:id
-DELETE /api/v1/visual-regression/projects/:id
-
-// Test execution
-POST   /api/v1/visual-regression/projects/:id/runs
-GET    /api/v1/visual-regression/projects/:id/runs
-GET    /api/v1/visual-regression/runs/:id
-GET    /api/v1/visual-regression/runs/:id/results
-
-// Results management
-POST   /api/v1/visual-regression/results/:id/approve
-POST   /api/v1/visual-regression/results/:id/reject
-
-// Webhooks
-POST   /api/v1/visual-regression/webhooks/argos
-
-// Where build results are sent (manage access; see "Notifications" below)
-GET    /api/v1/visual-regression/projects/:id/notifications
-POST   /api/v1/visual-regression/projects/:id/notifications
-DELETE /api/v1/visual-regression/projects/:id/notifications/:type
-POST   /api/v1/visual-regression/projects/:id/notifications/:type/test
-```
-
-### Phase 2: Frontend Dashboard
-
-#### 2.1 Main Dashboard Page (`frontend/src/views/VisualRegression.vue`)
-
-**Features:**
-- Project list with status indicators
-- Quick stats (total tests, pass rate, recent runs)
-- Recent test runs timeline
-- Quick actions (trigger test, view results)
-
-**Sections:**
-1. **Hero Section**
-   - Title: "Visual Regression Testing"
-   - Description: "Catch visual bugs before they reach production. Automated visual testing powered by Argos."
-   - CTA: "Create New Project"
-
-2. **Projects Overview**
-   - Grid/list view of all projects
-   - Each card shows:
-     - Project name and team
-     - Last test run status
-     - Pass rate percentage
-     - Number of pending diffs
-     - Last run timestamp
-
-3. **Recent Activity**
-   - Timeline of recent test runs across all projects
-   - Filter by project, status, date range
-
-#### 2.2 Project Configuration Page (`frontend/src/views/VisualRegressionProject.vue`)
-
-**Features:**
-- Project settings form
-- Argos integration setup
-- Test configuration
-- Team member access management
-- Webhook configuration for CI/CD
-
-**Configuration Options:**
-- Project name and description
-- Argos project ID and branch
-- Argos API token (encrypted storage)
-- Test directories/paths
-- Ignore patterns
-- Screenshot options (viewport sizes, devices)
-- Notification settings
-
-#### 2.3 Test Results Page (`frontend/src/views/VisualRegressionResults.vue`)
-
-**Features:**
-- Test run details
-- Side-by-side diff visualization
-- Baseline vs current comparison
-- Diff percentage and metrics
-- Approve/reject actions
-- Filter and search results
-- Export results
-
-**UI Components:**
-- Image comparison slider
-- Diff overlay toggle
-- Zoom controls
-- Fullscreen view
-- Batch approve/reject
-
-### Phase 3: Integration & Automation
-
-#### 3.1 CI/CD Integration
-
-**GitHub Actions Example:**
-```yaml
-name: Visual Regression Tests
-on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
-
-jobs:
-  visual-regression:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run Visual Regression Tests
-        uses: design-system/visual-regression-action@v1
-        with:
-          api-endpoint: ${{ secrets.DS_API_ENDPOINT }}
-          api-key: ${{ secrets.DS_API_KEY }}
-          project-id: ${{ secrets.PROJECT_ID }}
-          branch: ${{ github.ref }}
-          commit-sha: ${{ github.sha }}
-```
-
-**CLI Tool:**
-```bash
-# Install
-npm install -g @design-system/cli
-
-# Configure
-ds visual-regression config --project-id <id> --api-key <key>
-
-# Run tests
-ds visual-regression test --branch main
-
-# View results
-ds visual-regression results --run-id <id>
-```
-
-#### 3.2 API Client SDK
-
-```typescript
-import { VisualRegressionClient } from '@design-system/visual-regression-sdk';
-
-const client = new VisualRegressionClient({
-  apiEndpoint: 'https://design-system.example.com/api/v1',
-  apiKey: process.env.DS_API_KEY
-});
-
-// Trigger test
-const run = await client.projects.triggerTest(projectId, {
-  branch: 'main',
-  commitSha: 'abc123',
-  options: {
-    viewports: ['1920x1080', '768x1024'],
-    browsers: ['chrome', 'firefox']
-  }
-});
-
-// Get results
-const results = await client.runs.getResults(run.id);
-
-// Approve diff
-await client.results.approve(resultId);
-```
-
-### Phase 4: Advanced Features
-
-#### 4.1 Team Management
-- Multi-team support
-- Role-based access (viewer, tester, admin)
-- Project sharing between teams
-- Usage quotas and limits
-
-#### 4.2 Analytics & Reporting
-- Test coverage metrics
-- Failure trend analysis
-- Performance metrics (test duration)
-- Cost tracking (Argos usage)
-
-#### 4.3 Notifications
-
-Implemented. See [Notifications](#notifications).
-
-#### 4.4 Baseline Management
-- Manual baseline updates
-- Baseline versioning
-- Baseline comparison
-- Automatic baseline promotion rules
-
-## User Flow
-
-### Setting Up a New Project
-
-1. Navigate to `/tools/visual-regression`
-2. Click "Create New Project"
-3. Fill in project details:
-   - Project name
-   - Team/organization
-   - Description
-4. Configure Argos integration:
-   - Enter Argos project ID
-   - Enter Argos API token
-   - Select branch
-5. Configure test settings:
-   - Test directories
-   - Viewport sizes
-   - Browsers/devices
-   - Ignore patterns
-6. Save configuration
-7. System validates Argos connection
-8. Project is ready for testing
-
-### Running Tests
-
-**Via Dashboard:**
-1. Navigate to project page
-2. Click "Run Tests"
-3. Select branch and commit (optional)
-4. Configure test options
-5. Trigger test
-6. Monitor progress
-7. View results when complete
-
-**Via CI/CD:**
-1. Push code to repository
-2. CI/CD pipeline triggers
-3. Tests run automatically
-4. Results posted to PR/commit
-5. Team reviews diffs
-6. Approve or fix issues
-
-### Reviewing Results
-
-1. Navigate to test run results
-2. View list of all test results
-3. Filter by status (passed, failed, new, removed)
-4. Click on a result to view diff
-5. Compare baseline vs current
-6. Review diff percentage and areas
-7. Approve if expected, reject if bug
-8. Fix issues and re-run if needed
-
-## Security & Access Control
-
-- **Authentication**: Use existing design system auth
-- **Authorization**: RBAC-based project access
-- **API Keys**: Encrypted storage, team-scoped
-- **Argos Tokens**: Encrypted at rest, never exposed in API responses
-- **Audit Logging**: Track all test runs and approvals
-
-## Pricing/Quota Model
-
-- **Free Tier**: 
-  - 5 projects per team
-  - 100 test runs/month
-  - 7-day result retention
-  
-- **Pro Tier**:
-  - Unlimited projects
-  - 1000 test runs/month
-  - 90-day result retention
-  - Priority support
-
-- **Enterprise Tier**:
-  - Custom limits
-  - Unlimited retention
-  - Dedicated support
-  - SLA guarantees
-
-## Technical Considerations
-
-### Argos API Integration
-- Use Argos REST API for all operations
-- Handle rate limiting
-- Implement retry logic
-- Cache project metadata
-- Webhook signature verification
-
-### Performance
-- Async test execution
-- Background job processing
-- Image CDN for diff visualization
-- Pagination for large result sets
-- Caching of frequently accessed data
-
-### Scalability
-- Queue-based test execution
-- Horizontal scaling for API
-- Database indexing strategy
-- Image storage optimization
-- CDN for static assets
-
-## Future Enhancements
-
-1. **Multi-browser Testing**: Support for multiple browsers/devices
-2. **Component-level Testing**: Test individual components in isolation
-3. **Visual AI**: AI-powered diff analysis and auto-approval
-4. **Performance Testing**: Combine with performance metrics
-5. **Accessibility Testing**: Integrate with accessibility checks
-6. **Mobile App Testing**: Support for React Native, Flutter
-7. **Test Templates**: Pre-configured test setups for common frameworks
-
-## Documentation
-
-- **Getting Started Guide**: Step-by-step setup instructions
-- **API Documentation**: Complete API reference
-- **CI/CD Integration Guides**: Examples for common platforms
-- **Best Practices**: Recommendations for effective visual testing
-- **Troubleshooting**: Common issues and solutions
-
-## Success Metrics
-
-- Number of teams using the service
-- Number of projects configured
-- Test runs per month
-- Bugs caught before production
-- Time saved vs manual testing
-- User satisfaction scores
+There is no workbench CLI, SDK, GitHub Action, status badge, PR comments, usage quotas or pricing tiers, and runs can't be started from the workbench. See [ARGOS_REMAINING_FEATURES.md](ARGOS_REMAINING_FEATURES.md) for what is open.
 
 ## Notifications
 

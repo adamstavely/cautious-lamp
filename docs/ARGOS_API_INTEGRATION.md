@@ -1,193 +1,75 @@
-# Argos API Integration Guide
+# Argos API integration
 
-## Overview
-
-The Visual Regression Testing service integrates with the open-source, self-hosted Argos visual regression testing platform. This guide explains how the integration works and how to configure it.
-
-## Argos API Client
-
-The `ArgosApiClient` class (`backend/src/visual-regression/argos-api.client.ts`) handles all communication with Argos instances.
-
-### Features
-
-- **Self-hosted Support**: Works with any Argos instance URL
-- **Authentication**: Bearer token authentication
-- **Project Management**: Verify and fetch projects
-- **Build Management**: Create, fetch, and monitor builds
-- **Screenshot Management**: Get screenshots, approve/reject diffs
-- **Image URL Handling**: Handles both absolute and relative image URLs
-
-### API Endpoints Used
-
-The client assumes the following Argos API structure (adjust if your Argos instance uses different endpoints):
-
-```
-GET  /api/projects                    - List projects (for connection verification)
-GET  /api/projects/:id                - Get project details
-POST /api/projects/:id/builds         - Create a new build
-GET  /api/projects/:id/builds         - List builds for a project
-GET  /api/projects/:id/builds/:buildId - Get build details
-GET  /api/projects/:id/builds/:buildId/screenshots - Get screenshots for a build
-POST /api/projects/:id/builds/:buildId/screenshots/:screenshotId/approve - Approve screenshot
-POST /api/projects/:id/builds/:buildId/screenshots/:screenshotId/reject - Reject screenshot
-```
-
-**Note**: These endpoints may need to be adjusted based on your Argos instance's actual API structure. Check your Argos documentation for the correct endpoints.
+The workbench reads visual regression builds from [Argos](https://argos-ci.com) through its REST API v2. The client is `ArgosApiClient` in `backend/src/visual-regression/argos-api.client.ts`; `VisualRegressionService` uses it.
 
 ## Configuration
 
-### Environment Variables
+Each project stores:
 
-```bash
-# Optional: Default Argos base URL if not specified per project
-ARGOS_BASE_URL=https://argos.example.com
-```
+| Field | Notes |
+| --- | --- |
+| `argosProjectId` | The Argos project as `owner/project` (account slug and project name), for example `acme/web`. Anything else is rejected. |
+| `argosToken` | A project token or a personal access token. Stored encrypted (`ENCRYPTION_KEY`) and never returned. Reviews (approve or reject) need a personal access token with review access; a project token can only read. |
+| `argosBaseUrl` | Optional, for a self-hosted Argos. Defaults to `ARGOS_BASE_URL`, else `https://api.argos-ci.com/v2`. `https://app.argos-ci.com` and `https://api.argos-ci.com` are read as the hosted API. |
+| `argosBranch` | What builds compare against when no baseline is recorded. |
 
-### Project Configuration
+Environment variables:
 
-When creating a project, teams must provide:
+- `ARGOS_BASE_URL`: the default Argos API URL.
+- `ARGOS_ALLOWED_BASE_URLS`: comma-separated Argos URLs projects may use, besides the default URL (always allowed). A self-hosted Argos must be listed here or be the default; other URLs are refused.
 
-1. **Argos Base URL**: The URL of their self-hosted Argos instance
-   - Example: `https://argos.example.com`
-   - If not provided, defaults to `ARGOS_BASE_URL` env var or `https://app.argos-ci.com`
+Creating a project, or changing its Argos project, token or URL, checks the token by reading the Argos project: `401`/`403` means Argos refused the token, `404` that the token can't see that project, no answer that Argos is unreachable. Each case returns its own message.
 
-2. **Argos Project ID**: The identifier of the project in Argos
-   - Format: Usually `org/project` or just the project ID
-   - Example: `my-org/my-app`
+## Argos endpoints used
 
-3. **Argos API Token**: Authentication token for the Argos instance
-   - Stored securely (should be encrypted in production)
-   - Never returned in API responses
+All under the API URL, with `Authorization: Bearer <token>`:
 
-4. **Branch**: Default branch for test runs
-   - Example: `main`, `develop`
+| Call | Used for |
+| --- | --- |
+| `GET /projects/{owner}/{project}` | Verifying the token and project |
+| `GET /projects/{owner}/{project}/builds?page&perPage` | Reading recent builds into runs (30 at a time) |
+| `GET /projects/{owner}/{project}/builds/{number}` | Refreshing one build |
+| `GET /projects/{owner}/{project}/builds/{number}/diffs?page&perPage=100` | A finished build's screenshots, as the run's results |
+| `POST /projects/{owner}/{project}/builds/{number}/reviews` | Recording an approve (`APPROVE`) or reject (`REQUEST_CHANGES`) on one screenshot |
 
-## How It Works
+Nothing creates builds: Argos builds come from uploading screenshots with the Argos CLI in CI. See [ARGOS_CI_CD_INTEGRATION.md](ARGOS_CI_CD_INTEGRATION.md).
 
-### 1. Project Creation
+## When builds are read
 
-When a team creates a project:
-1. System verifies connection to Argos instance
-2. Verifies that the project exists in Argos
-3. Stores project configuration (token encrypted)
-4. Project is ready for testing
+- Listing a project's runs reads its builds from Argos, at most every 15 seconds per project. If Argos can't be reached, the stored runs are returned.
+- Opening a run's results refreshes that build.
+- A signed build notification from CI (`POST /api/v1/visual-regression/webhooks/argos`) reads the build at once. Argos itself sends no webhooks.
 
-### 2. Test Execution
+A build's diffs are fetched once it has finished, and again if its status changes. Reviews recorded in the workbench are kept when the diffs are re-read.
 
-When a test is triggered:
-1. System creates a build in Argos via API
-2. Argos build ID is stored and linked to our test run
-3. System polls Argos for build status updates
-4. When build completes, screenshots are fetched
-5. Results are displayed in the dashboard
+## Status mapping
 
-### 3. Results Management
+Argos build status to run `status`:
 
-- Screenshots are fetched from Argos
-- Image URLs are normalized (handles relative/absolute)
-- Approve/reject actions are sent to Argos
-- Local state is kept in sync with Argos
+| Argos | Run |
+| --- | --- |
+| `pending` | `pending` |
+| `progress` | `running` |
+| `no-changes`, `changes-detected`, `accepted`, `rejected` | `completed` |
+| `error`, `aborted`, `expired` | `failed` |
 
-### 4. Status Polling
+The Argos status is kept on the run as `argosStatus`.
 
-- System polls Argos every 5 seconds for build status
-- Maximum polling duration: 10 minutes
-- When build completes, results are automatically fetched
-- Status is updated in real-time
+Argos diff status to result `status`:
 
-## API Response Mapping
+| Argos | Result |
+| --- | --- |
+| `unchanged`, `ignored` | `passed` |
+| `added` | `new` |
+| `removed` | `removed` |
+| `changed`, `failure`, `retryFailure`, `pending` | `failed` |
 
-### Argos Build Status → Test Run Status
-
-- `pending` → `pending`
-- `progress` → `running`
-- `stable` → `completed`
-- `error` → `failed`
-
-### Argos Screenshot Status → Test Result Status
-
-- `stable` → `passed`
-- `failure` → `failed`
-- `new` → `new`
-- `removed` → `removed`
-
-## Error Handling
-
-The integration handles various error scenarios:
-
-- **Connection Errors**: Network failures, unreachable instances
-- **Authentication Errors**: Invalid tokens, expired credentials
-- **Not Found Errors**: Project/build doesn't exist in Argos
-- **API Errors**: Unexpected responses from Argos
-
-All errors are logged and user-friendly messages are returned.
-
-## Webhook Support
-
-A webhook endpoint is available at `/api/v1/visual-regression/webhooks/argos` for Argos to notify the system when builds complete. This reduces the need for polling.
-
-Each project needs a webhook secret first; until then its webhooks are refused with `401`.
-- `POST /api/v1/visual-regression/projects/:id/webhook-secret` sets one. It takes an optional body `{ secret }` (16–256 printable characters) and generates `whsec_…` when that's left out. The response is the only time the secret is returned.
-- `DELETE …/webhook-secret` removes the secret.
-- Both need the project's manage role. Projects report `hasWebhookSecret`.
-
-Requests must carry `x-argos-signature: sha256=<hex HMAC-SHA256 of the raw request body>` and the event in `x-argos-event`.
-
-**Note**: Webhook payload structure depends on your Argos instance. Update the handler based on your Argos webhook format.
-
-## Security Considerations
-
-1. **Token Storage**: API tokens should be encrypted at rest
-2. **Token Transmission**: Tokens are never returned in API responses
-3. **HTTPS**: Always use HTTPS for Argos instance URLs
-4. **Validation**: All Argos URLs and project IDs are validated
-
-## Customization
-
-If your Argos instance uses different API endpoints or response formats:
-
-1. Update `ArgosApiClient` methods to match your API structure
-2. Adjust response parsing in `fetchBuildResults`
-3. Update status mapping functions if status values differ
-4. Modify webhook handler if webhook format differs
-
-## Testing
-
-To test the integration:
-
-1. Set up a self-hosted Argos instance
-2. Create a test project in Argos
-3. Generate an API token
-4. Create a project in the design system with these credentials
-5. Trigger a test run
-6. Verify results appear correctly
+Image URLs from Argos are used as given (relative ones are resolved against the API URL).
 
 ## Troubleshooting
 
-### Connection Issues
-
-- Verify Argos instance is accessible
-- Check base URL format (no trailing slash)
-- Verify API token is valid
-- Check network/firewall settings
-
-### Authentication Issues
-
-- Verify token has correct permissions
-- Check token hasn't expired
-- Ensure Bearer token format is correct
-
-### Build Not Starting
-
-- Verify project ID is correct
-- Check branch exists in Argos
-- Verify Argos instance is running
-- Check Argos logs for errors
-
-### Results Not Appearing
-
-- Wait for build to complete (polling may take time)
-- Check build status in Argos directly
-- Verify screenshots were uploaded to Argos
-- Check image URLs are accessible
-
+- **"Argos refused the token"**: the token is wrong, revoked, or for another project.
+- **"Argos has no project … that this token can see"**: check the `owner/project` spelling and that the token belongs to that account.
+- **"Argos base URL … is not allowed"**: an administrator must add the URL to `ARGOS_ALLOWED_BASE_URLS`.
+- **"Argos refused the review"**: reviews need a personal access token; replace the project token in the project's settings.
+- **No runs**: no screenshots have been uploaded to that Argos project yet, or CI uploads to a different one.

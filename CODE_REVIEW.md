@@ -1,21 +1,163 @@
 # Code review: cautious-lamp
 
-Reviewed at `main` (`2849c65`), 12 November 2026. Covers `backend/` (NestJS, ~33k lines), `frontend/` (Vue 3, ~157k lines), and `mcp-server`, `cli`, `sdk`, `eslint-plugin-design-system`, `vscode-design-system-extension`, the two standalone tools, scripts and repo config.
+**Originally written** at `main` (`2849c65`), 12 November 2026. **Status updated** at `main` (`69076bb`), 15 November 2026: every finding below was re-checked against the code at `69076bb`, and each fixed one names the pull request that fixed it (adamstavely/cautious-lamp#N). The Problem columns still describe the code as it was at `2849c65`; the Status column says where it stands now.
 
-**Method.** Five parallel reviews (backend security, backend correctness, frontend core, frontend views, packages and tooling), plus `npm audit`, a compile check of every `.vue` file, and the backend and mcp-server test suites. Every finding marked ✔ was re-checked by hand against the code. The others come from a single reviewer who read the code, and include a file and line reference to check.
+The original review covered `backend/` (NestJS), `frontend/` (Vue 3), and `mcp-server`, `cli`, `sdk`, `eslint-plugin-design-system`, `vscode-design-system-extension`, the two standalone tools, scripts and repo config. **Method:** five parallel reviews (backend security, backend correctness, frontend core, frontend views, packages and tooling), plus `npm audit`, a compile check of every `.vue` file, and the backend and mcp-server test suites. Findings marked ✔ were re-checked by hand at the time.
 
-## Summary
+## Where it stands at 69076bb
 
-The app works as a local demo, but it isn't safe to deploy, and much of what it shows isn't real.
+Every Critical and High finding is fixed. What is still open is mostly frontend quality and operations:
 
-- **There's no authentication anywhere.** The backend has no auth guard on any route. The frontend makes every visitor a `design_system_manager` (admin) on each page load. Identity comes from whatever the client sends.
-- **Three ways to run code on the server** without logging in: a shell command built from an uploaded file's name, `new Function` on scanner code sent in a request body, and SSRF through a headless browser.
-- **Most data isn't stored.** Elasticsearch is never wired into the RBAC, feature-flag, audit or design-system modules, so they run from in-memory maps that are wiped on restart. Several endpoints report success when a write failed, and several dashboards show random numbers.
-- **Admin controls don't work.** Feature flags are forced on in both the backend and the frontend, so switching one off does nothing.
-- **It doesn't build.** `vite build` fails on three pages. The cli and the ESLint plugin can't be used as shipped. There is no CI.
-- **82 known vulnerabilities** in production dependencies: 3 critical, 32 high.
+| ID | Open item |
+| --- | --- |
+| F3 | Two flag evaluators remain (`services/featureFlagsService.js` and `composables/useFeatureFlags.js`); the 5-minute refresh `setInterval` is never stopped, and the refresher map is never cleared. Stored flag values are respected now (#22). |
+| F6 (part) | `MarkdownViewer.vue` still puts unsanitized `marked` output into `v-html` (it renders the repo's own docs, not user uploads). |
+| F9 (part) | `Sidebar.vue` adds a `prefers-color-scheme` listener that is never removed. |
+| F10 (part) | 31 `setInterval(…, 100)` dark-mode polls remain in `frontend/src` (103 components at `2849c65`). |
+| F11 | `main.js` still registers every Vuetify component and directive (`import * as components`). |
+| F12 (part) | 33 `alert()` calls in 11 files and 63 `console.log` calls remain. |
+| F13 | Clickable `div`/`span`/`tr` elements without a role are still common (a single-line grep finds about 44), and the router sets no page title or focus on navigation. |
+| F15 (part) | `ChartBuilder.vue` is still 3,827 lines. The others shrank: `WorkspaceDetail.vue` 422, `Governance.vue` 801, `design-system.service.ts` 1,555. |
+| D10 | The Elasticsearch telemetry exporter re-queues a failed batch with no cap, and never checks `bulk` item errors. |
+| D11 | No `enableShutdownHooks()`; the OpenTelemetry SIGTERM handler shuts the SDK down but never exits. |
+| D12 | The browser OpenTelemetry setup still calls `addSpanProcessor` / `addLogRecordProcessor` when they exist and only warns otherwise. Telemetry is off only when `VITE_OTEL_ENABLED=false`. |
+| L2 (part) | Photosensitivity errors still pass IRIS's `error.message` to the client inside the 503/422 body. |
+| P8 (part) | The VS Code extension's completion trigger characters still include `tokens` and `components` (VS Code uses single characters only). The rest of P8 was fixed in #65, after `69076bb`. |
+| P10 | `otel-collector-config.yaml` still uses the `logging` exporter, and no compose service runs the collector. |
+| S1 (rest) | After #22 and the NestJS 11 upgrade (#24), the remaining advisories were moderate and low, in `style-dictionary`'s bundled glob and deepmerge. `npm audit` was not re-run for this update. |
+| Ops | From the staff-engineer review's production gates: there is a health endpoint (`GET /api/v1/health`, Elasticsearch reachability, 503 when it is down, #63), but graceful shutdown (D11), backups and load testing are not done. |
 
-## Status after Phase 1
+Not reproducible: **F16** (a global `.bg-white { … !important }` rule in `style.css`). No such rule exists in `frontend/src` at `2849c65` or now, so it is closed.
+
+## Original summary (2849c65)
+
+At `2849c65` the app worked as a local demo but wasn't safe to deploy:
+
+- No authentication anywhere; the frontend made every visitor an admin. Fixed: #13 (API keys), #14 (sign-in, global guard, server-side permissions).
+- Three ways to run code on the server without logging in (IRIS shell command, `new Function` scanner code, SSRF through a headless browser). Fixed: #13, #14, #22.
+- Most data in in-memory maps lost on restart. Fixed across #13 (Elasticsearch injected), #14, #22, #55, #56 and #57; the remaining in-process state is caches and job queues (see D1).
+- Feature flags forced on. Fixed: #13 and #22 (R36).
+- `vite build` failed, the cli and ESLint plugin couldn't be used, no CI. Fixed: #13; CI is `.github/workflows/ci.yml`.
+- 82 known vulnerabilities in production dependencies. Fixed down to moderate/low: #22, #24.
+
+---
+
+## Critical
+
+| ID | Where (at 2849c65) | Problem | Status at 69076bb |
+| --- | --- | --- | --- |
+| C1 ✔ | `backend/src/**` | **No authentication.** No guard on any route except the throttler; identity came from whatever the client sent. | Fixed: API keys from env (#13); real sign-in, JWTs, global `AuthGuard` and permission checks (#14). |
+| C2 ✔ | `photosensitivity.service.ts:97`, `photosensitivity.controller.ts:18` | **Command injection** through a shell command built from an uploaded file's name. | Fixed (#13): `execFile`, filename not reused. |
+| C3 ✔ | `design-system.service.ts:2956, 3032, 3171` | **The server ran `new Function` on `rules[].scannerCode`** from the request body. | Fixed (#14): rules are stored data, scanners are vetted code. |
+| C4 ✔ | `design-system.service.ts:489-500`, 19 frontend files, VS Code extension, API client fallbacks | **Working API keys hardcoded** (`test-api-key-123`, `dev-key`). | Fixed (#13): the backend refuses both (tested in `key-management.service.spec.ts`). The VS Code extension's `apiKey` default was emptied in #65. |
+| C5 ✔ | `frontend/src/main.js:46-62`, `router/rbacGuards.js` | **The client made every visitor an admin** via `initUserRole`; the guard failed open. | Fixed (#14): `initUserRole` deleted; prefix-matched guard from the signed-in user's permissions, failing closed. |
+| C6 ✔ | `common/security/security-audit.service.ts:65, 235-256` | **Endless loop** in suspicious-activity logging. | Fixed (#13). |
+| C7 | `docker-compose.yml:9,12-13` | **Elasticsearch open to the network.** | Fixed (#13): bound to `127.0.0.1:9200`, 9300 not published. Security stays off in the dev compose file, with a comment to enable it elsewhere. |
+
+## Security (high and medium)
+
+| ID | Where (at 2849c65) | Problem | Status at 69076bb |
+| --- | --- | --- | --- |
+| H1 | `design-extraction.service.ts:56` | **SSRF** returning the fetched page. | Fixed (#13); DNS rebinding closed with a per-scan egress proxy (#22, R09). |
+| H2 ✔ | `design-system.controller.ts:44-113` | **API key routes open**, and created keys never validated. | Fixed (#13); scope escalation closed in #22 (R01). |
+| H3 | `rbac.controller.ts` | **Anyone could rewrite roles**; `assignedBy` from the body. | Fixed (#14). |
+| H4 | `visual-regression.service.ts:122`; `openreplay-api.client.ts:49` | **SSRF leaking the Argos token** via client `argosBaseUrl`. | Fixed (#13). |
+| H5 | `token-sync.controller.ts:8-16` | **Figma/Penpot credentials returned** to anyone. | Fixed (#22, R08): owner-scoped connections, encrypted credentials, `toPublic` never returns them (`token-sync/connection-registry.ts`, shared by design-sync). |
+| H6 | `audit.controller.ts` | **Audit logs readable by anyone.** | Fixed (#14): `admin:audit`. |
+| H7 | `feature-flags.controller.ts:51-89` | **Anyone could create, toggle or delete flags**, or call `enable-all`. | Fixed (#22, R07): every write route needs `ADMIN_SYSTEM_HEALTH`. |
+| H8 | `visual-regression.service.ts:669-676` | **Webhook signature skippable.** | Fixed (#13); secrets can be set and rotated since #25. |
+| H9 | `search.controller.ts:8-12` | **Search accepted any `Bearer`.** | Fixed (#13). |
+| F4 | `review-ui/PreviewFrame.vue:85` | **XSS through the iframe src.** | Fixed (#13). |
+| F5 | `components/EeroChatbot.vue` | **Chatbot rendered LLM and user text as HTML.** | Fixed: markdown escaped first (#29, S14); Eero then moved onto Trench Coat's chat widget with plain-text formatting (#31). |
+| F6 | `DocumentationGenerator.vue:357`; `MarkdownViewer.vue` | **Unsanitized `marked` output in `v-html`.** | Partly fixed (#13): DOMPurify is a dependency and the documentation generator sanitizes. `MarkdownViewer.vue` still doesn't (open). |
+| M1 | `rate-limit.guard.ts` | **Rate limiting easy to bypass.** | Fixed (#13). |
+| M2 | `backend/src/main.ts:21` | **Validation did almost nothing.** | Fixed: DTOs per module (#13, #14), a global `whitelist` + `forbidNonWhitelisted` pipe (#58), and DTOs for the 19 remaining free-form bodies (#63). Bodies typed as plain objects are listed, with reasons, in `global-validation.spec.ts`. |
+| M3 | `visual-regression.gateway.ts` | **Open socket gateway.** | Fixed (#13); credential expiry and re-checks in #29 (S07). |
+| M4 | `photosensitivity.controller.ts` | **Large unauthenticated uploads** with absolute paths in responses. | Fixed (#13); admission limits in #29 (S06). |
+| M5 | `design-extraction.service.ts` | **One Chromium per request.** | Fixed (#13). |
+| M6 | `frontend/src/services/api.js:68-70` | **Review password in the query string.** | Fixed (#13). |
+| L1 | `encryption.service.ts:19-23` | **Built-in fallback encryption key.** | Fixed (#22): outside development and test a missing `ENCRYPTION_KEY` leaves encryption unavailable instead of using a built-in key. |
+| L2 | `photosensitivity.service.ts`, `design-extraction.controller.ts:84` | **Error messages expose internals.** | Partly fixed: the design-extraction controller no longer builds error text, and upload paths are gone from responses (#13). IRIS error messages are still passed to the client (open). |
+| L3 | `mcp-server/src/resources/documentation.resource.ts` | **Path check without separator.** | Fixed (#13). |
+| L4 | `.gitignore` | **`.env.*` not ignored.** | Fixed (#13). |
+
+## Data and correctness
+
+| ID | Where (at 2849c65) | Problem | Status at 69076bb |
+| --- | --- | --- | --- |
+| D1 ✔ | `app.module.ts:33` and feature modules | **Elasticsearch never injected**; about 90 in-memory maps. | Fixed (#13), then each store moved to Elasticsearch: RBAC, users, governance (#14); keys, projects, flags (#22); patterns, contribution process, sync connections (#55); components, tokens, roadmap, banners, budgets, issues (#56); component requests (#57). What stays in process is caches and queues: the API-key lookup cache, the design-system in-process copy (reloaded when another replica writes, #63) and `common/background-jobs/job-queue.service.ts`. Review files and photosensitivity uploads are on local disk. |
+| D2 | `component-request.service.ts` vs `component-requests.service.ts` | **Two component-request stores.** | Fixed (#57): one Elasticsearch store; `/api/v1/requests` removed. |
+| D3 ✔ | `feature-flags.service.ts`; `featureFlagsService.js` | **Flags forced on.** | Fixed: guard no longer redirects on fetch errors (#13); stored values win on both sides (#22, R36). |
+| D4 | `design-system.service.ts:2950-3200`, `Governance.vue` | **Fake governance results.** | Fixed (#14). |
+| D5 | `design-system.service.ts:3924-4046` | **Failed survey writes reported as saved.** | Fixed (#13). |
+| D6 | `system-health.service.ts`, `analytics.service.ts`, `design-system.service.ts` | **Dashboards showed random numbers.** | Fixed: analytics (#14), health history (#22, R38), design-system data (#56). No `Math.random` remains in backend metrics (only in palette hue variation and job ids). Component usage is recorded from scans since #58. |
+| D7 | `rbac.service.ts:445-532` | **Revoked roles came back.** | Fixed (#14). |
+| D8 | `rbac.service.ts`, `audit.service.ts` | **No index mappings.** | Fixed (#13). |
+| D9 | `color-palette.service.ts:77` | **Palette list problems.** | Fixed (#13). |
+| D10 | `observability/elasticsearch-exporter.ts:57-66` | **Telemetry export queue unbounded**; bulk errors ignored. | Open. |
+| D11 | `observability/opentelemetry.ts:92`; `main.ts` | **Shutdown hangs.** | Open. |
+| D12 | `frontend/src/observability/opentelemetry.ts:62,113` | **Frontend telemetry never exports but still runs.** | Open. |
+| D13 | `views/WorkspaceDetail.vue` | **Workspace failures hidden or invented.** | Fixed (#14). |
+| D14 | `AdminDashboard.vue`; `ReviewKanban.vue` | **Empty against the real API.** | Fixed (#13). |
+| D15 | `error-handler.ts` | **Timeouts reported as connection errors.** | Fixed (#13). |
+| D16 | `rbac.service.ts:243`, `feature-flags.service.ts:35` | **Startup race** from async work in constructors. | Fixed: RBAC initializes in `onModuleInit` (#14); feature flags read through an injected store with no constructor work (#22). |
+
+## Frontend quality
+
+| ID | Where (at 2849c65) | Problem | Status at 69076bb |
+| --- | --- | --- | --- |
+| B1 ✔ | `ReviewPage.vue`, `HarmonyPalette.vue`, `TimelineGenerator.vue` | **Template errors broke `vite build`.** | Fixed (#13); CI runs `check:sfc` and the build. |
+| F1 | 41-48 files | **`http://localhost:3000` hardcoded** in about 55 places. | Fixed (#13). One fallback remains in `observability/opentelemetry.ts` for when `VITE_API_URL` is unset. |
+| F2 | `main.js:186, 310` | **`/admin` declared twice.** | Fixed (#14). |
+| F3 | `useFeatureFlags.js`; `featureFlagsService.js` | **Three flag evaluators that disagree**, a never-cleared refresher map and a never-stopped interval. | Partly fixed (#22): they agree on stored values. Two evaluators, the map and the interval remain (open). |
+| F7 | `MapMaker.vue:627, 999` | **Resize observers never cleaned up.** | Fixed (#13). The ChartBuilder lines were commented-out code. |
+| F8 | `MapMaker.vue` | **Map-switch race.** | Fixed (#13). |
+| F9 | `Step2Harmony.vue`, `Sidebar.vue`, `DarkModeToggle.vue` | **Listeners never removed.** | Partly fixed (#13). `Sidebar.vue`'s media-query listener remains (open). |
+| F10 | 103 files | **Dark mode polled every 100 ms.** | Partly fixed: many pages moved to tokens and shared components (#27, #43–#46); 31 such intervals remain (open). |
+| F11 | `main.js:18-21` | **Entry chunk includes every Vuetify component.** | Open. |
+| F12 | 225 `alert(` in 51 files; 94 `console.log` | **`alert()` for feedback, debug logging.** | Partly fixed (#13 and the restyles): 33 `alert()` in 11 files and 63 `console.log` remain (open). |
+| F13 | 46 elements; 18 `v-for`s | **Accessibility and rendering gaps**, no focus management or page titles on navigation. | Open. |
+| F14 | 12 files | **`isMockMode()` showed mock reviews as real** when the health check failed. | Fixed (#13): mock mode only when `VITE_USE_MOCKS=true`. |
+| F15 | `ChartBuilder` 5,434 lines, `WorkspaceDetail` 3,666, `Governance` 3,304; `design-system.service.ts` 6,119 | **Monolith files.** | Partly fixed (#14, #56 and others): see the table at the top. `ChartBuilder.vue` is still 3,827 lines (open). |
+| F16 | `frontend/src/style.css` | **Global `.bg-white … !important` rule.** | Not reproducible: no such rule at `2849c65` or now. Closed. |
+
+## Packages and tooling
+
+| ID | Where (at 2849c65) | Problem | Status at 69076bb |
+| --- | --- | --- | --- |
+| P1 | `mcp-server/src/logger.ts` | **Logs on the MCP stdout channel.** | Fixed (#13). |
+| P2 | `eslint-plugin-design-system/src/index.ts` | **Plugin couldn't be loaded.** | Fixed (#13). |
+| P3 | `cli/src/cli.ts` | **cli didn't compile.** | Fixed (#13). |
+| P4 | `mcp-server/src/index.ts` | **Tools crashed without `arguments`.** | Fixed (#13). |
+| P5 | `mcp-server/src/api-client.ts` | **POSTs retried.** | Fixed (#13). |
+| P6 | standalone tools and sdk `package.json` | **Entry points pointed at missing files.** | Fixed (#13, #22 R28). |
+| P7 | `eslint-plugin-design-system/src/index.ts` | **`component-naming` false positives.** | Fixed (#13). |
+| P8 | `vscode-design-system-extension/src/extension.ts` | **Docs URL hardcoded**, settings read once, `enableSnippets` unread, multi-character triggers. | Partly fixed: `apiUrl`/`apiKey` changes are picked up (`onDidChangeConfiguration`). #65 (after `69076bb`) added a `docsBaseUrl` setting, honours `enableSnippets` and removed the `test-api-key-123` default. The multi-character triggers are still open. |
+| P9 | repo root | **No CI**; workspaces missed packages. | Fixed (#13): `.github/workflows/ci.yml` builds and tests backend, frontend, sdk, cli, mcp-server, the ESLint plugin, the VS Code extension and the two standalone tools. |
+| P10 | `otel-collector-config.yaml` | **Unused collector config with a removed exporter.** | Open. |
+
+## Dependencies
+
+| ID | Problem | Status at 69076bb |
+| --- | --- | --- |
+| S1 ✔ | `npm audit --omit=dev`: 82 vulnerabilities (3 critical, 32 high). | Fixed down to moderate and low (#22, #24). Not re-run for this update. |
+
+## Later reviews
+
+- **Phase 3 external review (R01–R39, at `d5528ed`):** all 39 fixed in #22.
+- **Staff-engineer review (S01–S15, at `11f8c8f`):** S02, S03, S05–S10, S13 and S14 fixed in #29. The rest are fixed since: S01 and S12 (component-request authorization, forged authors) in #57; S04 and S15 (core library and roadmap in memory, duplicate component ids now 409) in #56; S11 (simulated contribution checks) in #54. The production gates are in the open list above.
+- **Second staff-engineer review (T01–T10, at `2b17fad`):** T03–T07 fixed in #38. T01, T02, T08, T09 and T10 are S01, S04, S11, S12 and S15, fixed as above.
+- **Phase 2 known gaps:** component-usage analytics now records usage from scans (#58). `docs/RULES_ENGINE_GUIDE.md`, which still described `scannerCode` scanners at `69076bb`, is rewritten for the declarative engine in the docs refresh that adds this status. Registering an application from the CLI or SDK still needs a key with `admin:governance`.
+
+## Tests
+
+At `2849c65` the backend had 3 spec files and the frontend, cli, sdk, ESLint plugin and extension had none. At `69076bb`: 83 backend spec files, 37 frontend test files, 17 in mcp-server, 5 in the ESLint plugin, 3 in the VS Code extension, 2 each in cli and sdk. CI runs all of them, plus the standalone tools' tests and pack checks.
+
+## History
+
+The sections below are what each phase recorded at the time. They are kept for the detail of each fix; where they say something is "not addressed" or "known gap", the tables above are current.
+
+### Status after Phase 1
 
 Phase 1 covered the MCP server, CLI, SDK, ESLint plugin, every tool page, data visualization and the review section, plus the foundations they needed. It shipped as adamstavely/cautious-lamp#13.
 
@@ -31,7 +173,7 @@ Phase 1 covered the MCP server, CLI, SDK, ESLint plugin, every tool page, data v
 - **Planned for Phase 2:** C1, C3, D4, C5, H3, H6, D7 and D13, all fixed (below).
 - **Not yet scheduled:** H5, H7, F5, F2, F3, F11, F13, F15, F16, D2, D6, D10–D12, D16, L1, L2, P8, P10, S1.
 
-## Status after Phase 2
+### Status after Phase 2
 
 Phase 2 covered governance, accessibility reports and scanning, team workspaces, and user, application and role management. It shipped as adamstavely/cautious-lamp#14.
 
@@ -52,7 +194,7 @@ Phase 2 covered governance, accessibility reports and scanning, team workspaces,
   - `docs/RULES_ENGINE_GUIDE.md` and `docs/AUTOMATED_ACCESSIBILITY_REPORTS.md` describe the old scanners.
   - Registering an application from the CLI or SDK needs an API key with the `admin:governance` scope.
 
-## Status after Phase 3
+### Status after Phase 3
 
 A second, external review of `main` at `d5528ed` (13 November 2026) reported 39 findings, R01–R39: 13 P1 and 26 P2. Each was checked against the code and all 39 were real. All are fixed in adamstavely/cautious-lamp#22, with tests.
 
@@ -117,7 +259,7 @@ NestJS was then upgraded from 10 to 11 (Express 5), which cleared the `@nestjs/c
 
 Findings are grouped by area below: Critical (C), Security (H, F, M, L), Data and correctness (D), Frontend quality (B, F), Packages (P) and Dependencies (S).
 
-## Status after the staff-engineer review
+### Status after the staff-engineer review
 
 A staff-engineer production-readiness review of `main` at `11f8c8f` (14 November 2026) reported 15 findings, S01–S15. The ten in areas covered by Phases 1–3 and the integrations are fixed, with tests:
 
@@ -136,7 +278,7 @@ A staff-engineer production-readiness review of `main` at `11f8c8f` (14 November
 
 Not addressed, because they are outside the areas worked on: S01 and S12 (component request authorization and forged authors), S04 and S15 (the core component library and roadmap are in memory only; duplicate component ids), S11 (simulated contribution checks), and the review's production gates (readiness checks, graceful shutdown, backups, load testing).
 
-## Status after the second staff-engineer review
+### Status after the second staff-engineer review
 
 A second review at `2b17fad` (14 November 2026) reported T01–T10. The five in code from the earlier fixes are fixed, with tests:
 
@@ -149,133 +291,3 @@ A second review at `2b17fad` (14 November 2026) reported T01–T10. The five in 
 | T07 Unknown API keys fill the lookup cache | Unknown keys are never cached; known keys are capped at 1,000 per instance, least recently used dropped first, expired entries dropped when read |
 
 T01, T02, T08, T09 and T10 are S01, S04, S11, S12 and S15 above, still not addressed.
-
-## Fix first
-
-In this order. The first five block any deployment beyond a single developer's machine.
-
-1. **Add real authentication.** Add a global auth guard on the backend. Derive the user from the session, never from `x-user-id`, body fields or localStorage. Delete `initUserRole` in the frontend. (C1, C5, F1)
-2. **Remove the three remote-code paths:** use `execFile` for IRIS, stop executing client scanner code, and block private addresses in design extraction. (C2, C3, H1)
-3. **Delete the hardcoded API keys** (`test-api-key-123`, `dev-key`) from the backend, the frontend (19 files), the VS Code extension and the API client fallbacks. (C4)
-4. **Stop the security-audit loop** that can freeze the server. (C6)
-5. **Lock down Elasticsearch in `docker-compose.yml`** (bind to 127.0.0.1, enable security). (C7)
-6. **Fix the build:** three Vue template errors. Then add CI. (B1, P9)
-7. **Make Elasticsearch actually inject** (`global: true`), add index mappings, and stop returning fake success. (D1, D5, D8)
-8. **Stop forcing feature flags on**, in the backend and the frontend. (D3, F3)
-9. **Upgrade dependencies** to clear the critical and high advisories. (S1)
-10. **Sanitize every `v-html` and `innerHTML` sink.** (F4, F5, F6)
-
----
-
-## Critical
-
-| ID | Where | Problem | Fix |
-| --- | --- | --- | --- |
-| C1 ✔ | `backend/src/**` | **No authentication.** No `@UseGuards`, passport strategy or auth guard exists. The only `APP_GUARD` is the throttler. These controllers have no check at all: rbac, audit, feature-flags, token-sync, design-sync, session-replay, visual-regression, analytics, accessibility-reports, system-health, component-scaffolding, color-palette and photosensitivity. The rest check an API key by hand, but the accepted keys are hardcoded (C4). | Global auth guard plus a permissions decorator; derive the user from the token. |
-| C2 ✔ | `photosensitivity.service.ts:97`, `photosensitivity.controller.ts:18` | **Command injection.** The shell command is built as `` `${iris} -v "${videoPath}" …` `` and run with `exec`. The stored filename keeps `extname(file.originalname)`, which the client controls, and `$()` still expands inside double quotes. Uploading `x.$(curl…|sh)` runs it, with no auth needed. | `execFile(iris, ['-v', videoPath, …])`; don't reuse `originalname`. |
-| C3 ✔ | `design-system.service.ts:2956, 3032, 3171`, route `POST compliance/scan` | **The server runs code from the request body.** `rules[].scannerCode` is passed to `new Function('context', scannerCode)` in the Node process. The only gate is the hardcoded key (C4). The Governance page even has a textarea for it (`Governance.vue:423, 3017`). | Never execute client code; accept rule IDs and run vetted scanners. |
-| C4 ✔ | `design-system.service.ts:489-500`; `test-api-key-123` in 19 frontend files and `vscode-design-system-extension/src/extension.ts:20,127`; fallbacks in `frontend/src/services/api.js:29` and `componentMetadataService.js:170` | **Working API keys hardcoded in the source.** `test-api-key-123` and `dev-key` are registered on every start, pass every `validateRequest` check, and ship in the client bundle. | Delete them; load keys from env or a secret store. |
-| C5 ✔ | `frontend/src/main.js:46-62`, `router/rbacGuards.js:21,30,55` | **The client makes every visitor an admin.** `initUserRole` writes `userRole=design_system_manager` on every load, and `?role=` overrides it. The RBAC guard skips the check for that role, matches only exact paths (so `/admin`, `/admin/users`, `/admin/workspaces/:id` and others go unchecked), and returns `true` on any error. Its API URL is hardcoded to `localhost:3000`, so outside local dev it always errors and always allows. | Delete `initUserRole`; fail closed; prefix-match `/admin/*`; enforce on the server. |
-| C6 ✔ | `common/security/security-audit.service.ts:65, 235-256` | **The server can freeze in an endless loop.** `logSecurityEvent` always calls `checkSuspiciousActivity`, which logs a new event whose description and `detectedPattern` match the same regex (for example "Potential privilege escalation attempt" matches `/privilege.*escalation/`). One match loops forever, starving the event loop and growing memory. `userAgent` is part of the matched text, so a client can trigger it. | Skip the check for `type === 'suspicious_activity'`. |
-| C7 | `docker-compose.yml:9,12-13` | **Elasticsearch is open to the network.** `xpack.security.enabled=false`, with ports `9200` and `9300` published on all interfaces. Docker's iptables rules also bypass ufw and firewalld. | `127.0.0.1:9200:9200`, drop 9300, enable security outside dev. |
-
-## Security (high and medium)
-
-| ID | Where | Problem | Fix |
-| --- | --- | --- | --- |
-| H1 | `design-extraction.service.ts:56`, controller `:66` | **SSRF that returns the fetched page.** Only `http://localhost…` is blocked. `169.254.169.254`, `127.0.0.1:9200` and `[::1]` all get through, and Playwright's extraction result is sent back. | Resolve the host and reject private and link-local addresses, including after redirects. |
-| H2 ✔ | `design-system.controller.ts:44-113` | **API key routes are open.** Anyone can create, list, revoke or rotate keys, so they can revoke every key. Separately, keys created here go to `KeyManagementService`, but `validateApiKey` (`design-system.service.ts:567`) only checks its own map, so newly created keys never work. | Guard the routes; validate keys through `keyManagementService`. |
-| H3 | `rbac.controller.ts:32,50,58` | **Anyone can rewrite roles** and grant themselves admin. `assignedBy` comes from the request body. | Guard with an `rbac:manage` permission. |
-| H4 | `visual-regression.service.ts:122`; `session-replay/openreplay-api.client.ts:49` | **SSRF that also leaks a token.** The client-supplied `argosBaseUrl` is called with the stored Argos token. | Allowlist base URLs, or set them only from server config. |
-| H5 | `token-sync.controller.ts:8-16` | **Third-party credentials returned to anyone.** Responses include Figma and Penpot `apiKey`s, with no auth. design-sync probably does the same (not verified). | Auth, and drop secrets from responses. |
-| H6 | `audit.controller.ts:18,50,80` | **Audit logs readable and exportable by anyone**, including emails, IPs and request bodies. | Guard with an `audit:read` permission. |
-| H7 | `feature-flags.controller.ts:51-89`; `scripts/enable-all-features.js` | **Anyone can create, toggle or delete feature flags**, or call `enable-all`. | Guard the write routes. |
-| H8 | `visual-regression.service.ts:669-676` | **The webhook signature check can be skipped** by leaving out the header. | If a secret is configured, require the signature; sign the raw body. |
-| H9 | `search.controller.ts:8-12` | **Search accepts any `Bearer` value.** | Validate the key. |
-| F4 | `frontend/src/components/review-ui/PreviewFrame.vue:85` | **XSS through the iframe src.** `innerHTML = \`<iframe src="${props.url}">\`` uses a URL that comes from shared review data, so a `"` breaks out of the attribute. The iframe isn't sandboxed either. | Use `<iframe :src sandbox>` in the template. |
-| F5 | `components/EeroChatbot.vue:55,185-191` | **The chatbot renders LLM and user text as HTML.** It applies regex markdown, never escapes, and uses `v-html`. | Escape first, or use marked plus DOMPurify. |
-| F6 | `views/DocumentationGenerator.vue:357`; `MarkdownViewer.vue:166-173` | **Unsanitized `marked` output in `v-html`.** HTML in uploaded files runs. There are 17 unsanitized `v-html` sites in 13 files, and DOMPurify isn't a dependency. | Add DOMPurify. |
-| M1 | `common/rate-limiting/rate-limit.guard.ts:35-38`, `rate-limit.config.ts` | **Rate limiting is easy to get around:** limits are per-token, before the token is checked, so a random token each time is a fresh bucket. Throttler v6 applies the strict `auth` limit (10/min) to every route. | Key by IP until the key validates; make named throttlers opt-in. |
-| M2 | `backend/src/main.ts:21` | **Validation does almost nothing.** `ValidationPipe()` has no `whitelist` or `transform`, and handlers use inline interfaces, so any field is accepted (mass assignment). | `whitelist`, `forbidNonWhitelisted` and `transform`, plus class DTOs. |
-| M3 | `visual-regression.gateway.ts:15-62` | **The socket gateway is open:** `cors: '*'`, no auth, and clients can join any room. | Authenticate in `handleConnection`. |
-| M4 | `photosensitivity.controller.ts:22,62` | **Large unauthenticated uploads:** 500MB, files never deleted, and the response includes absolute paths. | Auth, a lower limit, cleanup, drop paths. |
-| M5 | `design-extraction.service.ts:40,62` | **One Chromium per request**, uncapped. | Run them through a queue or semaphore. |
-| M6 | `frontend/src/services/api.js:68-70` | **The review password goes in the query string**, so it ends up in logs and telemetry spans. | Send it in the body or a header. |
-| L1 | `common/security/encryption.service.ts:19-23` | Falls back to a built-in encryption key. | Refuse to start without `ENCRYPTION_KEY`. |
-| L2 | `photosensitivity.service.ts:82,120`, `design-extraction.controller.ts:84` | Error messages expose paths and internals. | Generic messages; log the details. |
-| L3 | `mcp-server/src/resources/documentation.resource.ts:91-94` | The path check doesn't include the separator, so sibling `docs*` directories can be read. | `startsWith(base + path.sep)`. |
-| L4 | `.gitignore` | `.env.*` isn't ignored. Nothing sensitive is tracked today. | Add `.env.*` and `!.env.example`. |
-
-## Data and correctness
-
-| ID | Where | Problem | Fix |
-| --- | --- | --- | --- |
-| D1 ✔ | `app.module.ts:33`; `rbac.module.ts`, `feature-flags.module.ts`, `audit.module.ts`, `design-system.module.ts` (imports the symbol, never registers it) | **Elasticsearch is never injected.** The root registration isn't global, so every `@Optional() ElasticsearchService` is `undefined`. Roles, flags, audit logs and design-system data live in about 90 in-memory `Map`s across 25 services. They're lost on restart and differ between instances. Only color-palette reaches ES. | `global: true` on the root registration, or import the module in each feature module. |
-| D2 | `design-system/component-request.service.ts:61` vs `component-requests/component-requests.service.ts:29` | **Two separate component-request stores** behind two routes; requests created through one never show up in the other. | Keep one. |
-| D3 ✔ | `feature-flags.service.ts:741-870, 992`; `frontend/src/services/featureFlagsService.js:13-23` | **Flags are forced on** in both the backend and the frontend. Toggling one off reports success, then it flips back. When the API is down and nothing is cached, the frontend guard does the opposite and sends users away from flagged pages. | Respect the stored value; treat fetch errors as "use the default". |
-| D4 | `design-system.service.ts:2950-3200` | **Fake governance results.** The client falls back to a hardcoded "8 pass / 2 warn / 1 fail" report and made-up apps when the API fails (`Governance.vue:803, 3030`). | Show an error state. |
-| D5 | `design-system.service.ts:3924-3948, ~3992, ~4046` | **Failed survey writes reported as saved.** NASA-TLX and SUS submissions return `{id:'mock-…'}` when the write fails, which is always, because of D1. | Return a 503. |
-| D6 | `system-health.service.ts:50,358-380,575`; `analytics.service.ts:80,494-525`; `design-system.service.ts:4460` | **Dashboards show random numbers** presented as real metrics, different on every restart. | Return no data, or label it as demo data. |
-| D7 | `rbac.service.ts:445-532` | **Revoked roles come back.** Role removal never touches the in-memory fallback, which is used whenever ES fails. | One source of truth; don't swallow write errors. |
-| D8 | `rbac.service.ts:520,556`; `audit.service.ts:150-162` | **No index mappings.** `term` queries on dynamically mapped text fields never match hyphenated IDs. Latent until D1 is fixed. | Explicit keyword mappings at startup. |
-| D9 | `color-palette.service.ts:77` | **Palette list problems:** at most 10 results, a 500 on a fresh install (missing index), and a 500 instead of a 404 for unknown IDs. | Add `size` or pagination; ensure the index exists; map 404s. |
-| D10 | `observability/elasticsearch-exporter.ts:57-66` | **The telemetry export queue can grow without limit**, and partial bulk failures are ignored. | Cap the queue; check `bulk.errors`. |
-| D11 | `backend/src/observability/opentelemetry.ts:92`; `main.ts` | **Shutdown hangs.** The SIGTERM handler never exits and shutdown hooks are never enabled, so the process only stops on SIGKILL. Instrumentation also starts too late to patch http and express. | `enableShutdownHooks()`, then exit. |
-| D12 | `frontend/src/observability/opentelemetry.ts:62,113` | **Frontend telemetry never exports but still runs.** It calls `addSpanProcessor` and `addLogRecordProcessor`, which the installed SDK versions removed, while the instrumentation still patches fetch, XHR and clicks. | Pass processors to the constructor, or default OTel to off. |
-| D13 | `views/WorkspaceDetail.vue:2711, 2983` | **Workspace failures are hidden or invented.** Adding a member makes up a `userId`, and a failed load shows a fake workspace owned by the current user. | Resolve users on the server; show errors. |
-| D14 | `views/AdminDashboard.vue:589-608`; `views/ReviewKanban.vue:440-444` | **Empty against the real API.** The admin list filters by a mock designer name, and the Kanban fetch is commented out. | Scope on the server; implement the fetch. |
-| D15 | `error-handler.ts:~50 vs ~87` | **Timeouts reported as connection errors (503)** because the connection check runs first. This is the one failing backend test. | Check for timeouts first. |
-| D16 | `rbac.service.ts:243`, `feature-flags.service.ts:35` | **Startup race.** Constructors start async setup without waiting, so early requests run before it finishes. | Use `onModuleInit` and await it. |
-
-## Frontend quality
-
-| ID | Where | Problem |
-| --- | --- | --- |
-| B1 ✔ | `views/ReviewPage.vue:407`, `views/HarmonyPalette.vue:2`, `views/TimelineGenerator.vue:366/465` | **Template errors that break `vite build`.** HarmonyPalette is missing its root `</div>`; TimelineGenerator has an extra `</div>` near `<figcaption>`. |
-| F1 | 41-48 files | **`http://localhost:3000` hardcoded** (about 55 places) instead of `VITE_API_BASE_URL`. Everything breaks when deployed. |
-| F2 | `main.js:186, 310` | **`/admin` declared twice.** The second one is dead. |
-| F3 | `composables/useFeatureFlags.js:143,180`; `services/featureFlagsService.js` | **Three flag evaluators that disagree**, plus a refresher map that is never cleared and an interval that is never stopped. |
-| F7 | `ChartBuilder.vue:4769, 5049`; `MapMaker.vue:627, 999` | **Resize observers never cleaned up**, because `onBeforeUnmount` is registered after an `await`. |
-| F8 | `ChartBuilder.vue:4783, 5063` | **Map-switch race**: a slow response can show the wrong map. |
-| F9 | `components/Step2Harmony.vue:815`; `Sidebar.vue:116`; `review-ui/DarkModeToggle.vue:82` | **Listeners never removed.** |
-| F10 | 103 files | **Dark mode is polled every 100ms** in 103 components, alongside a `MutationObserver`. Tailwind `dark:` variants make this unnecessary. |
-| F11 | `main.js:18-19` | **The entry chunk includes every Vuetify component** (`import * as components`). |
-| F12 | 225 `alert(` calls in 51 files; 94 `console.log` calls | **`alert()` used for user feedback**, and debug logging left in. |
-| F13 | 46 elements; 18 `v-for`s | **Accessibility and rendering gaps:** clickable `div`, `span` and `tr` elements with no role or keyboard access, and `v-for`s without a `:key`. The app shell has no focus management or page titles on navigation. |
-| F14 | 12 files | **`isMockMode()` silently shows mock reviews as real** whenever the health check fails. |
-| F15 | `ChartBuilder` 5,434 lines, `WorkspaceDetail` 3,666, `Governance` 3,304; backend `design-system.service.ts` 6,119 | **Monolith files.** Near-duplicates: ColoredTextPalette/HarmonyPalette (70% the same), AITokenBuilder/TokenStudio (55%), PatternStatus/ComponentStatus (55%). |
-| F16 | `frontend/src/style.css` | **A global Vuetify `.bg-white { … !important }` rule overrides Tailwind `dark:` variants.** The restyle guide documents the workaround. |
-
-## Packages and tooling
-
-| ID | Where | Problem | Fix |
-| --- | --- | --- | --- |
-| P1 | `mcp-server/src/logger.ts:28-31` | **Logs are written to stdout, which is the MCP JSON-RPC channel**, so clients see parse errors on startup and on every API error. (Confirmed by running it.) | `stderrLevels` for all levels. |
-| P2 | `eslint-plugin-design-system/src/index.ts:257` | **The plugin can't be loaded.** `export default` compiles to `exports.default`, so ESLint finds no rules or configs. | `export = plugin`. |
-| P3 | `cli/src/cli.ts:57,67` | **The cli doesn't compile** (TS7053 under strict), and `chalk@5` is ESM-only in a CommonJS build. | Type the config; pin `chalk@4`. |
-| P4 | `mcp-server/src/index.ts:153`, `tools/*.ts` | **Tools crash when called without `arguments`**, and input isn't validated. | Default to `{}`; validate with zod. |
-| P5 | `mcp-server/src/api-client.ts:204-226` | **POSTs are retried**, which duplicates reviews; a call can block for about 2 minutes. | Retry GETs only. |
-| P6 | `breakpoint-overlay-standalone/package.json:5-7`, `loupe-tool-standalone/package.json:5-7`, `sdk/package.json:6` | **`main`, `module` and `types` point at files the build never produces.** | Point them at the real outputs. |
-| P7 | `eslint-plugin-design-system/src/index.ts:84-86` | **The `component-naming` rule flags `MAX_SIZE`, `_private` and `$el`.** | Test `/^[A-Z]/` first and skip constants. |
-| P8 | `vscode-design-system-extension/src/extension.ts:224` and settings | **Docs URL hardcoded to `localhost:5173`**, settings read only once, `enableSnippets` never read, and multi-character trigger characters (which VS Code ignores). | Add settings and re-register on change. |
-| P9 | repo root | **No CI**, and the workspaces list only `backend` and `frontend`, which is how P2, P3 and P6 went unnoticed. | Add every package to the workspaces; add a GitHub Actions build-and-test workflow. |
-| P10 | `otel-collector-config.yaml` | **The collector config isn't used by any compose service**, and its `logging` exporter has been removed from recent collector releases (not checked against a running collector). | Use `debug`; add the service. |
-
-## Dependencies
-
-| ID | Problem |
-| --- | --- |
-| S1 ✔ | `npm audit --omit=dev`: **82 vulnerabilities (3 critical, 32 high, 45 moderate, 2 low).** Critical: `jspdf` (local file inclusion), `protobufjs` (code injection), `proxy-addr` (IP spoofing). High includes `axios` (SSRF), `dompurify` (XSS), `express` and `body-parser`, `multer`, `socket.io-parser` and `engine.io`, `path-to-regexp`, `postcss`, `form-data`, `@grpc/grpc-js`, `@vue/server-renderer`, and `mout` through `@adobe/leonardo-contrast-colors`. Most fixes are minor or patch upgrades; `leonardo-contrast-colors` needs replacing or a newer release. |
-
-## Tests
-
-- **backend:** 3 spec files for about 33k lines. 14 of 15 tests pass; the failure is D15. One suite couldn't load in the reviewer's setup (`entities/decode`). No service that stores data has a test. Dependencies aren't installed in this checkout; the tests ran against a sibling checkout at the same commit.
-- **mcp-server:** 12 suites, 60 tests, all passing; `tsc` is clean. The tests miss P1 and P4.
-- **frontend, cli, sdk, eslint plugin, extension:** no tests.
-
-## Not covered
-
-- design-sync's response shapes (H5 is inferred from token-sync).
-- A runtime check of the collector config (P10).
-- The `vscode-design-system-extension`, standalone tools and sdk weren't built, because their dependencies aren't installed or cached. Those findings come from reading the code and running `tsc`.
-- Frontend views were reviewed by searching across all of them and reading nine in depth, not line by line.
