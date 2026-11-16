@@ -241,29 +241,58 @@
             </UiPanel>
 
             <VrNotificationSettings :project-id="project.id" />
+
+            <UiPanel
+              title="Delete project"
+              heading-tag="h3"
+              description="Removes this project with its runs, results and baselines here. The project in Argos is not touched."
+            >
+              <UiButton variant="danger" icon="trash-2" @click="openDeleteDialog">Delete project</UiButton>
+            </UiPanel>
           </div>
         </template>
       </UiTabs>
+
+      <UiDialog
+        :open="deleteDialogOpen"
+        :title="`Delete ${project.name}?`"
+        size="sm"
+        @update:open="(open) => { if (!open) closeDeleteDialog(); }"
+      >
+        <p>
+          The project <strong class="text-ink-strong">{{ project.name }}</strong> and its runs, results and baselines will be
+          deleted. This can't be undone.
+        </p>
+        <UiCallout v-if="deleteError" tone="danger" role="alert">{{ deleteError }}</UiCallout>
+        <template #footer>
+          <UiButton :disabled="deleting" @click="closeDeleteDialog">Cancel</UiButton>
+          <UiButton variant="danger" icon="trash-2" :loading="deleting" @click="deleteProject">
+            {{ deleting ? 'Deleting…' : 'Delete project' }}
+          </UiButton>
+        </template>
+      </UiDialog>
     </template>
   </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
 import VrBaselines from '../components/visual-regression/VrBaselines.vue';
 import VrCiSetup from '../components/visual-regression/VrCiSetup.vue';
 import VrSharing from '../components/visual-regression/VrSharing.vue';
 import VrTestSettings from '../components/visual-regression/VrTestSettings.vue';
-import { VR_API_PATH, formatDateTime, vrErrorMessage } from '../components/visual-regression/vrApi.js';
+import { VR_API_PATH, formatDateTime, setListNotice, vrErrorMessage } from '../components/visual-regression/vrApi.js';
 import VrNotificationSettings from '../components/visual-regression/VrNotificationSettings.vue';
 import {
   PageHero,
   PageShell,
   UiButton,
+  UiCallout,
   UiChip,
   UiCode,
+  UiDialog,
   UiEmptyState,
   UiInput,
   UiLink,
@@ -279,6 +308,7 @@ import apiClient from '../services/api.js';
 import { ARGOS_STATUS_LABELS } from '../utils/visualRegressionReport.js';
 
 const route = useRoute();
+const router = useRouter();
 const { notice, showNotice, clearNotice } = useNotice();
 const { notice: settingsNotice, showNotice: showSettingsNotice, clearNotice: clearSettingsNotice } = useNotice();
 const { notice: analyticsNotice, showNotice: showAnalyticsNotice, clearNotice: clearAnalyticsNotice } = useNotice();
@@ -502,6 +532,41 @@ const copySecret = async () => {
     secretCopied.value = true;
   } catch {
     showWebhookNotice('Copy failed. Select the secret and copy it yourself.', 'error');
+  }
+};
+
+// Deleting the project: confirmed in a dialog naming it, then back to the list
+const deleteDialogOpen = ref(false);
+const deleting = ref(false);
+const deleteError = ref('');
+
+const openDeleteDialog = () => {
+  deleteError.value = '';
+  deleteDialogOpen.value = true;
+};
+
+const closeDeleteDialog = () => {
+  if (deleting.value) return;
+  deleteDialogOpen.value = false;
+  deleteError.value = '';
+};
+
+const deleteProject = async () => {
+  if (!project.value || deleting.value) return;
+  const name = project.value.name;
+  deleting.value = true;
+  deleteError.value = '';
+  try {
+    await apiClient.delete(projectPath());
+    stopPolling();
+    deleteDialogOpen.value = false;
+    setListNotice(`Project "${name}" deleted.`);
+    await router.push('/tools/visual-regression');
+  } catch (error) {
+    console.error('Failed to delete project:', error);
+    deleteError.value = vrErrorMessage(error, 'Failed to delete the project. Please try again.');
+  } finally {
+    deleting.value = false;
   }
 };
 

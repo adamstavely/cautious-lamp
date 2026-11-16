@@ -60,13 +60,25 @@
         </UiPanel>
       </form>
     </PageSection>
+
+    <PageSection v-if="workload" title="Workload score" divided>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <UiStat
+          label="Raw TLX (unweighted)"
+          :value="`${workload.rawTlx}/100`"
+          hint="The mean of the six ratings, with no pairwise weighting. Higher means a heavier workload."
+          tone="accent"
+        />
+        <UiStat label="Task" :value="workload.task" />
+      </div>
+    </PageSection>
   </PageShell>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { PageHero, PageSection, PageShell, UiButton, UiPanel, UiRange, UiSelect, UiTextarea } from '../components/ui';
+import { PageHero, PageSection, PageShell, UiButton, UiPanel, UiRange, UiSelect, UiStat, UiTextarea } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import { focusSoon } from '../utils/focusAfterRemoval.js';
 import apiClient from '../services/api.js';
@@ -74,6 +86,8 @@ import { authState } from '../services/auth.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const isSubmitting = ref(false);
+// The last submitted assessment's raw TLX, shown under the form
+const workload = ref(null);
 
 const RATING_FIELDS = {
   mentalDemand: 'Mental demand',
@@ -105,6 +119,12 @@ const describeSubmitError = (error) => {
   if (detail) return `The assessment was not saved: ${detail}`;
   if (status) return `The assessment was not saved (HTTP ${status}). Please try again.`;
   return 'Could not reach the server, so the assessment was not saved. Check your connection and try again.';
+};
+
+// Raw (unweighted) TLX: the mean of the six 0-100 ratings, to one decimal
+const rawTlx = (ratings) => {
+  const sum = Object.keys(RATING_FIELDS).reduce((total, key) => total + ratings[key], 0);
+  return Math.round((sum / 6) * 10) / 10;
 };
 
 const form = ref({
@@ -161,6 +181,8 @@ const submitForm = async () => {
   isSubmitting.value = true;
   clearNotice();
 
+  workload.value = null;
+
   try {
     const user = authState.user?.name || authState.user?.email || 'Anonymous User';
     
@@ -170,8 +192,14 @@ const submitForm = async () => {
       user,
     };
 
-    await apiClient.post('/api/v1/nasa-tlx', payload);
+    const response = await apiClient.post('/api/v1/nasa-tlx', payload);
 
+    // Show the score the server stored; fall back to our own only if it sent none
+    const stored = response?.data?.rawTlx;
+    workload.value = {
+      task: payload.task,
+      rawTlx: typeof stored === 'number' ? stored : rawTlx(payload),
+    };
     showNotice('Assessment submitted and saved.', 'success');
     attempted.value = false;
     

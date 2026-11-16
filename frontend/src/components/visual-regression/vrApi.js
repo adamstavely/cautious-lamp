@@ -17,3 +17,15 @@ export const formatDateTime = (value) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
 };
+
+// A notice for the projects list to show once after leaving a project page
+// (e.g. "Project deleted"); taken, it is cleared, so a revisit doesn't repeat it
+let pendingListNotice = null;
+export const setListNotice = (message, type = 'success') => {
+  pendingListNotice = { message, type };
+};
+export const takeListNotice = () => {
+  const taken = pendingListNotice;
+  pendingListNotice = null;
+  return taken;
+};
