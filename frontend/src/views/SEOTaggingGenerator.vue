@@ -126,7 +126,8 @@ const generateOpenGraphTags = () => {
 const generateTwitterTags = () => {
   const tags = [];
   
-  tags.push('<meta name="twitter:card" content="summary_large_image">');
+  // A large-image card needs an image; without one, the plain summary card
+  tags.push(`<meta name="twitter:card" content="${formData.value.image ? 'summary_large_image' : 'summary'}">`);
   
   if (formData.value.title) {
     tags.push(`<meta name="twitter:title" content="${escapeHtml(formData.value.title)}">`);
@@ -161,6 +162,17 @@ const generateJSONLD = () => {
     jsonld.url = formData.value.url;
   }
   
+  if (formData.value.image) {
+    jsonld.image = formData.value.image;
+  }
+
+  if (formData.value.siteName) {
+    jsonld.isPartOf = {
+      '@type': 'WebSite',
+      name: formData.value.siteName
+    };
+  }
+
   if (formData.value.author) {
     jsonld.author = {
       '@type': 'Person',

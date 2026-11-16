@@ -15,7 +15,7 @@
 
           <UiFileDropzone
             :file="selectedFile"
-            accept="video/*"
+            :accept="VIDEO_ACCEPT"
             label="Video file"
             prompt="Drag and drop a video here, or"
             button-label="Browse files"
@@ -56,6 +56,10 @@
 
     <PageSection v-if="analysisResult && analysisResult.summary" id="photosensitivity-results" title="Analysis results" divided>
       <div class="space-y-6">
+        <UiCallout v-if="analysisResult.saved === false" tone="warning" role="status" title="This result wasn't saved">
+          The analysis finished, but it couldn't be stored, so it won't appear in saved analyses.
+          {{ analysisResult.saveError ? `Reason: ${analysisResult.saveError}` : '' }}
+        </UiCallout>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <UiStat label="Status" :icon="statusIcon" :tone="statusTone">
             <span class="capitalize">{{ analysisResult.summary.status }}</span>
@@ -108,6 +112,11 @@ import UiFileDropzone from '../components/ui/UiFileDropZone.vue';
 import apiClient from '../services/api.js';
 import { focusSoon } from '../utils/focusAfterRemoval.js';
 
+// The formats the server accepts (photosensitivity.controller VIDEO_EXTENSIONS)
+const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/avi'];
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.avi'];
+const VIDEO_ACCEPT = [...VIDEO_TYPES, ...VIDEO_EXTENSIONS].join(',');
+
 const selectedFile = ref(null);
 const isAnalyzing = ref(false);
 const analysisResult = ref(null);
@@ -133,11 +142,12 @@ onMounted(async () => {
 // A file dropped on the zone or chosen with Browse files (the native input is
 // cleared by the zone, so the same file can be picked again)
 const handleFileSelect = (file) => {
-  if (file && file.type.startsWith('video/')) {
+  // A drop skips the input's accept list, so check here too; the server goes by MIME type
+  if (file && VIDEO_TYPES.includes(file.type)) {
     selectedFile.value = file;
     error.value = null;
   } else {
-    error.value = 'Please choose a valid video file';
+    error.value = 'Please choose an MP4, WebM, MOV or AVI video.';
   }
 };
 
@@ -186,7 +196,8 @@ const analyzeVideo = async () => {
     analysisResult.value = response.data;
     const { summary } = response.data;
     const failures = (summary.luminanceFailures || 0) + (summary.redFailures || 0) + (summary.patternFailures || 0);
-    progressAnnouncement.value = `Analysis complete: ${summary.status}, ${failures} ${failures === 1 ? 'failure' : 'failures'}`;
+    const notSaved = response.data.saved === false ? ' The result was not saved.' : '';
+    progressAnnouncement.value = `Analysis complete: ${summary.status}, ${failures} ${failures === 1 ? 'failure' : 'failures'}.${notSaved}`;
     focusSoon('#photosensitivity-results h2');
   } catch (err) {
     const data = err.response?.data;

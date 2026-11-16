@@ -255,9 +255,16 @@ const submitEvaluation = async () => {
       timestamp: new Date().toISOString()
     };
     
-    await apiClient.post('/api/v1/heuristic-evaluation', evaluationData);
+    const response = await apiClient.post('/api/v1/heuristic-evaluation', evaluationData);
     
-    results.value = calculateResults();
+    // Show the score the server stored; fall back to our own only if it sent none
+    const local = calculateResults();
+    const saved = response?.data || {};
+    results.value = {
+      totalIssues: typeof saved.totalIssues === 'number' ? saved.totalIssues : local.totalIssues,
+      criticalIssues: typeof saved.criticalIssues === 'number' ? saved.criticalIssues : local.criticalIssues,
+      overallScore: typeof saved.overallScore === 'number' ? saved.overallScore : local.overallScore
+    };
     showNotice('Evaluation submitted and saved.', 'success');
   } catch (error) {
     console.error('Failed to submit evaluation:', error);
