@@ -363,6 +363,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { colorPickerAnchor } from '../utils/colorPickerAnchor.js';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
 import ColorPicker from '../components/ColorPicker.vue';
@@ -1348,51 +1349,7 @@ const openColorPicker = (target, event) => {
   
   pickerColor.value = color;
   
-  const rect = (event.currentTarget || event.target).getBoundingClientRect();
-  
-  const pickerWidth = 280;
-  const pickerHeight = 550;
-  const padding = 16;
-  
-  // Use viewport coordinates for fixed positioning
-  let left = rect.right + padding;
-  let top = rect.top;
-  
-  // If there's not enough space on the right, show on the left
-  if (left + pickerWidth > window.innerWidth) {
-    left = rect.left - pickerWidth - padding;
-  }
-  
-  // Ensure it doesn't go off-screen horizontally
-  left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding));
-  
-  // Check if there's enough space below the button
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const spaceAbove = rect.top;
-  
-  // If there's not enough space below, try above
-  if (spaceBelow < pickerHeight + padding && spaceAbove > spaceBelow) {
-    top = rect.top - pickerHeight - padding;
-  }
-  
-  // Ensure it doesn't go off-screen vertically
-  top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding));
-  
-  // If still too tall for viewport, center it vertically or position at top
-  if (top + pickerHeight > window.innerHeight) {
-    const centeredTop = Math.max(padding, (window.innerHeight - pickerHeight) / 2);
-    top = Math.min(centeredTop, padding);
-  }
-  
-  // Final safety check: ensure it's within bounds
-  if (top < padding) {
-    top = padding;
-  }
-  if (top + pickerHeight > window.innerHeight) {
-    top = window.innerHeight - pickerHeight - padding;
-  }
-  
-  pickerPosition.value = { left, top };
+  pickerPosition.value = colorPickerAnchor(event);
   showColorPicker.value = true;
 };
 

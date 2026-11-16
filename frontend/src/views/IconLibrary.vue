@@ -251,6 +251,7 @@
 
 <script setup>
 import { computed, createApp, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { colorPickerAnchor } from '../utils/colorPickerAnchor.js';
 import * as LucideIcons from 'lucide-vue-next';
 import ColorPicker from '../components/ColorPicker.vue';
 import InlineNotice from '../components/InlineNotice.vue';
@@ -560,16 +561,7 @@ const resetCustomizer = () => {
 
 // Colour picker, placed beside the swatch and kept on screen
 const openColorPicker = (event) => {
-  const rect = event.currentTarget.getBoundingClientRect();
-  const width = 300;
-  const height = 550;
-  const padding = 16;
-  let left = rect.right + padding;
-  if (left + width > window.innerWidth) left = rect.left - width - padding;
-  pickerPosition.value = {
-    left: Math.max(padding, Math.min(left, window.innerWidth - width - padding)),
-    top: Math.max(padding, Math.min(rect.top, window.innerHeight - height - padding)),
-  };
+  pickerPosition.value = colorPickerAnchor(event);
   pickerColor.value = iconColor.value || '#000000';
   showColorPicker.value = true;
 };
