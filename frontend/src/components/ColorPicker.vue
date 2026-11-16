@@ -1,15 +1,14 @@
 <template>
-  <div
+  <!-- A native modal dialog: Tab stays inside, the page behind is inert, Escape
+       and a click outside cancel, and focus returns to the control that opened it -->
+  <dialog
     v-if="show"
     ref="colorPickerContainerRef"
-    role="dialog"
-    aria-modal="true"
     :aria-labelledby="ids.title"
     class="color-picker"
     :data-theme="previewDarkMode ? 'dark' : undefined"
-    tabindex="-1"
-    @click.stop
-    @keydown.esc="cancel"
+    @cancel.prevent="cancel"
+    @click="onDialogClick"
   >
     <div class="w-64 flex flex-col gap-4">
       <h2 :id="ids.title" class="sr-only">Color picker</h2>
@@ -128,7 +127,7 @@
         <UiButton size="sm" class="flex-1" label="Cancel" @click="cancel" />
       </div>
     </div>
-  </div>
+  </dialog>
 </template>
 
 <script setup>
@@ -142,10 +141,12 @@ import { UiButton, UiSwatch } from './ui';
  * The position and the picked colour reach CSS through v-bind(), never inline styles.
  */
 
-// Picker dimensions
-const PICKER_WIDTH = 280;
-const PICKER_HEIGHT = 400;
+// The picker's size before it is measured, and the gap kept from the screen edge
+const PICKER_WIDTH = 290;
+const PICKER_HEIGHT = 670;
 const PADDING = 16;
+/** The picker's real size once open, so it can be kept fully on screen */
+const measured = ref({ width: 0, height: 0 });
 
 const props = defineProps({
   show: {
@@ -211,9 +212,17 @@ const safePickerStyle = computed(() => {
     ? parseFloat(props.position.top) 
     : props.position.top;
   
+  const width = measured.value.width || PICKER_WIDTH;
+  // Taller than the screen: it scrolls inside (max-height), so pin it to the top
+  const height = Math.min(measured.value.height || PICKER_HEIGHT, window.innerHeight - 2 * PADDING);
+
+  // No room on the right of the control: open on its left instead
+  if (left + width > window.innerWidth - PADDING && props.position.anchorLeft !== undefined) {
+    left = props.position.anchorLeft - width - PADDING;
+  }
   // Ensure picker doesn't go off right edge
-  if (left + PICKER_WIDTH > window.innerWidth - PADDING) {
-    left = window.innerWidth - PICKER_WIDTH - PADDING;
+  if (left + width > window.innerWidth - PADDING) {
+    left = window.innerWidth - width - PADDING;
   }
   
   // Ensure picker doesn't go off left edge
@@ -222,8 +231,8 @@ const safePickerStyle = computed(() => {
   }
   
   // Ensure picker doesn't go off bottom edge
-  if (top + PICKER_HEIGHT > window.innerHeight - PADDING) {
-    top = window.innerHeight - PICKER_HEIGHT - PADDING;
+  if (top + height > window.innerHeight - PADDING) {
+    top = window.innerHeight - height - PADDING;
   }
   
   // Ensure picker doesn't go off top edge
@@ -664,22 +673,41 @@ const toggleEyedropper = () => {
   }
 };
 
-// Watch for show prop changes
+// The control that opened the picker, which gets focus back when it closes
+let opener = null;
+
+const openDialog = () => {
+  const dialog = colorPickerContainerRef.value;
+  if (!dialog) return;
+  if (typeof dialog.showModal === 'function' && !dialog.open) dialog.showModal();
+  measured.value = { width: dialog.offsetWidth, height: dialog.offsetHeight };
+  drawGradientCanvas();
+  drawHueCanvas();
+  // Start on the saturation/lightness field, ready for the arrow keys
+  gradientCanvas.value?.focus();
+};
+
+const restoreFocus = () => {
+  const target = opener;
+  opener = null;
+  if (target?.isConnected) target.focus();
+};
+
+// A click on the backdrop lands on the <dialog> itself; clicks inside don't reach the page
+const onDialogClick = (event) => {
+  event.stopPropagation();
+  if (event.target === colorPickerContainerRef.value) cancel();
+};
+
 watch(() => props.show, (newVal) => {
   if (newVal) {
-    const color = props.initialColor || '#000000';
-    setColorFromHex(color);
-    // Use double nextTick to ensure canvas elements are rendered
-    nextTick(() => {
-      nextTick(() => {
-        drawGradientCanvas();
-        drawHueCanvas();
-        // Focus the gradient canvas for keyboard navigation
-        if (gradientCanvas.value) {
-          gradientCanvas.value.focus();
-        }
-      });
-    });
+    opener = document.activeElement;
+    setColorFromHex(props.initialColor || '#000000');
+    // Use double nextTick to ensure the dialog and canvases are rendered
+    nextTick(() => nextTick(openDialog));
+  } else {
+    measured.value = { width: 0, height: 0 };
+    nextTick(restoreFocus);
   }
 });
 
@@ -708,45 +736,36 @@ watch([hueCanvas, gradientCanvas], () => {
 
 // Position watcher removed - safePickerStyle computed property handles positioning with bounds checking
 
-// Close on outside click
-const handleClickOutside = (event) => {
-  if (props.show && colorPickerContainerRef.value && !colorPickerContainerRef.value.contains(event.target)) {
-    emit('update:show', false);
-  }
-};
-
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
-  
   if (props.show) {
+    opener = document.activeElement;
     setColorFromHex(props.initialColor);
-    // Use double nextTick to ensure canvas elements are rendered
-    nextTick(() => {
-      nextTick(() => {
-        drawGradientCanvas();
-        drawHueCanvas();
-        // Focus the gradient canvas for keyboard navigation
-        if (gradientCanvas.value) {
-          gradientCanvas.value.focus();
-        }
-      });
-    });
+    nextTick(() => nextTick(openDialog));
   }
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside);
+  if (props.show) restoreFocus();
   document.removeEventListener('mousemove', handleGradientDrag);
   document.removeEventListener('mouseup', endGradientDrag);
 });
 </script>
 
 <style scoped>
+/* A modal dialog placed beside the control that opened it; it never runs past
+   the screen: anything taller scrolls inside it */
 .color-picker {
-  @apply fixed z-50 p-4 rounded-card border border-line bg-surface-overlay text-ink shadow-overlay;
+  @apply fixed m-0 p-4 rounded-card border border-line bg-surface-overlay text-ink shadow-overlay overflow-y-auto;
   @apply focus:outline-none;
+  inset: auto;
   left: v-bind('safePickerStyle.left');
   top: v-bind('safePickerStyle.top');
+  max-height: calc(100dvh - 2rem);
+  max-width: calc(100vw - 2rem);
+}
+/* No dimming: it would change how the page's colours look while you pick one */
+.color-picker::backdrop {
+  @apply bg-transparent;
 }
 .picker-canvas {
   @apply block rounded-control border border-line-control;

@@ -255,6 +255,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import { colorPickerAnchor } from '../utils/colorPickerAnchor.js';
 import ColorPicker from '../components/ColorPicker.vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
@@ -1263,40 +1264,7 @@ const openColorPicker = (index, event) => {
   pickerColorIndex.value = index;
   pickerColor.value = colorStops.value[index].color;
   
-  // Calculate position near the color swatch button
-  const rect = (event.currentTarget || event.target).getBoundingClientRect();
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-  
-  const pickerWidth = 280;
-  const pickerHeight = 550; // Approximate height of color picker
-  const padding = 16;
-  
-  let left = rect.right + scrollLeft + padding;
-  let top = rect.top + scrollTop;
-  
-  // If there's not enough space on the right, show on the left
-  if (left + pickerWidth > window.innerWidth + scrollLeft) {
-    left = rect.left + scrollLeft - pickerWidth - padding;
-  }
-  
-  // If there's not enough space at the bottom, show above the button
-  if (top + pickerHeight > window.innerHeight + scrollTop) {
-    top = rect.top + scrollTop - pickerHeight - padding;
-  }
-  
-  // Ensure it doesn't go off-screen horizontally
-  left = Math.max(padding, Math.min(left, window.innerWidth + scrollLeft - pickerWidth - padding));
-  
-  // Ensure it doesn't go off-screen vertically
-  top = Math.max(padding, Math.min(top, window.innerHeight + scrollTop - pickerHeight - padding));
-  
-  // If still too tall, position at top of viewport
-  if (top + pickerHeight > window.innerHeight + scrollTop) {
-    top = scrollTop + padding;
-  }
-  
-  pickerPosition.value = { left, top };
+  pickerPosition.value = colorPickerAnchor(event);
   showColorPicker.value = true;
 };
 

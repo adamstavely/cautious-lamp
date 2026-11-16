@@ -157,6 +157,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
+import { colorPickerAnchor } from '../utils/colorPickerAnchor.js';
 import ColorPicker from '../components/ColorPicker.vue';
 import chroma from 'chroma-js';
 import { PageHero, PageSection, PageShell, UiChip, UiInput, UiPanel, UiRange, UiSwatch, UiTable } from '../components/ui';
@@ -394,29 +395,7 @@ const updateForegroundFromSlider = (hue) => {
 const openColorPicker = (type, event) => {
   if (event) {
     event.stopPropagation();
-    const rect = (event.currentTarget || event.target).getBoundingClientRect();
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    
-    const pickerWidth = 300;
-    const pickerHeight = 550;
-    const padding = 16;
-    
-    let left = rect.right + scrollLeft + padding;
-    let top = rect.top + scrollTop;
-    
-    if (left + pickerWidth > window.innerWidth + scrollLeft) {
-      left = rect.left + scrollLeft - pickerWidth - padding;
-    }
-    
-    if (top + pickerHeight > window.innerHeight + scrollTop) {
-      top = rect.top + scrollTop - pickerHeight - padding;
-    }
-    
-    left = Math.max(padding, Math.min(left, window.innerWidth + scrollLeft - pickerWidth - padding));
-    top = Math.max(padding, Math.min(top, window.innerHeight + scrollTop - pickerHeight - padding));
-    
-    pickerPosition.value = { left, top };
+    pickerPosition.value = colorPickerAnchor(event);
   }
   
   currentPickerType.value = type;

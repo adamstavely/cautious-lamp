@@ -102,6 +102,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from 'vue';
+import { colorPickerAnchor } from '../utils/colorPickerAnchor.js';
 import ColorPicker from '../components/ColorPicker.vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import chroma from 'chroma-js';
@@ -363,41 +364,7 @@ const copyToClipboard = async (text) => {
 const openColorPicker = (event) => {
   if (event) {
     event.stopPropagation();
-    const rect = (event.currentTarget || event.target).getBoundingClientRect();
-    
-    const pickerWidth = 300;
-    const pickerHeight = 550;
-    const padding = 16;
-    
-    // Calculate position relative to viewport (for fixed positioning)
-    let left = rect.right + padding;
-    let top = rect.top;
-    
-    // Check if picker would go off right edge
-    if (left + pickerWidth > window.innerWidth) {
-      left = rect.left - pickerWidth - padding;
-    }
-    
-    // Check if picker would go off left edge
-    if (left < padding) {
-      left = padding;
-    }
-    
-    // Check if picker would go off bottom edge
-    if (top + pickerHeight > window.innerHeight - padding) {
-      top = window.innerHeight - pickerHeight - padding;
-    }
-    
-    // Check if picker would go off top edge
-    if (top < padding) {
-      top = padding;
-    }
-    
-    // Ensure picker stays within viewport bounds
-    left = Math.max(padding, Math.min(left, window.innerWidth - pickerWidth - padding));
-    top = Math.max(padding, Math.min(top, window.innerHeight - pickerHeight - padding));
-    
-    pickerPosition.value = { left, top };
+    pickerPosition.value = colorPickerAnchor(event);
   }
   showColorPicker.value = true;
 };
