@@ -47,6 +47,7 @@
     "src/components/font-previewer/FontDetail.vue",
     "src/components/font-previewer/FontPreviewer.vue",
     "src/components/font-previewer/FontSample.vue",
+    "src/components/gradient/GradientPreview.vue",
     "src/components/loupe/LoupeBox.vue",
     "src/components/maps/BubbleMap.js",
     "src/components/maps/ChoroplethMap.js",
