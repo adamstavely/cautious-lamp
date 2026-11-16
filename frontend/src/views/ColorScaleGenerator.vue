@@ -240,6 +240,9 @@
             <div class="flex flex-col gap-2">
               <UiButton v-for="action in exportActions" :key="action.label" :variant="action.variant" icon="download" @click="action.run">{{ action.label }}</UiButton>
             </div>
+            <p class="text-xs text-ink-muted">
+              The Power BI theme holds every step as data colors. Power BI gradients take only three colors, so conditional formatting uses the first, middle and last steps.
+            </p>
           </UiPanel>
 
           <UiPanel title="Color analysis">
@@ -373,6 +376,7 @@ import {
 } from '../components/ui';
 import UiMeter from '../components/ui/UiMeter.vue';
 import { focusAfterRemoval } from '../utils/focusAfterRemoval';
+import { powerBiTheme, powerBiThemeFileName } from '../utils/powerBiTheme.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const previewDarkMode = ref(false);
@@ -445,6 +449,7 @@ const exportActions = [
   { label: 'Export CSS Variables', variant: 'primary', run: () => exportCSS() },
   { label: 'Export JSON', variant: 'secondary', run: () => exportJSON() },
   { label: 'Export Tableau XML', variant: 'secondary', run: () => exportTableau() },
+  { label: 'Export Power BI theme', variant: 'secondary', run: () => exportPowerBi() },
 ];
 
 const setSetting = (key, value) => {
@@ -1280,6 +1285,28 @@ const exportJSON = () => {
   }, null, 2);
   
   copyText(json, 'JSON copied to clipboard.');
+};
+
+const exportPowerBi = () => {
+  const label = scaleType.value.charAt(0).toUpperCase() + scaleType.value.slice(1);
+  let theme;
+  try {
+    theme = powerBiTheme({ name: `${label} color scale`, type: scaleType.value, colors: generatedScale.value });
+  } catch (error) {
+    showNotice(error.message, 'error');
+    return;
+  }
+  const fileName = powerBiThemeFileName(theme.name);
+  const blob = new Blob([`${JSON.stringify(theme, null, 2)}\n`], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  showNotice(`${fileName} downloaded. In Power BI Desktop, choose View, Themes, Browse for themes, and open it.`, 'success');
 };
 
 const exportTableau = () => {
