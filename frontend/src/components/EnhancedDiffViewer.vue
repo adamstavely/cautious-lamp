@@ -1,5 +1,5 @@
 <template>
-  <div class="relative w-full">
+  <div class="relative w-full" @keydown="handleKeydown">
     <!-- Toolbar -->
     <div class="mb-4 flex items-center justify-between flex-wrap gap-3">
       <UiSegmented v-model="currentViewMode" :options="viewModeOptions" aria-label="Comparison view" />
@@ -24,9 +24,13 @@
     <div
       ref="viewerContainer"
       class="diff-viewer"
-      :class="{ 'diff-viewer-fullscreen': isFullscreen, 'diff-viewer-dark': currentViewMode === 'overlay' }"
+      :class="{ 'diff-viewer-fullscreen': isFullscreen, 'diff-viewer-dark': currentViewMode === 'overlay', 'diff-viewer-zoomed': zoomLevel > 1 }"
+      tabindex="0"
+      role="group"
+      :aria-label="`Comparison of ${altText}`"
+      :aria-describedby="keysId"
       @wheel="handleWheel"
-      @mousedown="startPan"
+      @pointerdown="startPan"
     >
       <!-- Slider view -->
       <div v-if="currentViewMode === 'slider'" class="diff-pane">
@@ -130,18 +134,18 @@
       <div v-if="isPanning" class="diff-pan-note" role="status">Panning mode - Drag to move</div>
     </div>
 
-    <!-- Keyboard shortcuts -->
-    <p class="mt-2 text-xs flex flex-wrap items-center gap-4 text-ink-muted">
+    <!-- Keyboard shortcuts: they work while focus is in this viewer, never with Ctrl, Cmd or Alt held -->
+    <p :id="keysId" class="mt-2 text-xs flex flex-wrap items-center gap-4 text-ink-muted">
       <span><kbd class="diff-kbd">+</kbd> / <kbd class="diff-kbd">-</kbd> Zoom</span>
       <span><kbd class="diff-kbd">0</kbd> Reset zoom</span>
       <span><kbd class="diff-kbd">F</kbd> Full screen</span>
-      <span><kbd class="diff-kbd">Space</kbd> + Drag pan</span>
+      <span>Arrow keys or drag to pan when zoomed in</span>
     </p>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, useId, watch } from 'vue';
 import { UiButton, UiCheckbox, UiRange, UiSegmented } from './ui';
 
 /**
@@ -192,6 +196,9 @@ const showCurrentInOverlay = ref(false);
 
 // Fullscreen
 const isFullscreen = ref(false);
+
+// Each viewer on a page needs its own id for the shortcut hint
+const keysId = `diff-viewer-keys-${useId()}`;
 
 // Refs
 const viewerContainer = ref(null);
@@ -250,8 +257,9 @@ const resetZoom = () => {
 
 // Pan functions
 const startPan = (e) => {
-  if (e.button !== 0 || e.ctrlKey || e.metaKey) return; // Only left mouse button, not with modifier
-  if (e.target.tagName === 'IMG' || e.target.closest('button')) return;
+  // Primary button or a touch, only while zoomed in (there is nothing to pan otherwise)
+  if (e.button !== 0 || e.ctrlKey || e.metaKey || zoomLevel.value <= 1) return;
+  if (e.target.closest('button, [role="slider"], input')) return;
   
   isPanning.value = true;
   panStartX.value = e.clientX - panX.value;
@@ -266,21 +274,27 @@ const startPan = (e) => {
   
   const handleEnd = () => {
     isPanning.value = false;
-    document.removeEventListener('mousemove', handleMove);
-    document.removeEventListener('mouseup', handleEnd);
+    document.removeEventListener('pointermove', handleMove);
+    document.removeEventListener('pointerup', handleEnd);
+    document.removeEventListener('pointercancel', handleEnd);
   };
   
-  document.addEventListener('mousemove', handleMove);
-  document.addEventListener('mouseup', handleEnd);
+  document.addEventListener('pointermove', handleMove);
+  document.addEventListener('pointerup', handleEnd);
+  document.addEventListener('pointercancel', handleEnd);
 };
 
 // Wheel zoom
+// Ctrl/Cmd + wheel (and trackpad pinch) zooms the image. Plain wheel pans only
+// while zoomed in; otherwise it scrolls the page as usual.
 const handleWheel = (e) => {
   if (e.ctrlKey || e.metaKey) {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
     const newZoom = Math.max(minZoom, Math.min(maxZoom, zoomLevel.value + delta));
     zoomLevel.value = newZoom;
+  } else if (zoomLevel.value <= 1) {
+    return;
   } else if (e.shiftKey) {
     // Horizontal pan with shift + wheel
     e.preventDefault();
@@ -345,8 +359,10 @@ const toggleFullscreen = () => {
       viewerContainer.value.webkitRequestFullscreen();
     } else if (viewerContainer.value.msRequestFullscreen) {
       viewerContainer.value.msRequestFullscreen();
+    } else {
+      // No Fullscreen API: fill the window with CSS instead
+      isFullscreen.value = true;
     }
-    isFullscreen.value = true;
   } else {
     if (document.exitFullscreen) {
       document.exitFullscreen();
@@ -360,9 +376,23 @@ const toggleFullscreen = () => {
 };
 
 // Keyboard shortcuts
+const PAN_STEP = 40;
+
+// Listens on this viewer only (not the document), so several viewers on a page
+// don't all react, and leaves browser shortcuts (Cmd/Ctrl + +, -, 0, F) alone
 const handleKeydown = (e) => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  
+  if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+  const target = e.target;
+  if (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+
+  const pan = { ArrowLeft: [PAN_STEP, 0], ArrowRight: [-PAN_STEP, 0], ArrowUp: [0, PAN_STEP], ArrowDown: [0, -PAN_STEP] }[e.key];
+  if (pan && target === viewerContainer.value && zoomLevel.value > 1) {
+    e.preventDefault();
+    panX.value += pan[0];
+    panY.value += pan[1];
+    return;
+  }
+
   switch (e.key) {
     case '+':
     case '=':
@@ -402,14 +432,12 @@ const handleFullscreenChange = () => {
 };
 
 onMounted(() => {
-  document.addEventListener('keydown', handleKeydown);
   document.addEventListener('fullscreenchange', handleFullscreenChange);
   document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
   document.addEventListener('msfullscreenchange', handleFullscreenChange);
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener('keydown', handleKeydown);
   document.removeEventListener('fullscreenchange', handleFullscreenChange);
   document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
   document.removeEventListener('msfullscreenchange', handleFullscreenChange);
@@ -420,6 +448,11 @@ onBeforeUnmount(() => {
 .diff-viewer {
   @apply relative overflow-hidden rounded-tile border border-line bg-surface-sunken;
   height: v-bind(containerHeight);
+}
+/* Touch drags pan the zoomed image instead of scrolling the page */
+.diff-viewer-zoomed {
+  touch-action: none;
+  @apply cursor-grab;
 }
 .diff-viewer-fullscreen {
   @apply fixed inset-0 z-50 rounded-none;
