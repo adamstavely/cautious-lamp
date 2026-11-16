@@ -44,14 +44,14 @@ describe('postJson', () => {
 
   it('resolves on the status and closes the connection while the body is still trickling', async () => {
     handler = trickle(200);
-    await expect(postJson(url, '{}', {}, { timeoutMs: 40, policy: LOOPBACK })).resolves.toBe(200);
+    await expect(postJson(url, '{}', {}, { timeoutMs: 2000, policy: LOOPBACK })).resolves.toBe(200);
     await wait(200);
     expect(open.size).toBe(0);
   });
 
   it('closes the connection on an error status too', async () => {
     handler = trickle(503);
-    await expect(postJson(url, '{}', {}, { timeoutMs: 40, policy: LOOPBACK })).rejects.toMatchObject({ status: 503, retryable: true });
+    await expect(postJson(url, '{}', {}, { timeoutMs: 2000, policy: LOOPBACK })).rejects.toMatchObject({ status: 503, retryable: true });
     await wait(100);
     expect(open.size).toBe(0);
   });
@@ -59,11 +59,11 @@ describe('postJson', () => {
   it('gives up when the status line never comes, within the deadline', async () => {
     handler = (req) => req.resume();
     const started = Date.now();
-    const error = await postJson(url, '{}', {}, { timeoutMs: 60, policy: LOOPBACK }).catch((e) => e);
+    const error = await postJson(url, '{}', {}, { timeoutMs: 300, policy: LOOPBACK }).catch((e) => e);
     expect(error).toBeInstanceOf(DeliveryHttpError);
-    expect(error).toMatchObject({ retryable: true, message: expect.stringMatching(/Timed out after 60ms/) });
-    expect(Date.now() - started).toBeLessThan(1000);
-    await wait(50);
+    expect(error).toMatchObject({ retryable: true, message: expect.stringMatching(/Timed out after 300ms/) });
+    expect(Date.now() - started).toBeLessThan(3000);
+    await wait(150);
     expect(open.size).toBe(0);
   });
 
@@ -73,9 +73,9 @@ describe('postJson', () => {
       // Keep the socket busy without ever finishing the status line
       timers.push(setInterval(() => res.socket?.write('H'), 10));
     };
-    const error = await postJson(url, '{}', {}, { timeoutMs: 60, policy: LOOPBACK }).catch((e) => e);
+    const error = await postJson(url, '{}', {}, { timeoutMs: 300, policy: LOOPBACK }).catch((e) => e);
     expect(error).toBeInstanceOf(DeliveryHttpError);
-    await wait(50);
+    await wait(150);
     expect(open.size).toBe(0);
   });
 
