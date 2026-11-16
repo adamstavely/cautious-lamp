@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Type, spacing and layout widths are in rem, so they all follow this token */
+html {
+  font-size: var(--app-root-font-size);
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

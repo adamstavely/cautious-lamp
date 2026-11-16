@@ -50,6 +50,10 @@
   --app-hero-grid-cell: 1.5rem;
   --app-hero-grid-minor: light-dark(rgba(47, 94, 168, 0.07), rgba(157, 188, 240, 0.06));
   --app-hero-grid-major: light-dark(rgba(47, 94, 168, 0.14), rgba(157, 188, 240, 0.12));
+  /* The size everything in rem is measured from: 90% of the browser's default
+     (14.4px at the usual 16px), so the app reads as it did at 90% browser zoom.
+     A percentage, so a larger default text size set in the browser still applies. */
+  --app-root-font-size: 90%;
   /* Side nav widths: the docs drawer's rail and open panel */
   --app-drawer-closed: 3rem;
   --app-drawer-open: 16rem;
