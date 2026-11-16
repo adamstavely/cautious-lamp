@@ -27,6 +27,51 @@ const STATE_BY_FIPS = new Map(US_STATES.map(([fips, abbr, name]) => [fips, { abb
 // Normalized state name or postal code → postal code, for "Cook County, Illinois"
 const STATE_ABBR = new Map(US_STATES.flatMap(([, abbr, name]) => [[normalizeName(name), abbr], [normalizeName(abbr), abbr]]));
 
+/**
+ * The Census Bureau's regions and divisions, by state FIPS code. DC is in the
+ * South Atlantic division; the territories are in neither.
+ */
+export const US_DIVISIONS = {
+  'new-england': { label: 'New England', region: 'northeast', states: ['09', '23', '25', '33', '44', '50'] },
+  'middle-atlantic': { label: 'Middle Atlantic', region: 'northeast', states: ['34', '36', '42'] },
+  'east-north-central': { label: 'East North Central', region: 'midwest', states: ['17', '18', '26', '39', '55'] },
+  'west-north-central': { label: 'West North Central', region: 'midwest', states: ['19', '20', '27', '29', '31', '38', '46'] },
+  'south-atlantic': { label: 'South Atlantic', region: 'south', states: ['10', '11', '12', '13', '24', '37', '45', '51', '54'] },
+  'east-south-central': { label: 'East South Central', region: 'south', states: ['01', '21', '28', '47'] },
+  'west-south-central': { label: 'West South Central', region: 'south', states: ['05', '22', '40', '48'] },
+  mountain: { label: 'Mountain', region: 'west', states: ['04', '08', '16', '30', '32', '35', '49', '56'] },
+  pacific: { label: 'Pacific', region: 'west', states: ['02', '06', '15', '41', '53'] },
+};
+export const US_REGIONS = Object.fromEntries(
+  [['northeast', 'Northeast'], ['midwest', 'Midwest'], ['south', 'South'], ['west', 'West']].map(([key, label]) => [
+    key,
+    { label, states: Object.values(US_DIVISIONS).filter((d) => d.region === key).flatMap((d) => d.states) },
+  ]),
+);
+
+/**
+ * Part of a US map to show on its own: `region:west`, `division:pacific` or
+ * `state:06` (a state shows its counties). Null for anything else.
+ */
+export function parseUsFocus(focus) {
+  const [kind, key] = String(focus || '').split(':');
+  if (kind === 'region' && US_REGIONS[key]) return { kind, key, label: `${US_REGIONS[key].label} region`, states: US_REGIONS[key].states };
+  if (kind === 'division' && US_DIVISIONS[key]) return { kind, key, label: `${US_DIVISIONS[key].label} division`, states: US_DIVISIONS[key].states };
+  if (kind === 'state' && STATE_BY_FIPS.has(key)) return { kind, key, label: STATE_BY_FIPS.get(key).name, states: [key] };
+  return null;
+}
+
+/** Focus choices for a US map, grouped for a UiSelect */
+export const usFocusOptions = () => [
+  { value: '', label: 'All of the United States' },
+  { group: 'Census regions', options: Object.entries(US_REGIONS).map(([key, r]) => ({ value: `region:${key}`, label: r.label })) },
+  { group: 'Census divisions', options: Object.entries(US_DIVISIONS).map(([key, d]) => ({ value: `division:${key}`, label: d.label })) },
+  {
+    group: 'A state and its counties',
+    options: US_STATES.filter(([fips]) => Number(fips) <= 56).map(([fips, , name]) => ({ value: `state:${fips}`, label: name })),
+  },
+];
+
 /** The id world-atlas gives the United States, which drills into us-atlas states. */
 export const USA_ID = '840';
 

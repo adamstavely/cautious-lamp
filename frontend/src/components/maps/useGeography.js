@@ -1,6 +1,7 @@
 import { ref, shallowRef, watch, onBeforeUnmount } from 'vue';
 import { MAP_URLS, admin1Url, loadMapFile, getGeoJSONFeatures, getBorderMesh } from '../../utils/mapData.js';
-import { AREAS, USA_ID, extentPoints, describeCountry, describeState, describeCounties, canonicalCounty, describeAdmin1 } from '../../utils/mapAreas.js';
+import { geoBounds, geoCentroid } from 'd3-geo';
+import { AREAS, USA_ID, extentPoints, describeCountry, describeState, describeCounties, canonicalCounty, describeAdmin1, parseUsFocus, usFocusOptions } from '../../utils/mapAreas.js';
 import { createRegionIndex } from '../../utils/regionMatch.js';
 
 /**
@@ -29,7 +30,7 @@ export function useGeography(getChoice) {
     loading.value = true;
     error.value = null;
     try {
-      const next = await build(choice);
+      const next = await buildGeography(choice);
       if (id !== requestId) return;
       geo.value = next;
     } catch (err) {
@@ -46,6 +47,9 @@ export function useGeography(getChoice) {
   return { geo, loading, error };
 }
 
+// Opening a state from a US map shows its counties
+const openState = (feature) => (Number(feature.id) <= 56 ? `state:${feature.id}` : null);
+
 const usStates = async () => {
   const topo = await loadMapFile(MAP_URLS.usStates);
   const features = getGeoJSONFeatures(topo, 'states');
@@ -58,12 +62,77 @@ const usStates = async () => {
     projection: { type: 'albersUsa' },
     fit: { type: 'FeatureCollection', features },
     index: createRegionIndex(features, describeState),
+    drillable: openState,
+    focusOptions: usFocusOptions(),
     remote: [],
   };
 };
 
-async function build({ area: areaKey, country, includeRemote }) {
+/** A conic projection centred on a group of features, with standard parallels inside their latitude span */
+const conicFor = (collection) => {
+  const [[, south], [, north]] = geoBounds(collection);
+  const [lon] = geoCentroid(collection);
+  const span = north - south;
+  return { type: 'conicEqualArea', rotate: [-lon, 0], parallels: [south + span / 6, north - span / 6] };
+};
+
+/**
+ * Part of the US on its own: the states of a Census region or division (with
+ * their counties on a counties map), or one state's counties. Other states are
+ * drawn faintly around it. `outsideIndex` matches names anywhere in the US, so
+ * data for places outside the view is reported as such, not as unknown.
+ */
+async function usFocus(areaKey, focus) {
+  const area = AREAS[areaKey];
+  const parent = { area: areaKey, label: area.label };
+  const showCounties = focus.kind === 'state' || area.source === 'us-counties';
+  const inFocus = (fips) => focus.states.includes(String(fips).slice(0, 2));
+  const base = { key: `${areaKey}/${focus.kind}:${focus.key}`, country: `${focus.kind}:${focus.key}`, countryName: focus.label, name: focus.label, parent, overlay: null, remote: [] };
+
+  if (!showCounties) {
+    const topo = await loadMapFile(MAP_URLS.usStates);
+    const all = getGeoJSONFeatures(topo, 'states');
+    const features = all.filter((f) => inFocus(f.id));
+    return {
+      ...base,
+      kind: 'us-focus',
+      features,
+      context: all.filter((f) => !inFocus(f.id)),
+      // Albers USA keeps Alaska and Hawaii in their insets for the Pacific and the West
+      projection: { type: 'albersUsa' },
+      fit: { type: 'FeatureCollection', features },
+      index: createRegionIndex(features, describeState),
+      outsideIndex: createRegionIndex(all, describeState),
+      drillable: openState,
+    };
+  }
+
+  const topo = await loadMapFile(MAP_URLS.usCounties);
+  const all = getGeoJSONFeatures(topo, 'counties');
+  const states = getGeoJSONFeatures(topo, 'states');
+  const features = all.filter((f) => inFocus(f.id));
+  const fit = { type: 'FeatureCollection', features };
+  const spansInsets = focus.states.some((fips) => fips === '02' || fips === '15') && focus.states.length > 1;
+  return {
+    ...base,
+    kind: 'us-focus',
+    features,
+    context: states.filter((f) => !inFocus(f.id)),
+    // State lines over a region's counties
+    overlay: focus.kind === 'state' ? null : getBorderMesh(topo, 'states'),
+    projection: spansInsets ? { type: 'albersUsa' } : conicFor(fit),
+    fit,
+    index: createRegionIndex(features, describeCounties(features), { canonical: canonicalCounty }),
+    outsideIndex: createRegionIndex(all, describeCounties(all), { canonical: canonicalCounty }),
+  };
+}
+
+/** The geography for a choice (exported for tests; useGeography loads it reactively) */
+export async function buildGeography({ area: areaKey, country, includeRemote }) {
   const area = AREAS[areaKey] || AREAS.world;
+  // A state or region opened from a US map (also the US opened from the world map)
+  const focus = parseUsFocus(country);
+  if (focus) return usFocus(areaKey, focus);
   if (area.source === 'us-states') return { ...(await usStates()), key: areaKey };
   if (area.source === 'us-counties') {
     const topo = await loadMapFile(MAP_URLS.usCounties);
@@ -79,6 +148,7 @@ async function build({ area: areaKey, country, includeRemote }) {
       projection: { type: 'albersUsa' },
       fit: { type: 'FeatureCollection', features },
       index: createRegionIndex(features, describeCounties(features), { canonical: canonicalCounty }),
+      focusOptions: usFocusOptions(),
       remote: [],
     };
   }
