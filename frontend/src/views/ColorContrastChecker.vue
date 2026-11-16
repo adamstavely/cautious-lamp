@@ -17,9 +17,11 @@
               :label="`${field.label} value`"
               :placeholder="field.placeholder"
               :required="field.required"
+              :error="colorErrors[field.type]"
               mono
             />
-            <button type="button" class="picker-button" :aria-label="`Pick ${field.type} color`" title="Pick color" @click="openColorPicker(field.type, $event)">
+            <!-- The accessible name starts with the visible "Pick color" (WCAG 2.5.3) -->
+            <button type="button" class="picker-button" :aria-label="`Pick color, ${field.type}`" title="Pick color" @click="openColorPicker(field.type, $event)">
               <span class="block h-32"><UiSwatch :color="colorRefs[field.type].value" size="fill" :label="`${field.label}: ${colorRefs[field.type].value}`" /></span>
               <span class="picker-button-label">
                 <AppIcon name="pipette" class="text-base" />
@@ -62,9 +64,14 @@
           <UiPanel title="Contrast">
             <div class="flex items-center gap-4" role="status">
               <span class="pair-preview" aria-hidden="true"><span class="pair-preview-fg"></span></span>
-              <div>
-                <p class="text-4xl font-semibold tracking-tight text-ink-strong">{{ contrastRatio.toFixed(2) }}</p>
+              <div v-if="pairValid">
+                <p class="text-4xl font-semibold tracking-tight text-ink-strong" data-contrast-ratio>{{ contrastRatio.toFixed(2) }}</p>
                 <p class="text-sm text-ink-secondary">Contrast ratio</p>
+              </div>
+              <!-- A colour that doesn't parse has no ratio; never show (or announce) a made-up one -->
+              <div v-else>
+                <p class="text-4xl font-semibold tracking-tight text-ink-strong" aria-hidden="true" data-contrast-ratio>—</p>
+                <p class="text-sm text-ink-secondary">Contrast ratio not available: enter two valid colors.</p>
               </div>
             </div>
           </UiPanel>
@@ -83,9 +90,15 @@
               <tbody>
                 <tr v-for="(criterion, index) in wcagCriteria" :key="index">
                   <td>{{ criterion.label }}</td>
-                  <td><UiChip :tone="criterion.aaPass ? 'success' : 'danger'">{{ criterion.aaPass ? 'Pass' : 'Fail' }}</UiChip></td>
+                  <td>
+                    <UiChip v-if="pairValid" :tone="criterion.aaPass ? 'success' : 'danger'">{{ criterion.aaPass ? 'Pass' : 'Fail' }}</UiChip>
+                    <span v-else>—<span class="sr-only">not available</span></span>
+                  </td>
                   <td class="font-code">{{ criterion.aaMinimum }}</td>
-                  <td><UiChip :tone="criterion.aaaPass ? 'success' : 'danger'">{{ criterion.aaaPass ? 'Pass' : 'Fail' }}</UiChip></td>
+                  <td>
+                    <UiChip v-if="pairValid" :tone="criterion.aaaPass ? 'success' : 'danger'">{{ criterion.aaaPass ? 'Pass' : 'Fail' }}</UiChip>
+                    <span v-else>—<span class="sr-only">not available</span></span>
+                  </td>
                   <td class="font-code">{{ criterion.aaaMinimum }}</td>
                 </tr>
               </tbody>
@@ -103,6 +116,9 @@
                 </tr>
               </thead>
               <tbody>
+                <tr v-if="!pairValid">
+                  <td colspan="4" class="text-sm text-ink-secondary">Enter two valid colors to simulate color vision deficiencies.</td>
+                </tr>
                 <tr v-for="(vision, index) in visionTypes" :key="index">
                   <td>
                     <span class="flex">
@@ -178,6 +194,18 @@ const colorFields = [
 ];
 const colorRefs = { foreground: foregroundColor, background: backgroundColor };
 
+// A value chroma can't read has no contrast: flag it on its field instead of
+// silently treating it as a colour (which gave ratio 1.00 and every check failing)
+const isValidColor = (value) => {
+  const text = String(value ?? '').trim();
+  return text !== '' && chroma.valid(text);
+};
+const colorErrors = computed(() => ({
+  foreground: isValidColor(foregroundColor.value) ? '' : 'Enter a color in a supported format (HEX, RGB or HSL).',
+  background: isValidColor(backgroundColor.value) ? '' : 'Enter a color in a supported format (HEX, RGB or HSL).',
+}));
+const pairValid = computed(() => !colorErrors.value.foreground && !colorErrors.value.background);
+
 // The formats the inputs accept
 const supportedFormats = [
   { space: 'HEX', opaque: '#FFFFFF', alpha: '#FFFFFFFF' },
@@ -216,6 +244,7 @@ const resolvePair = () => {
 
 // Calculate contrast ratio
 const contrastRatio = computed(() => {
+  if (!pairValid.value) return null;
   try {
     const { fgRgb, bgRgb } = resolvePair();
     
@@ -227,13 +256,13 @@ const contrastRatio = computed(() => {
     
     return (lighter + 0.05) / (darker + 0.05);
   } catch (error) {
-    return 1;
+    return null;
   }
 });
 
 // WCAG Criteria
 const wcagCriteria = computed(() => {
-  const ratio = contrastRatio.value;
+  const ratio = contrastRatio.value ?? 0;
   
   return [
     {
@@ -343,6 +372,7 @@ const rgbToLab = (rgb) => {
 
 // Vision types with simulated colors
 const visionTypes = computed(() => {
+  if (!pairValid.value) return [];
   try {
     const { fgRgb, bgRgb } = resolvePair();
     

@@ -146,7 +146,7 @@ describe('Dependency graph', () => {
     await open(ComponentDependencyGraph);
     expect(page.state.edges).toEqual([]);
     expect(text()).toContain('No dependencies recorded');
-    expect(document.querySelector('svg[role="img"]')).toBe(null);
+    expect(document.querySelector('svg[role="group"]')).toBe(null);
     // The list still shows every component
     expect(text()).toContain('Legacy tabs');
   });
@@ -165,7 +165,7 @@ describe('Dependency graph', () => {
     const { positions } = page.state.layout;
     expect(positions.get('button').y).toBeLessThan(positions.get('card').y);
     expect(positions.get('card').y).toBeLessThan(positions.get('old-card').y);
-    expect(document.querySelector('svg[role="img"]').getAttribute('aria-label')).toContain('Old card depends on Card, Button');
+    expect(document.querySelector('svg[role="group"]').getAttribute('aria-label')).toContain('Old card depends on Card, Button');
     expect(page.state.names(page.state.dependentsOf('button'))).toBe('Card, Old card');
 
     page.state.focusId = 'card';

@@ -13,7 +13,7 @@
         :max="max"
         :step="step"
         :aria-describedby="describedBy"
-        :aria-valuetext="display"
+        :aria-valuetext="valuetext || display"
         @input="$emit('update:modelValue', Number($event.target.value))"
       />
     </template>
@@ -34,6 +34,8 @@ const props = defineProps({
   hint: { type: String, default: '' },
   unit: { type: String, default: '' },
   id: { type: String, default: '' },
+  /** What a screen reader says for the value when the number alone needs context ("50 of 100 (0 very low, 100 very high)") */
+  valuetext: { type: String, default: '' },
 });
 
 defineEmits(['update:modelValue']);

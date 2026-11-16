@@ -27,7 +27,7 @@
             <UiInput v-model="filters.userId" label="User ID" placeholder="Filter by user ID" />
             <UiSelect v-model="filters.action" label="Action" :options="actionOptions" />
             <UiInput v-model="filters.resourceType" label="Resource type" placeholder="e.g., component, token" />
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <UiInput v-model="filters.startDate" type="date" label="From" />
               <UiInput v-model="filters.endDate" type="date" label="To" />
             </div>
@@ -126,10 +126,13 @@
           <dd class="mt-1 space-y-2">
             <div v-for="(change, idx) in selectedLog.changes" :key="idx" class="p-3 rounded-tile bg-surface-sunken">
               <div class="font-medium text-ink-strong">{{ change.field }}</div>
-              <div class="text-sm text-ink-secondary">
-                <del class="text-danger">{{ JSON.stringify(change.oldValue) }}</del>
-                →
-                <ins class="no-underline text-success">{{ JSON.stringify(change.newValue) }}</ins>
+              <!-- "Was" and "Now" in words: the colours alone don't say which is which -->
+              <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-secondary">
+                <span class="font-medium">Was</span>
+                <del class="break-all text-danger">{{ JSON.stringify(change.oldValue) }}</del>
+                <span aria-hidden="true">→</span>
+                <span class="font-medium">now</span>
+                <ins class="break-all no-underline text-success">{{ JSON.stringify(change.newValue) }}</ins>
               </div>
             </div>
           </dd>

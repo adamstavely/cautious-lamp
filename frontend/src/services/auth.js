@@ -79,6 +79,12 @@ export const authState = reactive({
   ...readStoredToken(),
   /** The `Me` object from /auth/me, or null when signed out / not loaded yet */
   user: initialMockUser(),
+  /**
+   * True from EXPIRY_WARNING_MS before the token expires until the session
+   * ends, is renewed by signing in again, or the person dismisses the warning
+   * (WCAG 2.2.1). SessionExpiryWarning shows it.
+   */
+  expiringSoon: false,
 });
 
 let mePromise = null;
@@ -88,6 +94,7 @@ let devSignInPromise = null;
 let devSignInFailed = false;
 let router = null;
 let expiryTimer = null;
+let warningTimer = null;
 // Set when a session ends because its token expired, so the sign-in page can
 // say so. Cleared by consumeSessionExpired(), sign-in and sign-out.
 let sessionExpired = false;
@@ -127,14 +134,35 @@ export const consumeSessionExpired = () => {
 
 // setTimeout can't wait longer than 2^31-1 ms; longer sessions re-arm.
 const MAX_TIMER_MS = 2 ** 31 - 1;
+/** How long before the token expires the warning appears. */
+export const EXPIRY_WARNING_MS = 2 * 60 * 1000;
 
-/** Sign out and go to /login when the token expires, even if the page is idle. */
-const scheduleExpiry = () => {
+const clearTimers = () => {
   if (expiryTimer) clearTimeout(expiryTimer);
+  if (warningTimer) clearTimeout(warningTimer);
   expiryTimer = null;
+  warningTimer = null;
+};
+
+/**
+ * Warn EXPIRY_WARNING_MS before the token expires, then sign out and go to
+ * /login when it does, even if the page is idle. The backend has no refresh
+ * endpoint, so the warning offers signing in again rather than extending.
+ */
+const scheduleExpiry = () => {
+  clearTimers();
+  authState.expiringSoon = false;
   if (isMockAuth() || !authState.token || !authState.expiresAt) return;
   const remaining = new Date(authState.expiresAt).getTime() - Date.now();
   if (!Number.isFinite(remaining)) return;
+  const untilWarning = remaining - EXPIRY_WARNING_MS;
+  if (untilWarning <= 0) authState.expiringSoon = remaining > 0;
+  else if (untilWarning <= MAX_TIMER_MS) {
+    warningTimer = setTimeout(() => {
+      warningTimer = null;
+      authState.expiringSoon = true;
+    }, untilWarning);
+  }
   expiryTimer = setTimeout(() => {
     expiryTimer = null;
     if (dropExpiredSession()) redirectToLogin();
@@ -170,8 +198,8 @@ export const hasPermission = (permission) => {
 
 /** Forget the token and user (no server call). */
 export function clearSession() {
-  if (expiryTimer) clearTimeout(expiryTimer);
-  expiryTimer = null;
+  clearTimers();
+  authState.expiringSoon = false;
   authState.token = null;
   authState.expiresAt = null;
   authState.user = null;
@@ -303,6 +331,23 @@ export async function logout() {
   } catch {
     // Already signed out locally; an expired or revoked token is fine
   }
+}
+
+/** Hide the expiry warning; the session still ends on time. */
+export function dismissExpiryWarning() {
+  authState.expiringSoon = false;
+}
+
+/**
+ * From the expiry warning: end this session now and go to /login, coming back
+ * to the current page after signing in (unsaved changes are lost). Only the
+ * local session is cleared; the token simply expires on the server.
+ */
+export function signInAgain() {
+  const current = router?.currentRoute.value;
+  clearSession();
+  sessionExpired = false;
+  if (router) router.replace({ path: '/login', query: { redirect: safeRedirect(current?.fullPath) } });
 }
 
 /**

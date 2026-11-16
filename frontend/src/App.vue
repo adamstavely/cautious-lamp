@@ -31,6 +31,9 @@
       
       <!-- Toast Notifications -->
       <Toast />
+
+      <!-- Two minutes before the sign-in session ends (WCAG 2.2.1) -->
+      <SessionExpiryWarning />
     </div>
   </div>
 </template>
@@ -45,6 +48,7 @@ import InfoBanner from './components/InfoBanner.vue';
 import EeroChatbot from './components/EeroChatbot.vue';
 import LoupeTool from './components/LoupeTool.vue';
 import Toast from './components/Toast.vue';
+import SessionExpiryWarning from './components/SessionExpiryWarning.vue';
 import { useFeatureFlag } from './composables/useFeatureFlags';
 import { useAuth } from './composables/useAuth.js';
 

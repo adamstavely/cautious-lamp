@@ -9,14 +9,13 @@
 
     <PageSection title="Overview" description="Measured by the server; figures with no data yet say so.">
       <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <UiStat label="Overall health" icon="circle-check" :tone="scoreTone(overallHealth)">
-          <span class="flex items-baseline gap-2">
-            {{ formatPercent(overallHealth) }}
-            <span v-if="healthScore?.trend" class="flex items-center gap-1 text-xs font-medium" :class="trendTone">
+        <UiStat label="Overall health" icon="circle-check" :value="formatPercent(overallHealth)" :tone="scoreTone(overallHealth)">
+          <template v-if="healthScore?.trend" #footer>
+            <p class="flex items-start gap-1 text-xs font-medium" :class="trendTone">
               <AppIcon :name="trendIcon" class="text-sm" />
-              {{ healthScore.trend.change >= 0 ? '+' : '' }}{{ healthScore.trend.change.toFixed(1) }}
-            </span>
-          </span>
+              {{ trendText }}
+            </p>
+          </template>
         </UiStat>
         <UiStat
           label="Components"
@@ -102,7 +101,7 @@
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           role="img"
-          :aria-label="`Health score from ${trendStart} to ${trendEnd}`"
+          :aria-label="healthTrendSummary"
         >
           <rect
             v-for="(trend, index) in healthScoreTrends"
@@ -114,12 +113,47 @@
             :width="Math.max(0.1, 100 / healthScoreTrends.length - 0.3)"
             :height="Math.min(100, trend.score)"
           >
-            <title>{{ new Date(trend.date).toLocaleDateString() }}: {{ trend.score.toFixed(1) }}%</title>
+            <title>{{ new Date(trend.date).toLocaleDateString() }}: {{ trend.score.toFixed(1) }}% ({{ scoreRating(trend.score) }})</title>
           </rect>
+          <!-- The bands are also marked by dashed lines, not only by colour -->
+          <line x1="0" x2="100" y1="20" y2="20" class="trend-threshold" />
+          <line x1="0" x2="100" y1="40" y2="40" class="trend-threshold" />
         </svg>
         <div class="flex justify-between mt-4 text-xs text-ink-muted">
           <span>{{ trendStart }}</span>
           <span>{{ trendEnd }}</span>
+        </div>
+        <p class="mt-2 text-xs text-ink-secondary">
+          Dashed lines mark 80% and 60%: bars reaching above the top line are good, between the lines fair, below the lower line poor.
+        </p>
+        <UiButton
+          class="mt-4"
+          size="sm"
+          variant="ghost"
+          :icon="showHealthTable ? 'chevron-up' : 'table'"
+          :aria-expanded="showHealthTable"
+          aria-controls="health-trend-table"
+          @click="showHealthTable = !showHealthTable"
+        >
+          {{ showHealthTable ? 'Hide table' : 'Show as table' }}
+        </UiButton>
+        <div v-show="showHealthTable" id="health-trend-table" class="mt-4">
+          <UiTable caption="Daily health score, last 30 days" bordered compact>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Score</th>
+                <th scope="col">Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(trend, index) in healthScoreTrends" :key="index">
+                <th scope="row" class="font-medium text-ink-strong">{{ new Date(trend.date).toLocaleDateString() }}</th>
+                <td>{{ trend.score.toFixed(1) }}%</td>
+                <td>{{ scoreRating(trend.score) }}</td>
+              </tr>
+            </tbody>
+          </UiTable>
         </div>
       </UiPanel>
     </PageSection>
@@ -216,7 +250,7 @@
       <UiPanel class="mt-6" title="Usage trends" description="Last 30 days." heading-tag="h3">
         <p v-if="usageTrends.length === 0" class="text-sm text-ink-secondary">Not collected: no usage recorded in the last 30 days.</p>
         <template v-else>
-          <svg class="trend-chart h-32" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Component usage per day, last 30 days">
+          <svg class="trend-chart h-32" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" :aria-label="usageTrendSummary">
             <rect
               v-for="(day, index) in usageTrends"
               :key="index"
@@ -231,6 +265,33 @@
           </svg>
           <div class="flex gap-2 mt-1" aria-hidden="true">
             <span v-for="(day, index) in usageTrends" :key="index" class="flex-1 text-center text-xs text-ink-muted">{{ day.label }}</span>
+          </div>
+          <UiButton
+            class="mt-4"
+            size="sm"
+            variant="ghost"
+            :icon="showUsageTable ? 'chevron-up' : 'table'"
+            :aria-expanded="showUsageTable"
+            aria-controls="usage-trend-table"
+            @click="showUsageTable = !showUsageTable"
+          >
+            {{ showUsageTable ? 'Hide table' : 'Show as table' }}
+          </UiButton>
+          <div v-show="showUsageTable" id="usage-trend-table" class="mt-4">
+            <UiTable caption="Component uses per day, last 30 days" bordered compact>
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Uses</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(day, index) in usageTrends" :key="index">
+                  <th scope="row" class="font-medium text-ink-strong">{{ day.date }}</th>
+                  <td>{{ day.usage }}</td>
+                </tr>
+              </tbody>
+            </UiTable>
           </div>
         </template>
       </UiPanel>
@@ -528,14 +589,43 @@ const trendTone = computed(() => {
   return direction === 'up' ? 'text-success' : direction === 'down' ? 'text-danger' : 'text-ink-muted';
 });
 
+/** "Up 1.2 points since the last daily snapshot": the delta's meaning in words, not only its sign and colour */
+const trendText = computed(() => {
+  const change = healthScore.value?.trend?.change;
+  if (typeof change !== 'number') return '';
+  const points = (value) => `${Math.abs(value).toFixed(1)} ${Math.abs(value) === 1 ? 'point' : 'points'}`;
+  if (change > 0) return `Up ${points(change)} since the last daily snapshot`;
+  if (change < 0) return `Down ${points(change)} since the last daily snapshot`;
+  return 'No change since the last daily snapshot';
+});
+
+const showHealthTable = ref(false);
+const showUsageTable = ref(false);
+
 const trendStart = computed(() => (healthScoreTrends.value.length > 0 ? new Date(healthScoreTrends.value[0].date).toLocaleDateString() : ''));
 const trendEnd = computed(() =>
   healthScoreTrends.value.length > 0 ? new Date(healthScoreTrends.value[healthScoreTrends.value.length - 1].date).toLocaleDateString() : '',
 );
 
+/** The health trend chart's name: its range and the figures in it */
+const healthTrendSummary = computed(() => {
+  const scores = healthScoreTrends.value.map((t) => t.score);
+  if (!scores.length) return 'Health score: no history yet';
+  const pct = (value) => `${value.toFixed(1)}%`;
+  return `Health score from ${trendStart.value} to ${trendEnd.value}: latest ${pct(scores[scores.length - 1])}, lowest ${pct(Math.min(...scores))}, highest ${pct(Math.max(...scores))}. Use Show as table for each day.`;
+});
+
+const usageTrendSummary = computed(() => {
+  const days = usageTrends.value;
+  if (!days.length) return 'Component usage per day: none recorded';
+  const uses = days.map((d) => d.usage);
+  return `Component usage per day, last 30 days: latest ${uses[uses.length - 1]}, lowest ${Math.min(...uses)}, highest ${Math.max(...uses)}. Use Show as table for each day.`;
+});
+
 /** Tone for a 0–100 score: 80+ good, 60+ fair, below that poor */
 const scoreTone = (score) => (score === null || score === undefined ? 'neutral' : score >= 80 ? 'success' : score >= 60 ? 'warning' : 'danger');
 const scoreFill = (score) => ({ success: 'fill-success-solid', warning: 'fill-warning-solid', danger: 'fill-danger-solid', neutral: 'fill-chart-neutral' })[scoreTone(score)];
+const scoreRating = (score) => ({ success: 'Good', warning: 'Fair', danger: 'Poor', neutral: 'Not rated' })[scoreTone(score)];
 const priorityTone = (priority) => (priority === 'high' ? 'danger' : priority === 'medium' ? 'warning' : 'info');
 const debtTone = (score) => (score >= 70 ? 'danger' : score >= 40 ? 'warning' : 'success');
 
@@ -739,5 +829,11 @@ const gradeTone = (grade) => ({ A: 'success', B: 'success', C: 'warning', D: 'wa
 }
 .trend-bar {
   @apply transition-opacity hover:opacity-80;
+}
+.trend-threshold {
+  @apply stroke-ink-muted;
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
 }
 </style>

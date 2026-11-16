@@ -23,14 +23,16 @@
     <section class="capability">
       <UiCheckbox v-model="model.visualRegression.enabled"><span class="capability-title">Visual regression testing</span></UiCheckbox>
       <div v-if="model.visualRegression.enabled" class="grid md:grid-cols-2 gap-5">
-        <UiInput v-model="model.visualRegression.argosProjectId" label="Argos project" required maxlength="200" placeholder="acme/web" hint="Account and project name, as owner/project." />
-        <UiInput v-model="model.visualRegression.argosBranch" label="Branch" maxlength="200" pattern="[A-Za-z0-9._\/\-]+" placeholder="main" />
+        <UiInput v-model="model.visualRegression.argosProjectId" name="argosProjectId" label="Argos project" required maxlength="200" placeholder="acme/web" hint="Account and project name, as owner/project." :error="errors.argosProjectId" />
+        <UiInput v-model="model.visualRegression.argosBranch" name="argosBranch" label="Branch" maxlength="200" pattern="[A-Za-z0-9._\/\-]+" placeholder="main" :error="errors.argosBranch" />
         <UiInput
           v-model="model.visualRegression.argosBaseUrl"
+          name="argosBaseUrl"
           type="url"
           label="Argos API URL"
           placeholder="https://api.argos-ci.com/v2"
           hint="Only for a self-hosted Argos. Must be on the server's allowed list (ARGOS_ALLOWED_BASE_URLS)."
+          :error="errors.argosBaseUrl"
         />
         <UiInput
           v-model="model.visualRegression.argosToken"
@@ -51,27 +53,33 @@
           <UiInput
             v-model="model.sessionReplay.openreplayProjectKey"
             id="app-openreplay-project-key"
+            name="openreplayProjectKey"
             label="OpenReplay project key"
             required
             mono
             maxlength="100"
             hint="In OpenReplay's project settings. The tracker uses it."
+            :error="errors.openreplayProjectKey"
           />
           <UiInput
             v-model="model.sessionReplay.openreplayProjectId"
             id="app-openreplay-project-id"
+            name="openreplayProjectId"
             label="OpenReplay project ID (optional)"
             inputmode="numeric"
             pattern="[0-9]*"
             placeholder="e.g. 42"
             hint="The number in OpenReplay's address bar, for links to replays. Filled in for you when you add an API key."
+            :error="errors.openreplayProjectId"
           />
           <UiInput
             v-model="model.sessionReplay.openreplayBaseUrl"
+            name="openreplayBaseUrl"
             type="url"
             label="OpenReplay base URL"
             placeholder="https://api.openreplay.com"
             hint="Must be a public address, or one the server allows (OPENREPLAY_ALLOWED_BASE_URLS)."
+            :error="errors.openreplayBaseUrl"
           />
           <UiInput
             v-model="model.sessionReplay.openreplayApiKey"
@@ -114,6 +122,10 @@ import { INPUT_MODE_OPTIONS } from '../session-replay/captureSettings.js';
 
 /** Edits the object from capabilitiesForm() in place (v-model) */
 const model = defineModel({ type: Object, required: true });
+defineProps({
+  /** Messages for fields the page validated, by field name (e.g. { argosProjectId: 'Enter the Argos project.' }) */
+  errors: { type: Object, default: () => ({}) },
+});
 
 const scheduleOptions = [
   { value: 'manual', label: 'Manual' },

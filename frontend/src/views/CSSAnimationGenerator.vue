@@ -77,8 +77,15 @@
     <PageSection title="Preview" divided>
       <UiPanel title="Live preview">
         <template #actions>
-          <UiButton size="sm" icon="rotate-ccw" label="Replay" @click="replayPreview" />
+          <div class="flex flex-wrap gap-2">
+            <!-- Looping animations must be stoppable (WCAG 2.2.2); the name says what a press does next -->
+            <UiButton size="sm" :icon="paused ? 'play' : 'pause'" :label="paused ? 'Play' : 'Pause'" data-preview-toggle @click="togglePlayback" />
+            <UiButton size="sm" icon="rotate-ccw" label="Replay" @click="replayPreview" />
+          </div>
         </template>
+        <p v-if="reducedMotion" class="mb-3 text-sm text-ink-muted" data-reduced-motion-hint>
+          Your device asks for reduced motion, so the preview starts paused. Press Play to watch it.
+        </p>
         <div class="w-full h-64 rounded-tile flex items-center justify-center bg-surface-sunken">
           <div :key="previewKey" class="anim-preview flex items-center justify-center font-medium">Preview</div>
         </div>
@@ -101,6 +108,7 @@
 import { ref, computed, watchEffect, onBeforeUnmount } from 'vue';
 import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiCodeBlock, UiInput, UiPanel, UiSelect } from '../components/ui';
 import { focusAfterRemoval } from '../utils/focusAfterRemoval';
+import { mediaMatches } from '../composables/useMediaQuery.js';
 
 const animationName = ref('fadeIn');
 const duration = ref(300);
@@ -330,9 +338,20 @@ const exportButtons = [
   { format: 'json', icon: 'braces', label: 'Export JSON' },
 ];
 
+// The preview can be paused (looping presets would otherwise move forever);
+// with reduced motion requested it starts paused
+const reducedMotion = mediaMatches('(prefers-reduced-motion: reduce)');
+const paused = ref(reducedMotion);
+const playState = computed(() => (paused.value ? 'paused' : 'running'));
+const togglePlayback = () => {
+  paused.value = !paused.value;
+};
+
 const previewKey = ref(0);
+// Replaying is a request to watch it, so it also resumes a paused preview
 const replayPreview = () => {
   previewKey.value++;
+  paused.value = false;
 };
 
 const toggleProperty = (keyframe, propertyName, enabled) => {
@@ -368,7 +387,8 @@ const loadPreset = (preset) => {
   timingFunction.value = preset.timingFunction || 'ease';
   // Reset, so e.g. Bounce (infinite) followed by Fade doesn't stay infinite.
   iterationCount.value = preset.iterationCount || '1';
-  replayPreview();
+  // Restart from the top, but keep a paused preview paused
+  previewKey.value++;
 };
 
 const downloadFile = (content, type, filename) => {
@@ -433,5 +453,7 @@ const exportFormat = (format) => {
   border-radius: v-bind(previewRadius);
   box-shadow: v-bind(previewShadow);
   animation: v-bind(animationShorthand);
+  /* After the shorthand, which would reset it */
+  animation-play-state: v-bind(playState);
 }
 </style>

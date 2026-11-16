@@ -1,4 +1,4 @@
-import { computed, h, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, h, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { createAreaProjection, createPathGenerator, createProjection } from '../../utils/mapProjections.js';
 
 /**
@@ -8,7 +8,9 @@ import { createAreaProjection, createPathGenerator, createProjection } from '../
  * context countries, the area's regions (filled by `fillFor`, or a neutral
  * base), border lines, and the hover/focus outline. Regions that can be
  * opened (a country on a world or continent map) are buttons: click, Enter
- * or Space opens them. Map types draw their own marks on top through `layer`
+ * or Space opens them. They share one tab stop (a roving tabindex): the arrow
+ * keys move between them in name order, Home and End go to the first and
+ * last, so the world map isn't ~200 Tab presses deep. Map types draw their own marks on top through `layer`
  * and their legend through `legend`.
  *
  * `layer`, `legend`, `fillFor` and `titleFor` are functions so the parent's
@@ -36,6 +38,8 @@ export default {
     defs: { type: Function, default: null },
     /** Called with (countryId) when a region that can be opened is activated */
     onOpen: { type: Function, default: null },
+    /** Appended to the accessible name: where the values can be read as text */
+    dataNote: { type: String, default: 'values are in the Table tab' },
   },
   setup(props, { expose }) {
     const containerRef = ref(null);
@@ -43,6 +47,8 @@ export default {
     const width = ref(800);
     const height = ref(500);
     const hovered = ref(null);
+    // The openable region that holds the single tab stop (a feature index)
+    const active = ref(null);
     let resizeObserver = null;
 
     const measure = () => {
@@ -90,7 +96,43 @@ export default {
 
     watch(() => props.geo, () => {
       hovered.value = null;
+      active.value = null;
     });
+
+    // Openable regions in name order, for the arrow keys
+    const openableOrder = computed(() => {
+      const geo = props.geo;
+      if (!geo || !props.onOpen || !geo.drillable) return [];
+      return geo.features
+        .map((feature, index) => ({ index, id: geo.drillable(feature), name: String(geo.index?.labels?.[index] ?? '') }))
+        .filter((r) => r.id && paths.value.features[r.index] && (!props.fillFor || props.fillFor(r.index) !== false))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((r) => r.index);
+    });
+
+    const focusRegion = (index) => {
+      active.value = index;
+      // Focus once the tab stop has moved to it
+      nextTick(() => svgRef.value?.querySelector(`[data-region-index="${index}"]`)?.focus());
+    };
+
+    const moveFocus = (event, index) => {
+      const order = openableOrder.value;
+      const at = order.indexOf(index);
+      if (at < 0 || !order.length) return false;
+      const next = {
+        ArrowRight: at + 1,
+        ArrowDown: at + 1,
+        ArrowLeft: at - 1,
+        ArrowUp: at - 1,
+        Home: 0,
+        End: order.length - 1,
+      }[event.key];
+      if (next === undefined) return false;
+      event.preventDefault();
+      focusRegion(order[(next + order.length) % order.length]);
+      return true;
+    };
 
     expose({ getSvgElement: () => svgRef.value });
 
@@ -104,6 +146,9 @@ export default {
       const ctx = { projection: projection.value, width: width.value, height: height.value, geo };
       const openable = (feature) => (props.onOpen && geo.drillable ? geo.drillable(feature) : null);
       const anyOpenable = Boolean(props.onOpen && geo.drillable);
+      const order = openableOrder.value;
+      // The tab stop: the last region focused, else the first by name
+      const tabStop = order.includes(active.value) ? active.value : order[0];
       // Thin strokes where regions are small and many
       const strokeWidth = geo.kind === 'us-counties' ? 0.25 : 0.5;
       let hoveredPath = null;
@@ -129,20 +174,23 @@ export default {
           fill: fill?.fill,
           class: ['stroke-surface-raised outline-none', fill?.class || (fill?.fill ? '' : 'fill-fill-strong'), countryId ? 'cursor-pointer' : ''],
           'stroke-width': strokeWidth,
-          tabindex: countryId ? 0 : undefined,
+          tabindex: countryId ? (index === tabStop ? 0 : -1) : undefined,
           role: countryId ? 'button' : undefined,
           'data-country': countryId || undefined,
+          'data-region-index': countryId ? index : undefined,
           'aria-label': countryId ? `${title}. Activate to show its regions.` : undefined,
           onClick: countryId ? open : undefined,
           onKeydown: countryId ? (e) => {
             if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
               e.preventDefault();
               open();
+              return;
             }
+            moveFocus(e, index);
           } : undefined,
           onMouseenter: countryId ? () => { hovered.value = index; } : undefined,
           onMouseleave: countryId ? () => { if (hovered.value === index) hovered.value = null; } : undefined,
-          onFocus: countryId ? () => { hovered.value = index; } : undefined,
+          onFocus: countryId ? () => { hovered.value = index; active.value = index; } : undefined,
           onBlur: countryId ? () => { if (hovered.value === index) hovered.value = null; } : undefined,
         }, [h('title', countryId ? `${title} (click to show its regions)` : title)]);
       });
@@ -155,7 +203,7 @@ export default {
         viewBox: `0 0 ${width.value} ${height.value}`,
         class: 'w-full h-full block',
         role: anyOpenable ? 'group' : 'img',
-        'aria-label': props.label,
+        'aria-label': [props.label, props.dataNote, anyOpenable && order.length ? 'arrow keys move between regions' : ''].filter(Boolean).join('; '),
       }, [
         props.defs ? h('defs', props.defs(ctx)) : null,
         ...context,

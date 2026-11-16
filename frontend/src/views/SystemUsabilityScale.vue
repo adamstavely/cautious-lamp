@@ -9,19 +9,28 @@
     />
 
     <PageSection>
-      <form class="space-y-6" @submit.prevent="submitForm">
+      <form class="space-y-6" novalidate @submit.prevent="submitForm">
         <UiPanel title="The system" description="What you assessed.">
-          <UiSelect v-model="form.systemName" label="System / application" :options="systemOptions" placeholder="Select a system or application" required />
+          <UiSelect
+            id="sus-system"
+            v-model="form.systemName"
+            label="System / application"
+            :options="systemOptions"
+            placeholder="Select a system or application"
+            required
+            :error="attempted && !form.systemName ? 'Choose the system or application you are assessing.' : ''"
+          />
         </UiPanel>
 
         <UiPanel title="Rate your agreement with each statement" description="1 = strongly disagree, 5 = strongly agree.">
           <ol class="divide-y divide-line-faint">
-            <li v-for="(question, index) in questions" :key="index" class="py-4 first:pt-0 last:pb-0">
+            <li v-for="(question, index) in questions" :key="index" :data-question="index + 1" class="py-4 first:pt-0 last:pb-0">
               <UiSegmented
                 v-model="form[`q${index + 1}`]"
-                :label="`${index + 1}. ${question}`"
+                :label="question"
                 :options="ratingOptions"
                 :hint="getRatingLabel(form[`q${index + 1}`]) || '1 = strongly disagree, 5 = strongly agree'"
+                :error="attempted && !isRating(form[`q${index + 1}`]) ? 'Choose a rating for this statement.' : ''"
               />
             </li>
           </ol>
@@ -48,6 +57,7 @@ import { ref, computed } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiPanel, UiSegmented, UiSelect } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
+import { focusSoon } from '../utils/focusAfterRemoval.js';
 import apiClient from '../services/api.js';
 import { authState } from '../services/auth.js';
 
@@ -102,7 +112,12 @@ const systemOptions = ref([
   { value: 'Other', label: 'Other' },
 ]);
 
-const ratingOptions = [1, 2, 3, 4, 5].map((value) => ({ value, label: String(value) }));
+// The buttons show only the number; screen readers also hear where it sits on the scale
+const ratingNames = { 1: 'strongly disagree', 2: 'disagree', 3: 'neutral', 4: 'agree', 5: 'strongly agree' };
+const ratingOptions = [1, 2, 3, 4, 5].map((value) => ({ value, label: String(value), srLabel: `${value}, ${ratingNames[value]}` }));
+
+// Errors show next to each field once the person has tried to submit
+const attempted = ref(false);
 
 const isRating = (value) => Number.isInteger(value) && value >= 1 && value <= 5;
 
@@ -147,12 +162,16 @@ const getScoreInterpretation = (score) => {
 };
 
 const submitForm = async () => {
+  attempted.value = true;
   if (!form.value.systemName) {
     showNotice('Choose the system or application you are assessing.', 'error');
+    focusSoon('#sus-system');
     return;
   }
   if (unansweredQuestions.value.length > 0) {
     showNotice(`Answer every statement before submitting (missing: ${unansweredQuestions.value.join(', ')}).`, 'error');
+    // The first unanswered group's roving tab stop (its first option, as nothing is chosen)
+    focusSoon(`[data-question="${unansweredQuestions.value[0]}"] [role="radio"][tabindex="0"]`);
     return;
   }
 
@@ -172,6 +191,7 @@ const submitForm = async () => {
 
     const score = typeof response.data?.score === 'number' ? response.data.score : localScore;
     showNotice(`Assessment submitted and saved. SUS score: ${score}.`, 'success');
+    attempted.value = false;
     
     // Reset form
     form.value = {

@@ -9,11 +9,19 @@
     />
 
     <PageSection>
-      <form class="space-y-6" @submit.prevent="submitEvaluation">
+      <form class="space-y-6" novalidate @submit.prevent="submitEvaluation">
         <UiPanel title="The evaluation" description="What you evaluated, and who evaluated it.">
           <div class="grid gap-6 md:grid-cols-2">
-            <UiSelect v-model="form.systemName" label="System / application" :options="systemOptions" placeholder="Select a system or application" required />
-            <UiInput v-model="form.evaluator" label="Evaluator name" required placeholder="Enter your name" />
+            <UiSelect
+              id="he-system"
+              v-model="form.systemName"
+              label="System / application"
+              :options="systemOptions"
+              placeholder="Select a system or application"
+              required
+              :error="errors.systemName"
+            />
+            <UiInput id="he-evaluator" v-model="form.evaluator" label="Evaluator name" required placeholder="Enter your name" :error="errors.evaluator" />
           </div>
         </UiPanel>
 
@@ -22,13 +30,16 @@
             <li v-for="(heuristic, index) in heuristics" :key="index">
               <UiPanel :title="`${index + 1}. ${heuristic.name}`" :description="heuristic.description" heading-tag="h3">
                 <div class="space-y-4">
+                  <!-- Each label names its heuristic, so the ten fields are told apart out of context -->
                   <UiTextarea
+                    :id="`he-issues-${index}`"
                     v-model="form.heuristics[index].issues"
-                    label="Issues found"
+                    :label="`Issues found: ${heuristic.name}`"
                     rows="3"
                     :placeholder="`Describe any issues related to ${heuristic.name.toLowerCase()}...`"
+                    :error="errors.issues?.[index]"
                   />
-                  <UiSegmented v-model="form.heuristics[index].severity" label="Severity rating" :options="severityOptions" />
+                  <UiSegmented v-model="form.heuristics[index].severity" :label="`Severity rating: ${heuristic.name}`" :options="severityOptions" />
                 </div>
               </UiPanel>
             </li>
@@ -63,10 +74,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { computed, ref, reactive } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { PageHero, PageSection, PageShell, UiButton, UiInput, UiPanel, UiSegmented, UiSelect, UiStat, UiTextarea } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
+import { focusSoon } from '../utils/focusAfterRemoval.js';
 import apiClient from '../services/api.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
@@ -164,6 +176,7 @@ const resetForm = () => {
     severity: 0
   }));
   form.overallAssessment = '';
+  attempted.value = false;
   results.value = null;
   clearNotice();
 };
@@ -184,6 +197,26 @@ const calculateResults = () => {
   };
 };
 
+// Errors show next to each field once the person has tried to submit
+const attempted = ref(false);
+const errors = computed(() => {
+  if (!attempted.value) return {};
+  return {
+    systemName: form.systemName ? '' : 'Choose the system or application you evaluated.',
+    evaluator: form.evaluator.trim() ? '' : 'Enter the evaluator name.',
+    issues: form.heuristics.map((h) => (h.severity > 0 && !h.issues.trim() ? 'Describe the issues, as this heuristic is rated above "No Issues".' : '')),
+  };
+});
+
+// The first field with an error, in page order
+const firstInvalidField = () => {
+  const e = errors.value;
+  if (e.systemName) return '#he-system';
+  if (e.evaluator) return '#he-evaluator';
+  const index = (e.issues ?? []).findIndex(Boolean);
+  return index >= 0 ? `#he-issues-${index}` : null;
+};
+
 const validate = () => {
   if (!form.systemName) return 'Choose the system or application you evaluated.';
   if (!form.evaluator.trim()) return 'Enter the evaluator name.';
@@ -197,9 +230,12 @@ const validate = () => {
 };
 
 const submitEvaluation = async () => {
+  attempted.value = true;
   const problem = validate();
   if (problem) {
     showNotice(problem, 'error');
+    const target = firstInvalidField();
+    if (target) focusSoon(target);
     return;
   }
 

@@ -20,11 +20,13 @@
       </div>
     </div>
 
+    <!-- The viewer and its overlay controls go full screen together; on phones the controls sit below the viewer -->
+    <div ref="stage" class="diff-stage" :class="{ 'diff-stage-fullscreen': isFullscreen }">
     <!-- Diff viewer -->
     <div
       ref="viewerContainer"
       class="diff-viewer"
-      :class="{ 'diff-viewer-fullscreen': isFullscreen, 'diff-viewer-dark': currentViewMode === 'overlay', 'diff-viewer-zoomed': zoomLevel > 1 }"
+      :class="{ 'diff-viewer-dark': currentViewMode === 'overlay', 'diff-viewer-zoomed': zoomLevel > 1 }"
       tabindex="0"
       role="group"
       :aria-label="`Comparison of ${altText}`"
@@ -34,7 +36,8 @@
     >
       <!-- Slider view -->
       <div v-if="currentViewMode === 'slider'" class="diff-pane">
-        <div ref="sliderContainer" class="diff-zoom overflow-hidden">
+        <!-- A click or tap anywhere in the comparison moves the handle there (and drags from there) -->
+        <div ref="sliderContainer" class="diff-zoom diff-slider-area overflow-hidden" data-slider-area @pointerdown="onComparisonPointerDown">
           <img
             v-if="baselineImage"
             :src="baselineImage"
@@ -56,8 +59,7 @@
             aria-valuemax="100"
             :aria-valuenow="Math.round(sliderPosition)"
             :aria-valuetext="`${Math.round(sliderPosition)}% current`"
-            @mousedown.stop="startSliderDrag"
-            @touchstart.stop="startSliderDrag"
+            @pointerdown.stop="startSliderDrag"
             @keydown="onHandleKey"
           >
             <span class="diff-handle-grip">
@@ -73,8 +75,9 @@
       <!-- Side-by-side view -->
       <div v-else-if="currentViewMode === 'side-by-side'" class="diff-pane flex">
         <div ref="sideBySideContainer" class="diff-zoom flex-1 overflow-auto">
-          <div class="flex h-full">
-            <div class="flex-1 relative border-r border-line">
+          <!-- Stacked on phones, where two columns would each be too narrow to compare -->
+          <div class="flex flex-col sm:flex-row h-full">
+            <div class="flex-1 relative border-b sm:border-b-0 sm:border-r border-line">
               <span class="diff-tag left-2">Baseline</span>
               <img v-if="baselineImage" :src="baselineImage" :alt="`Baseline: ${altText}`" class="w-full h-full object-contain" draggable="false" />
             </div>
@@ -112,12 +115,6 @@
           />
         </div>
 
-        <div class="diff-overlay-controls">
-          <UiCheckbox v-model="showCurrentInOverlay" label="Show current" />
-          <div class="flex-1 min-w-48">
-            <UiRange v-model="overlayOpacityPercent" label="Diff opacity" :min="0" :max="100" :step="10" unit="%" />
-          </div>
-        </div>
       </div>
 
       <!-- Grid view -->
@@ -132,6 +129,14 @@
 
       <!-- Pan indicator -->
       <div v-if="isPanning" class="diff-pan-note" role="status">Panning mode - Drag to move</div>
+    </div>
+
+    <div v-if="currentViewMode === 'overlay'" class="diff-overlay-controls" data-overlay-controls>
+      <UiCheckbox v-model="showCurrentInOverlay" label="Show current" />
+      <div class="flex-1 min-w-48">
+        <UiRange v-model="overlayOpacityPercent" label="Diff opacity" :min="0" :max="100" :step="10" unit="%" />
+      </div>
+    </div>
     </div>
 
     <!-- Keyboard shortcuts: they work while focus is in this viewer, never with Ctrl, Cmd or Alt held -->
@@ -202,6 +207,7 @@ const keysId = `diff-viewer-keys-${useId()}`;
 
 // Refs
 const viewerContainer = ref(null);
+const stage = ref(null);
 const sliderContainer = ref(null);
 const sideBySideContainer = ref(null);
 const overlayContainer = ref(null);
@@ -209,7 +215,8 @@ const overlayContainer = ref(null);
 const viewModeLabels = { slider: 'Slider', 'side-by-side': 'Side by side', overlay: 'Overlay', grid: 'Grid' };
 
 // Values from data, used in <style> through v-bind()
-const containerHeight = computed(() => (isFullscreen.value ? '100vh' : `${props.height}px`));
+// Full screen: the viewer fills the stage's remaining height (flex), leaving room for the overlay controls on phones
+const containerHeight = computed(() => (isFullscreen.value ? 'auto' : `${props.height}px`));
 const paneHeight = computed(() => (isFullscreen.value ? '100%' : `${props.height}px`));
 const zoomTransform = computed(() => `scale(${zoomLevel.value}) translate(${panX.value / zoomLevel.value}px, ${panY.value / zoomLevel.value}px)`);
 const sliderLeft = computed(() => `${sliderPosition.value}%`);
@@ -306,36 +313,44 @@ const handleWheel = (e) => {
   }
 };
 
-// Slider drag
+// Slider drag (pointer events: mouse, touch and pen alike)
+const moveSliderTo = (clientX) => {
+  const area = sliderContainer.value ?? viewerContainer.value;
+  if (!area) return;
+  const rect = area.getBoundingClientRect();
+  if (!rect.width) return;
+  sliderPosition.value = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+};
+
 const startSliderDrag = (e) => {
+  if (e.button !== undefined && e.button !== 0) return;
   isSliderDragging.value = true;
   e.preventDefault();
-  
-  const container = viewerContainer.value;
-  if (!container) return;
-  
+
   const handleMove = (moveEvent) => {
     if (!isSliderDragging.value) return;
-    
-    const rect = container.getBoundingClientRect();
-    const clientX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
-    const x = clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    sliderPosition.value = percentage;
+    moveSliderTo(moveEvent.clientX);
   };
-  
+
   const handleEnd = () => {
     isSliderDragging.value = false;
-    document.removeEventListener('mousemove', handleMove);
-    document.removeEventListener('mouseup', handleEnd);
-    document.removeEventListener('touchmove', handleMove);
-    document.removeEventListener('touchend', handleEnd);
+    document.removeEventListener('pointermove', handleMove);
+    document.removeEventListener('pointerup', handleEnd);
+    document.removeEventListener('pointercancel', handleEnd);
   };
-  
-  document.addEventListener('mousemove', handleMove);
-  document.addEventListener('mouseup', handleEnd);
-  document.addEventListener('touchmove', handleMove, { passive: false });
-  document.addEventListener('touchend', handleEnd);
+
+  document.addEventListener('pointermove', handleMove);
+  document.addEventListener('pointerup', handleEnd);
+  document.addEventListener('pointercancel', handleEnd);
+};
+
+// A press in the comparison area jumps the handle to that point and keeps
+// dragging from there. While zoomed in, a drag pans instead (startPan).
+const onComparisonPointerDown = (e) => {
+  if (zoomLevel.value > 1 || e.ctrlKey || e.metaKey || (e.button !== undefined && e.button !== 0)) return;
+  if (e.target.closest('[role="slider"]')) return;
+  moveSliderTo(e.clientX);
+  startSliderDrag(e);
 };
 
 // Keyboard control of the slider handle
@@ -350,15 +365,16 @@ const onHandleKey = (e) => {
 
 // Fullscreen
 const toggleFullscreen = () => {
-  if (!viewerContainer.value) return;
+  const target = stage.value;
+  if (!target) return;
   
   if (!isFullscreen.value) {
-    if (viewerContainer.value.requestFullscreen) {
-      viewerContainer.value.requestFullscreen();
-    } else if (viewerContainer.value.webkitRequestFullscreen) {
-      viewerContainer.value.webkitRequestFullscreen();
-    } else if (viewerContainer.value.msRequestFullscreen) {
-      viewerContainer.value.msRequestFullscreen();
+    if (target.requestFullscreen) {
+      target.requestFullscreen();
+    } else if (target.webkitRequestFullscreen) {
+      target.webkitRequestFullscreen();
+    } else if (target.msRequestFullscreen) {
+      target.msRequestFullscreen();
     } else {
       // No Fullscreen API: fill the window with CSS instead
       isFullscreen.value = true;
@@ -454,8 +470,18 @@ onBeforeUnmount(() => {
   touch-action: none;
   @apply cursor-grab;
 }
-.diff-viewer-fullscreen {
-  @apply fixed inset-0 z-50 rounded-none;
+.diff-stage {
+  @apply relative;
+}
+.diff-stage-fullscreen {
+  @apply fixed inset-0 z-50 flex flex-col bg-surface-sunken;
+}
+.diff-stage-fullscreen .diff-viewer {
+  @apply flex-1 min-h-0 rounded-none;
+}
+/* Horizontal drags move the slider; vertical ones still scroll the page */
+.diff-slider-area {
+  touch-action: pan-y;
 }
 .diff-viewer-dark {
   @apply bg-surface-inverse;
@@ -488,8 +514,10 @@ onBeforeUnmount(() => {
 .diff-overlay-image {
   opacity: v-bind(overlayOpacity);
 }
+/* Below the viewer on phones (inside it they'd cover the image and be clipped); over its foot from sm */
 .diff-overlay-controls {
-  @apply absolute bottom-4 left-4 right-4 z-20 flex flex-wrap items-end gap-6 p-4 rounded-tile border border-line bg-surface-overlay shadow-overlay;
+  @apply mt-3 flex flex-wrap items-end gap-6 p-4 rounded-tile border border-line bg-surface-overlay shadow-overlay;
+  @apply sm:absolute sm:bottom-4 sm:left-4 sm:right-4 sm:z-20 sm:mt-0;
 }
 .diff-grid {
   @apply grid grid-cols-1 md:grid-cols-3 gap-4 p-4 overflow-auto;

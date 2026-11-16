@@ -1,7 +1,7 @@
 import { h, ref } from 'vue';
 import MapCanvas from './MapCanvas.js';
 import { surfaceProps, canvasProps, project, label } from './mapMarks.js';
-import { categorySection, formatValue, renderLegend, sizeSection } from './mapLegend.js';
+import { categorySection, formatValue, renderLegend, sizeSection, symbolPath } from './mapLegend.js';
 import { radiusScale, sizeLegendValues } from '../../utils/mapScales.js';
 
 // Direct labels for the few largest symbols only
@@ -11,12 +11,15 @@ const LABELS = 3;
  * Proportional symbols: a circle per place whose area is proportional to its
  * value (radius ∝ √value). The largest are drawn first so small ones stay on
  * top and visible; each has a surface-coloured ring to separate overlaps.
+ * With categories each symbol also takes its category's marker shape (as on
+ * the dot map; the shapes keep the circle's area, so size still reads as
+ * value), so category never rests on colour alone.
  */
 export default {
   name: 'BubbleMap',
   props: {
     ...surfaceProps,
-    /** [{ label, lng, lat, value, color }] with value > 0 (the view reports the rest) */
+    /** [{ label, lng, lat, value, color, shape? }] with value > 0 (the view reports the rest) */
     points: { type: Array, required: true },
     /** Legend entries for categories: [{ name, color, shape }]; empty for one series */
     categories: { type: Array, default: () => [] },
@@ -40,11 +43,11 @@ export default {
         .map((p) => ({ ...p, at: project(ctx.projection, p.lng, p.lat), r: radiusOf(p.value) }))
         .filter((p) => p.at && p.r > 0)
         .sort((a, b) => b.value - a.value);
-      const circles = placed.map((p, i) => h('circle', {
+      const circles = placed.map((p, i) => h('path', {
         key: `bubble-${i}`,
-        cx: p.at[0],
-        cy: p.at[1],
-        r: p.r,
+        d: symbolPath(p.shape || 'circle', p.r),
+        transform: `translate(${p.at[0]}, ${p.at[1]})`,
+        'data-shape': p.shape || 'circle',
         fill: p.color,
         'fill-opacity': 0.75,
         class: 'stroke-surface-raised',
@@ -59,7 +62,7 @@ export default {
       if (!max) return null;
       return renderLegend([
         sizeSection(sizeLegendValues(max), radiusOf, { title: props.legendTitle }),
-        props.categories.length ? categorySection(props.categories.map((c) => ({ ...c, shape: 'circle' }))) : null,
+        props.categories.length ? categorySection(props.categories.map((c) => ({ ...c, shape: c.shape || 'circle' }))) : null,
       ], ctx.height);
     };
 
