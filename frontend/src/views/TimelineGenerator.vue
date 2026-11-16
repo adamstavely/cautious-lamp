@@ -3,199 +3,183 @@
     <PageHero
       :back="{ to: '/data-viz', label: 'Data visualization' }"
       title="Timeline generator"
-      lead="Create customizable timelines with events, dates, and icons. Generate React or Vue components with interactive timeline displays."
+      lead="Build a timeline from your events, pick a layout, check it reads well for everyone, and export it as a React or Vue component or an SVG."
       spot="tools/timeline-generator"
       size="tool"
     />
 
-    <PageSection title="Timeline style" description="How the events are laid out.">
-      <UiChoiceCards v-model="config.style" :options="timelineStyles" :columns="3" aria-label="Timeline style" />
+    <PageSection title="Layout" description="Every layout becomes a single column when there isn't room, so it works on phones.">
+      <UiChoiceCards v-model="config.style" :options="TIMELINE_STYLES" :columns="3" aria-label="Timeline layout" />
     </PageSection>
 
-    <PageSection title="Build" description="Describe the timeline, add events, check it and export the code." divided>
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-1">
-          <UiPanel title="Configuration">
+    <PageSection title="Build" description="Describe the timeline, add your events, check it and export the code." divided>
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="flex flex-col gap-6">
+          <UiPanel title="About this timeline" heading-tag="h3">
             <div class="flex flex-col gap-4">
               <UiInput
                 v-model="config.title"
-                label="Timeline title"
-                placeholder="Enter timeline title"
+                label="Title"
+                placeholder="What the timeline is about"
                 required
-                :error="config.title ? '' : 'Timeline title is required for accessibility compliance.'"
+                :error="touched.title && !config.title.trim() ? 'Add a title: it names the timeline for screen readers.' : ''"
+                @blur="touched.title = true"
               />
               <UiTextarea
                 v-model="config.summary"
-                label="Timeline summary"
-                hint="1-2 sentences"
+                label="Summary"
+                hint="One or two sentences"
                 :rows="2"
-                placeholder="Enter a brief summary describing what this timeline shows"
+                placeholder="What the timeline shows"
                 required
-                :error="config.summary ? '' : 'Timeline summary is required for accessibility compliance.'"
+                :error="touched.summary && !config.summary.trim() ? 'Add a summary: it is read out after the title.' : ''"
+                @blur="touched.summary = true"
               />
-              <UiTextarea
-                v-model="config.keyInsight"
-                label="Key insight"
-                hint="Primary takeaway"
-                :rows="2"
-                placeholder="Enter the primary insight or takeaway from this timeline"
-                required
-                :error="config.keyInsight ? '' : 'Key insight is required for accessibility compliance.'"
-              />
+              <UiTextarea v-model="config.keyInsight" label="Key insight" hint="Optional: the one thing to take away" :rows="2" />
+              <UiSwitch v-model="config.showHeader" label="Show the title and summary" hint="When off, screen readers still read them." />
+            </div>
+          </UiPanel>
 
+          <UiPanel title="Appearance" heading-tag="h3">
+            <div class="flex flex-col gap-4">
               <div class="grid grid-cols-aside-content items-end gap-2">
                 <div class="w-16">
-                  <UiInput v-model="config.timelineColor" type="color" label="Timeline color" />
+                  <UiInput v-model="config.timelineColor" type="color" label="Accent" />
                 </div>
-                <!-- style-check: allow the placeholder shows an example hex value the user types -->
-                <UiInput v-model="config.timelineColor" placeholder="#6366f1" mono aria-label="Timeline color value" />
+                <UiInput v-model="config.timelineColor" mono aria-label="Accent colour value" />
               </div>
-
+              <UiSegmented v-model="config.theme" :options="themeOptions" label="Theme" hint="Auto follows the reader's light or dark setting." />
+              <UiSwitch v-model="config.cards" label="Show events as cards" />
               <UiSelect v-model="config.dateFormat" label="Date format" :options="dateFormatOptions" />
-              <UiRange v-model="config.spacing" label="Event spacing" :min="40" :max="200" :step="10" unit="px" />
+              <UiRange v-model="config.spacing" label="Space between events" :min="0" :max="120" :step="4" unit="px" />
             </div>
+          </UiPanel>
 
-            <div class="mt-6 pt-6 border-t border-line">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-ink-strong">Events ({{ events.length }})</h3>
-                <UiButton variant="primary" size="sm" icon="plus" @click="addEvent">Add event</UiButton>
-              </div>
+          <UiPanel :title="`Events (${events.length})`" heading-tag="h3">
+            <template #actions>
+              <UiButton variant="ghost" size="sm" :icon="allCollapsed ? 'chevrons-up-down' : 'chevron-up'" @click="setAllCollapsed(!allCollapsed)">
+                {{ allCollapsed ? 'Expand all' : 'Collapse all' }}
+              </UiButton>
+            </template>
 
-              <div class="flex flex-col gap-3 max-h-96 overflow-y-auto">
-                <fieldset v-for="(event, index) in events" :key="event.id" class="flex flex-col gap-2 p-3 rounded-tile border border-line bg-surface-sunken">
-                  <legend class="sr-only">Event {{ index + 1 }}</legend>
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-medium text-ink-muted" aria-hidden="true">Event {{ index + 1 }}</span>
-                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove event ${index + 1}`" :disabled="events.length <= 1" @click="removeEvent(index)" />
+            <div class="flex flex-col gap-4">
+              <UiSwitch v-model="config.sortByDate" label="Sort events by date" hint="Turn off to put them in your own order." />
+
+              <ol class="flex flex-col gap-3" aria-label="Events">
+                <li v-for="(event, index) in orderedEvents" :key="event.id" class="event-card">
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="event-toggle"
+                      :aria-expanded="String(!event.collapsed)"
+                      :aria-controls="`event-fields-${event.id}`"
+                      @click="event.collapsed = !event.collapsed"
+                    >
+                      <AppIcon :name="event.collapsed ? 'chevron-down' : 'chevron-up'" class="text-base text-ink-muted shrink-0" />
+                      <span class="min-w-0 truncate">
+                        <span class="font-medium text-ink-strong">{{ event.title || `Event ${index + 1}` }}</span>
+                        <span v-if="formatDate(event.date, config.dateFormat)" class="text-ink-muted"> · {{ formatDate(event.date, config.dateFormat) }}</span>
+                      </span>
+                    </button>
+                    <template v-if="!config.sortByDate">
+                      <UiButton icon-only icon="arrow-up" variant="ghost" size="sm" :label="`Move ${eventName(event, index)} up`" :disabled="index === 0" @click="move(event, -1)" />
+                      <UiButton icon-only icon="arrow-down" variant="ghost" size="sm" :label="`Move ${eventName(event, index)} down`" :disabled="index === events.length - 1" @click="move(event, 1)" />
+                    </template>
+                    <UiButton icon-only icon="copy" variant="ghost" size="sm" :label="`Duplicate ${eventName(event, index)}`" @click="duplicate(event)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove ${eventName(event, index)}`" :disabled="events.length <= 1" @click="remove(event)" />
                   </div>
-                  <UiInput v-model="event.date" type="date" :aria-label="`Event ${index + 1} date`" />
-                  <UiInput v-model="event.title" placeholder="Event title" :aria-label="`Event ${index + 1} title`" />
-                  <UiTextarea v-model="event.description" :rows="2" placeholder="Event description" :aria-label="`Event ${index + 1} description`" />
-                  <div class="grid grid-cols-content-aside items-end gap-2">
-                    <UiSelect v-model="event.icon" :options="iconOptions" :aria-label="`Event ${index + 1} icon`" />
-                    <div class="w-12">
-                      <UiInput v-model="event.color" type="color" :aria-label="`Event ${index + 1} color`" />
+
+                  <fieldset v-show="!event.collapsed" :id="`event-fields-${event.id}`" class="flex flex-col gap-3 mt-3">
+                    <legend class="sr-only">{{ eventName(event, index) }}</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <UiInput v-model="event.date" type="date" label="Date" />
+                      <UiSelect v-model="event.icon" label="Icon" :options="iconOptions" />
                     </div>
-                  </div>
-                  <UiSegmented v-if="config.style === 'zigzag'" v-model="event.position" :options="positionOptions" :aria-label="`Event ${index + 1} side`" />
-                </fieldset>
+                    <UiInput v-model="event.title" label="Title" placeholder="What happened" />
+                    <UiTextarea v-model="event.description" label="Description" :rows="2" placeholder="Optional detail" />
+                    <div class="flex flex-wrap items-end gap-3">
+                      <div class="w-16">
+                        <UiInput :model-value="event.color || config.timelineColor" type="color" label="Marker" @update:model-value="event.color = $event" />
+                      </div>
+                      <UiButton v-if="event.color" variant="ghost" size="sm" icon="rotate-ccw" @click="event.color = ''">Use the accent</UiButton>
+                    </div>
+                    <UiSegmented
+                      v-if="config.style === 'alternating'"
+                      v-model="event.side"
+                      :options="sideOptions"
+                      label="Side of the line"
+                    />
+                  </fieldset>
+                </li>
+              </ol>
+
+              <div class="flex flex-wrap gap-2">
+                <UiButton variant="primary" size="sm" icon="plus" @click="addEvent">Add event</UiButton>
+                <UiButton variant="ghost" size="sm" icon="rotate-ccw" @click="startOver">Start over</UiButton>
               </div>
+              <UiCallout v-if="undoState" tone="info" role="status" title="Started over with the example timeline">
+                <template #actions>
+                  <UiButton size="sm" icon="undo-2" @click="undoStartOver">Undo</UiButton>
+                </template>
+              </UiCallout>
             </div>
           </UiPanel>
         </div>
 
-        <div class="lg:col-span-2 flex flex-col gap-6">
-          <UiPanel title="Preview">
+        <div class="xl:col-span-2 flex flex-col gap-6">
+          <UiPanel title="Preview" heading-tag="h3">
+            <template #actions>
+              <UiSegmented v-model="previewWidth" :options="widthOptions" aria-label="Preview width" />
+            </template>
             <div class="timeline-stage">
-              <figure
-                ref="timelinePreview"
-                class="timeline-container"
-                role="img"
-                :aria-label="config.title || 'Timeline'"
-                aria-describedby="timeline-summary"
-                tabindex="0"
-              >
-                <div v-if="config.style === 'vertical'" class="timeline-vertical">
-                  <div v-for="(event, index) in sortedEvents" :key="event.id" class="timeline-event-vertical">
-                    <div class="timeline-marker timeline-marker-vertical">
-                      <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
-                      <AppIcon :name="getIconName(event.icon)" v-if="event.icon" class="timeline-marker-icon text-sm" />
-                    </div>
-                    <div class="timeline-content-vertical">
-                      <div class="timeline-date-vertical text-ink-secondary">{{ formatDate(event.date) }}</div>
-                      <div class="timeline-title-vertical font-semibold text-ink-strong">{{ event.title || 'Event ' + (index + 1) }}</div>
-                      <div v-if="event.description" class="timeline-description-vertical text-ink">{{ event.description }}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-else-if="config.style === 'horizontal'" class="timeline-horizontal">
-                  <div class="timeline-line timeline-line-horizontal"></div>
-                  <div class="timeline-events-horizontal">
-                    <div v-for="(event, index) in sortedEvents" :key="event.id" class="timeline-event-horizontal">
-                      <div class="timeline-marker timeline-marker-horizontal">
-                        <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
-                        <AppIcon :name="getIconName(event.icon)" v-if="event.icon" class="timeline-marker-icon text-xs" />
-                      </div>
-                      <div class="timeline-content-horizontal">
-                        <div class="timeline-date-horizontal text-xs text-ink-secondary">{{ formatDate(event.date) }}</div>
-                        <div class="timeline-title-horizontal font-semibold text-sm text-ink-strong">{{ event.title || 'Event ' + (index + 1) }}</div>
-                        <div v-if="event.description" class="timeline-description-horizontal text-xs text-ink">{{ event.description }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-else-if="config.style === 'zigzag'" class="timeline-zigzag">
-                  <div class="timeline-line timeline-line-zigzag"></div>
-                  <div
-                    v-for="(event, index) in sortedEvents"
-                    :key="event.id"
-                    class="timeline-event-zigzag"
-                    :class="event.position === 'right' ? 'timeline-event-right' : 'timeline-event-left'"
-                  >
-                    <div class="timeline-marker timeline-marker-zigzag">
-                      <svg class="timeline-marker-dot" viewBox="0 0 2 2" aria-hidden="true"><circle cx="1" cy="1" r="1" :fill="event.color || config.timelineColor" /></svg>
-                      <AppIcon :name="getIconName(event.icon)" v-if="event.icon" class="timeline-marker-icon text-sm" />
-                    </div>
-                    <div class="timeline-content-zigzag" :class="event.position === 'right' ? 'timeline-content-right' : 'timeline-content-left'">
-                      <div class="timeline-date-zigzag text-xs text-ink-secondary">{{ formatDate(event.date) }}</div>
-                      <div class="timeline-title-zigzag font-semibold text-ink-strong">{{ event.title || 'Event ' + (index + 1) }}</div>
-                      <div v-if="event.description" class="timeline-description-zigzag text-sm text-ink">{{ event.description }}</div>
-                    </div>
-                  </div>
-                </div>
-                <figcaption id="timeline-summary" class="sr-only">
-                  {{ config.summary || 'Timeline visualization' }}
-                </figcaption>
-              </figure>
+              <div class="timeline-frame" :class="`timeline-frame--${previewWidth}`">
+                <TimelineRender ref="preview" :config="config" :events="events" heading-id="timeline-preview-heading" />
+              </div>
             </div>
           </UiPanel>
 
-          <UiPanel title="Accessibility score">
+          <UiPanel title="Accessibility" heading-tag="h3">
             <template #actions>
-              <UiChip :tone="accessibilityScore >= 100 ? 'success' : accessibilityScore >= 70 ? 'warning' : 'danger'">{{ accessibilityScore }}%</UiChip>
+              <UiChip :tone="failures.length ? 'danger' : 'success'">{{ passed }} of {{ checked }} checks pass</UiChip>
             </template>
 
-            <ul class="flex flex-col gap-2 text-sm">
-              <li v-for="check in accessibilityChecks" :key="check.label" class="flex items-center justify-between">
-                <span class="text-ink-secondary">{{ check.label }}</span>
-                <AppIcon :name="checkIcon[check.state]" class="text-base" :class="checkTone[check.state]" />
-                <span class="sr-only">{{ checkText[check.state] }}</span>
+            <ul class="flex flex-col gap-3 text-sm">
+              <li v-for="check in accessibilityChecks" :key="check.label" class="flex items-start gap-2">
+                <AppIcon :name="checkIcon[check.state]" class="text-base shrink-0 mt-0.5" :class="checkTone[check.state]" />
+                <div class="min-w-0">
+                  <span class="text-ink-strong">{{ check.label }}</span>
+                  <span class="sr-only">: {{ checkText[check.state] }}</span>
+                  <p v-if="check.detail" class="text-ink-secondary">{{ check.detail }}</p>
+                </div>
               </li>
             </ul>
 
-            <UiCallout v-if="accessibilityScore < 100" tone="warning" title="Fix required" class="mt-4">
-              <ul>
-                <li v-if="!config.title || !config.summary || !config.keyInsight">Add required metadata: title, summary, and key insight</li>
-              </ul>
-            </UiCallout>
-
-            <UiButton variant="primary" icon="bug" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
-              {{ axeScanRunning ? 'Scanning...' : 'Run accessibility check' }}
+            <UiButton variant="secondary" icon="scan-eye" class="mt-4" :loading="axeScanRunning" @click="runAxeCoreScan">
+              {{ axeScanRunning ? 'Checking…' : 'Run the automated check (axe)' }}
             </UiButton>
 
             <div v-if="axeScanResults" class="mt-4 flex flex-col gap-2" role="status">
-              <UiCallout v-if="axeScanResults.error" tone="warning" title="Scan error">{{ axeScanResults.error }}</UiCallout>
+              <UiCallout v-if="axeScanResults.error" tone="warning" title="The check couldn't run">{{ axeScanResults.error }}</UiCallout>
               <UiCallout
-                v-for="(violation, index) in axeScanResults.violations"
-                :key="index"
+                v-for="violation in axeScanResults.violations"
+                :key="violation.id"
                 tone="danger"
-                :icon="violation.impact === 'critical' ? 'circle-alert' : 'triangle-alert'"
-                :title="`${violation.id} (${violation.impact || 'moderate'})`"
+                :title="`${violation.help} (${violation.impact || 'moderate'})`"
               >
-                <p>{{ violation.description }}</p>
-                <p class="mt-1 text-ink-secondary">{{ violation.help }}</p>
+                {{ violation.description }}
               </UiCallout>
-              <UiCallout v-if="axeScanResults.violations && axeScanResults.violations.length === 0 && !axeScanResults.error" tone="success">
-                No accessibility violations found!
+              <UiCallout v-if="!axeScanResults.error && !axeScanResults.violations.length" tone="success">
+                No problems found in the preview.
               </UiCallout>
             </div>
           </UiPanel>
 
-          <UiPanel title="Export">
+          <UiPanel title="Export" heading-tag="h3">
+            <template #actions>
+              <UiButton variant="secondary" size="sm" icon="download" @click="download">Download {{ fileName }}</UiButton>
+            </template>
             <div class="flex flex-col gap-4">
-              <UiSegmented v-model="selectedExportFormat" :options="exportFormats" label="Export format" />
+              <UiSegmented v-model="selectedExportFormat" :options="exportFormats" label="Format" :hint="formatHint" />
               <InlineNotice :notice="notice" @dismiss="clearNotice" />
               <UiCodeBlock :code="generatedCode" label="Generated code" @copy-failed="onCopyFailed" />
             </div>
@@ -207,361 +191,258 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import InlineNotice from '../components/InlineNotice.vue';
-import {
-  PageHero, PageSection, PageShell, UiButton, UiCallout, UiChip, UiCodeBlock, UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiTextarea,
-} from '../components/ui';
-import UiChoiceCards from '../components/ui/UiChoiceCards.vue';
-import { useNotice } from '../composables/useNotice.js';
+import { computed, reactive, ref, watch } from 'vue';
 import axe from 'axe-core';
+import InlineNotice from '../components/InlineNotice.vue';
+import TimelineRender from '../components/timeline/TimelineRender.vue';
+import {
+  AppIcon, PageHero, PageSection, PageShell, UiButton, UiCallout, UiChip, UiChoiceCards, UiCodeBlock, UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwitch, UiTextarea,
+} from '../components/ui';
+import { useNotice } from '../composables/useNotice.js';
 import { AXE_SCAN_OPTIONS, axeCategoryState } from '../utils/axeScan.js';
 import { generateTimelineCode } from '../utils/timelineExport.js';
+import {
+  DEFAULT_ACCENT, THEME_BACKGROUNDS, TIMELINE_ICONS, TIMELINE_STYLES, contrastRatio, exampleEvents, formatDate, localDateString, parseDate, readableOn,
+  restoreTimeline, safeColor,
+} from '../utils/timelineTheme.js';
 
+const STORAGE_KEY = 'cautious-lamp:timeline-generator';
 const { notice, showNotice, clearNotice } = useNotice();
-const timelinePreview = ref(null);
-
-const timelineStyles = [
-  { label: 'Vertical', value: 'vertical', icon: 'fold-vertical', description: 'Events stacked vertically' },
-  { label: 'Horizontal', value: 'horizontal', icon: 'minus', description: 'Events in a horizontal line' },
-  { label: 'Zigzag', value: 'zigzag', icon: 'chart-gantt', description: 'Alternating left/right layout' }
-];
 
 const dateFormatOptions = [
-  { value: 'short', label: 'Short (1/1/2024)' },
-  { value: 'medium', label: 'Medium (Jan 1, 2024)' },
-  { value: 'long', label: 'Long (January 1, 2024)' },
-  { value: 'full', label: 'Full (Monday, January 1, 2024)' }
+  { value: 'year', label: 'Year (2026)' },
+  { value: 'month', label: 'Month (January 2026)' },
+  { value: 'short', label: 'Short (1/15/2026)' },
+  { value: 'medium', label: 'Medium (Jan 15, 2026)' },
+  { value: 'long', label: 'Long (January 15, 2026)' },
+  { value: 'full', label: 'Full (Thursday, January 15, 2026)' },
 ];
-
-const iconOptions = [
-  { value: '', label: 'No icon' },
-  { value: 'calendar-check', label: 'Event' },
-  { value: 'star', label: 'Star' },
-  { value: 'circle-check', label: 'Check' },
-  { value: 'flag', label: 'Flag' },
-  { value: 'location_on', label: 'Location' }
-];
-
-const positionOptions = [
+const iconOptions = [{ value: '', label: 'No icon' }, ...Object.entries(TIMELINE_ICONS).map(([value, { label }]) => ({ value, label }))];
+const sideOptions = [
+  { value: 'auto', label: 'Alternate' },
   { value: 'left', label: 'Left' },
-  { value: 'right', label: 'Right' }
+  { value: 'right', label: 'Right' },
 ];
-
+const themeOptions = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
+const widthOptions = [
+  { value: 'full', label: 'Wide' },
+  { value: 'tablet', label: 'Tablet' },
+  { value: 'phone', label: 'Phone' },
+];
 const exportFormats = [
   { label: 'React', value: 'react' },
   { label: 'Vue', value: 'vue' },
-  { label: 'SVG', value: 'svg' }
+  { label: 'SVG', value: 'svg' },
 ];
 
-const config = ref({
-  title: '',
-  summary: '',
-  keyInsight: '',
-  style: 'vertical',
-  timelineColor: '#6366f1',
-  dateFormat: 'medium',
-  spacing: 80
-});
+// ---------- State, kept in this browser ----------
 
-// Today's date as YYYY-MM-DD in local time (toISOString() is UTC, which is
-// tomorrow/yesterday for part of the day in most time zones).
-const localDateString = (date = new Date()) => {
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-};
+let nextId = 0;
+const withIds = (list) => list.map((event) => ({ collapsed: false, side: 'auto', ...event, id: nextId++ }));
 
-// <input type="date"> values are YYYY-MM-DD; new Date('YYYY-MM-DD') parses as
-// UTC midnight and shows the previous day west of UTC, so parse as local.
-const parseDate = (dateString) => {
-  if (!dateString) return null;
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString);
-  const date = match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : new Date(dateString);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-let eventIdCounter = 0;
-
-const events = ref([
-  {
-    date: localDateString(),
-    title: 'Project Start',
-    description: 'Initial project kickoff',
-    icon: 'calendar-check',
-    color: '#6366f1',
-    position: 'left'
-  },
-  {
-    date: localDateString(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-    title: 'Milestone 1',
-    description: 'First major milestone achieved',
-    icon: 'star',
-    color: '#10b981',
-    position: 'right'
+const readSaved = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
+  } catch {
+    return null;
   }
-].map(e => ({ id: eventIdCounter++, ...e })));
+};
+const restored = restoreTimeline(readSaved());
+const config = ref(restored.config);
+const events = ref(withIds(restored.events));
+const touched = reactive({ title: false, summary: false });
 
-const selectedExportFormat = ref('react');
+watch(
+  [config, events],
+  () => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ config: config.value, events: events.value.map(({ id, ...event }) => event) }));
+    } catch {
+      // Storage full or blocked: the timeline still works, it just isn't kept
+    }
+  },
+  { deep: true },
+);
 
-// Events without a valid date go last, in their original order.
-const sortedEvents = computed(() => {
-  return [...events.value].sort((a, b) => {
-    const aTime = parseDate(a.date)?.getTime();
-    const bTime = parseDate(b.date)?.getTime();
-    if (aTime === undefined && bTime === undefined) return 0;
-    if (aTime === undefined) return 1;
-    if (bTime === undefined) return -1;
-    return aTime - bTime;
-  });
+// ---------- Events ----------
+
+const byDate = (a, b) => (parseDate(a.date)?.getTime() ?? Infinity) - (parseDate(b.date)?.getTime() ?? Infinity);
+/** The events in the order the timeline shows them; editing them edits the timeline */
+const orderedEvents = computed(() => (config.value.sortByDate ? [...events.value].sort((a, b) => byDate(a, b) || events.value.indexOf(a) - events.value.indexOf(b)) : events.value));
+const eventName = (event, index) => (event.title ? `“${event.title}”` : `event ${index + 1}`);
+
+const addEvent = () => {
+  const last = orderedEvents.value.at(-1);
+  const after = parseDate(last?.date);
+  const date = after ? localDateString(new Date(after.getFullYear(), after.getMonth(), after.getDate() + 7)) : localDateString();
+  events.value.push({ id: nextId++, date, title: '', description: '', icon: '', color: '', side: 'auto', collapsed: false });
+};
+
+const remove = (event) => {
+  if (events.value.length > 1) events.value.splice(events.value.indexOf(event), 1);
+};
+
+const duplicate = (event) => {
+  const index = events.value.indexOf(event);
+  events.value.splice(index + 1, 0, { ...event, id: nextId++, title: event.title ? `${event.title} (copy)` : '', collapsed: false });
+};
+
+const move = (event, step) => {
+  const index = events.value.indexOf(event);
+  const target = index + step;
+  if (target < 0 || target >= events.value.length) return;
+  events.value.splice(index, 1);
+  events.value.splice(target, 0, event);
+};
+
+const allCollapsed = computed(() => events.value.every((event) => event.collapsed));
+const setAllCollapsed = (collapsed) => events.value.forEach((event) => {
+  event.collapsed = collapsed;
 });
 
-const getIconName = (icon) => {
-  const iconMap = {
-    event: 'calendar-check',
-    star: 'star',
-    check_circle: 'circle-check',
-    flag: 'flag',
-    location_on: 'map-pin'
-  };
-  return iconMap[icon] || 'calendar-check';
+const undoState = ref(null);
+const startOver = () => {
+  // A plain copy: structuredClone can't copy Vue's reactive proxies
+  undoState.value = JSON.parse(JSON.stringify({ config: config.value, events: events.value }));
+  config.value = restoreTimeline(null).config;
+  events.value = withIds(exampleEvents());
+  Object.assign(touched, { title: false, summary: false });
+};
+const undoStartOver = () => {
+  config.value = undoState.value.config;
+  events.value = undoState.value.events;
+  undoState.value = null;
 };
 
-const DATE_FORMATS = {
-  short: { month: 'numeric', day: 'numeric', year: 'numeric' },
-  medium: { month: 'short', day: 'numeric', year: 'numeric' },
-  long: { month: 'long', day: 'numeric', year: 'numeric' },
-  full: { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }
-};
+// ---------- Preview ----------
 
-const formatDate = (dateString) => {
-  const date = parseDate(dateString);
-  if (!date) return dateString || '';
-  return date.toLocaleDateString('en-US', DATE_FORMATS[config.value.dateFormat] || DATE_FORMATS.medium);
-};
+const previewWidth = ref('full');
+const preview = ref(null);
 
-// Accessibility Score (0-100%)
-const accessibilityScore = computed(() => {
-  let score = 0;
-  let maxScore = 0;
-  
-  // Alt Text (required fields) - 100 points
-  maxScore += 100;
-  if (config.value.title && config.value.title.trim() !== '') score += 34;
-  if (config.value.summary && config.value.summary.trim() !== '') score += 33;
-  if (config.value.keyInsight && config.value.keyInsight.trim() !== '') score += 33;
-  
-  return Math.round((score / maxScore) * 100);
-});
+// ---------- Accessibility ----------
 
-// Alt text from the form; keyboard and screen reader from the last axe scan (unchecked until it runs)
-const accessibilityChecks = computed(() => [
-  { label: 'Alt text', state: config.value.title && config.value.summary && config.value.keyInsight ? 'ok' : 'fail' },
-  { label: 'Keyboard navigation', state: axeCategoryState(axeScanResults.value, 'keyboard') },
-  { label: 'Screen reader', state: axeCategoryState(axeScanResults.value, 'screenReader') },
-]);
 const checkTone = { ok: 'text-success', fail: 'text-danger', unchecked: 'text-ink-muted' };
 const checkIcon = { ok: 'circle-check', fail: 'circle-alert', unchecked: 'circle-help' };
-const checkText = { ok: 'Passes', fail: 'Needs work', unchecked: 'Not checked yet: run the accessibility check' };
+const checkText = { ok: 'passes', fail: 'needs work', unchecked: 'not checked yet: run the automated check' };
 
-// User-chosen values for the preview, passed to CSS through v-bind()
-const previewColor = computed(() => config.value.timelineColor);
-const previewSpacing = computed(() => `${config.value.spacing}px`);
+/** The backgrounds the timeline can be read on: both when it follows the reader's setting */
+const backgrounds = computed(() => (config.value.theme === 'auto' ? ['light', 'dark'] : [config.value.theme]));
+const accent = computed(() => safeColor(config.value.timelineColor, DEFAULT_ACCENT));
+const lowContrast = (color) => backgrounds.value.filter((theme) => contrastRatio(color, THEME_BACKGROUNDS[theme]) < 3);
+const names = (list) => list.map((event) => event.title || 'an untitled event').join(', ');
 
-// axe-core Integration
 const axeScanRunning = ref(false);
 const axeScanResults = ref(null);
+
+const accessibilityChecks = computed(() => {
+  const list = events.value;
+  const untitled = list.filter((event) => !event.title.trim() || !parseDate(event.date));
+  const faintMarkers = list.filter((event) => lowContrast(safeColor(event.color, accent.value)).length);
+  const faintIcons = list.filter((event) => {
+    const color = safeColor(event.color, accent.value);
+    return event.icon && config.value.style !== 'compact' && contrastRatio(color, readableOn(color)) < 3;
+  });
+  const faintLine = lowContrast(accent.value);
+  const hasIntro = config.value.title.trim() && config.value.summary.trim();
+  return [
+    {
+      label: 'Title and summary',
+      state: hasIntro ? 'ok' : 'fail',
+      detail: hasIntro ? '' : 'Screen readers announce the timeline by its title, then read the summary.',
+    },
+    {
+      label: 'Every event has a title and a date',
+      state: untitled.length ? 'fail' : 'ok',
+      detail: untitled.length ? `Missing on ${names(untitled)}.` : '',
+    },
+    {
+      label: 'Markers stand out from the background (3:1)',
+      state: faintMarkers.length ? 'fail' : 'ok',
+      detail: faintMarkers.length ? `Too faint on the ${backgrounds.value.join(' or ')} background: ${names(faintMarkers)}.` : '',
+    },
+    {
+      label: 'Icons can be seen on their markers (3:1)',
+      state: faintIcons.length ? 'fail' : 'ok',
+      detail: faintIcons.length ? `Pick a darker or lighter marker for ${names(faintIcons)}.` : '',
+    },
+    {
+      label: 'The line stands out from the background (3:1)',
+      state: faintLine.length ? 'fail' : 'ok',
+      detail: faintLine.length ? `The accent is too faint on the ${faintLine.join(' and ')} background.` : '',
+    },
+    { label: 'Keyboard navigation', state: axeCategoryState(axeScanResults.value, 'keyboard') },
+    { label: 'Screen reader', state: axeCategoryState(axeScanResults.value, 'screenReader') },
+  ];
+});
+const checked = computed(() => accessibilityChecks.value.filter((check) => check.state !== 'unchecked').length);
+const failures = computed(() => accessibilityChecks.value.filter((check) => check.state === 'fail'));
+const passed = computed(() => checked.value - failures.value.length);
 
 const runAxeCoreScan = async () => {
   axeScanRunning.value = true;
   axeScanResults.value = null;
-  
   try {
-    const scanTarget = timelinePreview.value;
-    
-    if (!scanTarget) {
-      axeScanResults.value = {
-        violations: [{
-          id: 'scan-error',
-          description: 'Timeline preview not found. Please ensure the timeline is rendered.',
-          help: 'Try refreshing the page or reloading the timeline data.',
-          impact: 'critical'
-        }],
-        passes: [],
-        incomplete: [],
-        inapplicable: []
-      };
-      return;
-    }
-    
-    const results = await axe.run(scanTarget, AXE_SCAN_OPTIONS);
-    
-    axeScanResults.value = results;
+    const target = preview.value?.$el;
+    if (!target) throw new Error('The preview is not on the page yet.');
+    axeScanResults.value = await axe.run(target, AXE_SCAN_OPTIONS);
   } catch (error) {
-    console.error('axe-core scan error:', error);
-    axeScanResults.value = {
-      violations: [{
-        id: 'scan-error',
-        description: `Error running accessibility scan: ${error.message}`,
-        help: 'Please check the browser console for more details.',
-        impact: 'critical'
-      }],
-      passes: [],
-      incomplete: [],
-      inapplicable: [],
-      error: error.message
-    };
+    axeScanResults.value = { violations: [], passes: [], incomplete: [], inapplicable: [], error: error.message };
   } finally {
     axeScanRunning.value = false;
   }
 };
 
-const addEvent = () => {
-  events.value.push({
-    id: eventIdCounter++,
-    date: localDateString(),
-    title: '',
-    description: '',
-    icon: '',
-    color: '#6366f1',
-    position: 'left'
-  });
-};
+// ---------- Export ----------
 
-const removeEvent = (index) => {
-  if (events.value.length > 1) {
-    events.value.splice(index, 1);
-  }
-};
+const selectedExportFormat = ref('react');
+const generatedCode = computed(() => generateTimelineCode(selectedExportFormat.value, config.value, events.value));
+const fileName = computed(() => ({ react: 'Timeline.tsx', vue: 'Timeline.vue', svg: 'timeline.svg' })[selectedExportFormat.value]);
+const formatHint = computed(() => ({
+  react: 'A typed component with its own stylesheet; needs only React.',
+  vue: 'A single-file component with its own stylesheet; needs only Vue.',
+  svg: 'A static picture of the timeline, with its events in the description for screen readers.',
+})[selectedExportFormat.value]);
 
-const generatedCode = computed(() => generateTimelineCode(selectedExportFormat.value, config.value, sortedEvents.value, formatDate));
+const download = () => {
+  const type = selectedExportFormat.value === 'svg' ? 'image/svg+xml' : 'text/plain';
+  const url = URL.createObjectURL(new Blob([generatedCode.value], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName.value;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+};
 
 const onCopyFailed = () => {
   showNotice('Could not copy to the clipboard. Select the code and copy it manually.', 'error');
 };
-
-
-
-
-
 </script>
 
 <style scoped>
+.event-card {
+  @apply p-3 rounded-tile border border-line bg-surface-sunken;
+}
+.event-toggle {
+  @apply flex flex-1 min-w-0 items-center gap-2 py-1 pr-2 rounded-control text-left text-sm;
+}
+.event-toggle:focus-visible {
+  @apply outline-none ring-2 ring-accent;
+}
+
 .timeline-stage {
-  @apply p-8 rounded-tile bg-surface-sunken overflow-x-auto;
+  @apply p-2 sm:p-6 rounded-tile bg-surface-sunken overflow-x-auto;
 }
-
-/* Markers: the colour is the event's own, drawn as an SVG fill */
-.timeline-marker {
-  @apply relative z-10 flex items-center justify-center shrink-0;
+.timeline-frame {
+  @apply mx-auto w-full;
 }
-.timeline-marker-dot {
-  @apply absolute inset-0 w-full h-full;
+.timeline-frame--tablet {
+  @apply max-w-2xl;
 }
-.timeline-marker-icon {
-  @apply relative text-ink-on-accent;
-}
-.timeline-line {
-  background-color: v-bind(previewColor);
-}
-
-/* Vertical */
-.timeline-vertical {
-  @apply relative pl-8;
-}
-.timeline-event-vertical {
-  @apply relative flex gap-4;
-}
-.timeline-event-vertical:not(:last-child) {
-  margin-bottom: v-bind(previewSpacing);
-}
-.timeline-marker-vertical {
-  @apply w-12 h-12;
-}
-.timeline-event-vertical:not(:last-child) .timeline-marker-vertical::after {
-  content: '';
-  @apply absolute top-full left-1/2 -translate-x-1/2 w-0.5;
-  height: calc(v-bind(previewSpacing) - 3rem);
-  background-color: v-bind(previewColor);
-}
-.timeline-content-vertical {
-  @apply flex-1 pb-4;
-}
-.timeline-date-vertical {
-  @apply text-sm mb-1;
-}
-.timeline-title-vertical {
-  @apply text-lg mb-2;
-}
-.timeline-description-vertical {
-  @apply text-sm leading-normal;
-}
-
-/* Horizontal: evenly spaced, equal-width events */
-.timeline-horizontal {
-  @apply relative py-8 min-h-52;
-}
-.timeline-line-horizontal {
-  @apply absolute top-12 left-0 right-0 h-1 -translate-y-1/2;
-}
-.timeline-events-horizontal {
-  @apply relative flex justify-between gap-2;
-}
-.timeline-event-horizontal {
-  @apply flex flex-col items-center w-36 shrink-0;
-}
-.timeline-marker-horizontal {
-  @apply w-8 h-8 mb-2;
-}
-.timeline-content-horizontal {
-  @apply text-center mt-2;
-}
-.timeline-date-horizontal,
-.timeline-title-horizontal {
-  @apply mb-1;
-}
-.timeline-description-horizontal {
-  @apply leading-snug;
-}
-
-/* Zigzag */
-.timeline-zigzag {
-  @apply relative py-8;
-}
-.timeline-line-zigzag {
-  @apply absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2;
-}
-.timeline-event-zigzag {
-  @apply relative flex items-start min-h-24;
-}
-.timeline-event-zigzag:not(:last-child) {
-  margin-bottom: v-bind(previewSpacing);
-}
-.timeline-event-left {
-  @apply flex-row;
-}
-.timeline-event-right {
-  @apply flex-row-reverse;
-}
-.timeline-marker-zigzag {
-  @apply w-12 h-12 mx-4;
-}
-.timeline-content-zigzag {
-  @apply flex-1 p-3 rounded-control bg-fill-subtle;
-  max-width: 45%;
-}
-.timeline-content-left {
-  @apply text-left;
-}
-.timeline-content-right {
-  @apply text-right;
-}
-.timeline-date-zigzag {
-  @apply mb-1;
-}
-.timeline-title-zigzag {
-  @apply text-base mb-2;
-}
-.timeline-description-zigzag {
-  @apply leading-normal;
+.timeline-frame--phone {
+  @apply max-w-sm;
 }
 </style>
