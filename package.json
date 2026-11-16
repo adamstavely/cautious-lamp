@@ -24,6 +24,7 @@
     "@opentelemetry/resource-detector-gcp": {
       "gcp-metadata": "^9.2.3"
     },
-    "react": "^18.3.1"
+    "react": "^18.3.1",
+    "vite": "^6.4.5"
   }
 }
