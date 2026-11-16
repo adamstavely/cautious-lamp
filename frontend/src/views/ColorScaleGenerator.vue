@@ -73,7 +73,15 @@
             <div class="flex flex-col gap-4 pt-5 border-t border-line">
               <h3 class="text-sm font-semibold text-ink-strong">Settings</h3>
               <div class="grid sm:grid-cols-2 gap-4">
-                <UiInput :model-value="settings.steps" type="number" label="Number of steps" min="3" max="20" @update:model-value="setSetting('steps', $event)" />
+                <UiInput
+                  :model-value="settings.steps"
+                  type="number"
+                  label="Number of steps"
+                  min="3"
+                  max="20"
+                  :hint="scaleType === 'qualitative' ? 'Every base color is kept; extra steps add new hues.' : ''"
+                  @update:model-value="setSetting('steps', $event)"
+                />
                 <UiSelect :model-value="settings.contrast" label="Contrast ratio" :options="contrastOptions" @update:model-value="setSetting('contrast', $event)" />
                 <UiRange :model-value="settings.brightness" label="Brightness" unit="%" :min="0" :max="100" @update:model-value="setSetting('brightness', $event)" />
                 <UiRange :model-value="settings.saturation" label="Saturation" unit="%" :min="0" :max="100" @update:model-value="setSetting('saturation', $event)" />
@@ -130,7 +138,7 @@
             </ul>
           </UiPanel>
 
-          <UiPanel v-if="generatedScale.length > 0" title="Colorblindness simulation" description="Simulated colors are ordered by hue and saturation for best comparison of similar colors.">
+          <UiPanel v-if="generatedScale.length > 0" title="Colorblindness simulation" description="Each step in scale order as seen with the color vision deficiency; the small inset is the original color.">
             <div v-for="sim in simulationTypes" :key="sim.value" class="flex flex-col gap-2">
               <h3 class="text-sm font-semibold text-ink-strong">{{ sim.label }}</h3>
               <svg
@@ -264,7 +272,7 @@
               <div class="stat-tile">
                 <dt class="stat-label">Contrast ratio</dt>
                 <dd class="stat-value">
-                  {{ generatedScale.length >= 2 ? getContrastRatio(generatedScale[0], generatedScale[generatedScale.length - 1]).toFixed(2) : '0.00' }}
+                  {{ generatedScale.length >= 2 ? formatContrastRatio(getContrastRatio(generatedScale[0], generatedScale[generatedScale.length - 1])) : '0.00' }}
                 </dd>
               </div>
               <div class="stat-tile">
@@ -305,7 +313,7 @@
                   <td>
                     <UiChip :tone="getContrastStatus(row.a, row.b) === 'Pass' ? 'success' : 'danger'">{{ getContrastStatus(row.a, row.b) }}</UiChip>
                   </td>
-                  <td class="font-code whitespace-nowrap">{{ getContrastRatio(row.a, row.b).toFixed(2) }}:1</td>
+                  <td class="font-code whitespace-nowrap">{{ formatContrastRatio(getContrastRatio(row.a, row.b)) }}:1</td>
                 </tr>
               </tbody>
             </UiTable>
@@ -377,6 +385,10 @@ import {
 import UiMeter from '../components/ui/UiMeter.vue';
 import { focusAfterRemoval } from '../utils/focusAfterRemoval';
 import { powerBiTheme, powerBiThemeFileName } from '../utils/powerBiTheme.js';
+import {
+  contrastRatio as calculateContrastRatio, divergingScale, findColorAtContrast, luminance as getLuminance, qualitativeScale, singleColorSequentialScale,
+} from '../utils/colourScale.js';
+import { deltaE2000, formatContrastRatio } from '../utils/colourCompare.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const previewDarkMode = ref(false);
@@ -567,8 +579,9 @@ const generateSequentialScale = () => {
       let scale = [];
 
       if (colors.length === 1) {
-        // Single color: generate scale from base to target contrast
-        scale = generateContrastBasedScale(colors[0], bgColor, contrastRatio, steps, 'sequential');
+        // Single color: from no contrast up to the target, with the base color
+        // itself at the step nearest its own contrast
+        scale = singleColorSequentialScale(colors[0], bgColor, contrastRatio, steps);
       } else {
         // Multiple colors: split the steps - 1 intervals across the segments so
         // the scale has exactly `steps` colors, sharing each boundary color.
@@ -623,18 +636,12 @@ const generateDivergingScale = () => {
 
       if (colors.length === 1) {
         // Single color: generate scale from background to target contrast
-        scale = generateContrastBasedScale(colors[0], bgColor, contrastRatio, steps, 'diverging');
+        scale = generateContrastBasedScale(colors[0], bgColor, contrastRatio, steps);
       } else {
-        // Two arms that meet at the background: each runs from the target
-        // contrast at its end color down to (no contrast with) the background.
-        const leftSteps = Math.ceil(steps / 2);
-        const rightSteps = steps - leftSteps + 1; // shares the midpoint
-
-        const leftScale = generateContrastBasedScale(colors[0], bgColor, contrastRatio, leftSteps, 'diverging').reverse();
-        const rightScale = generateContrastBasedScale(colors[colors.length - 1], bgColor, contrastRatio, rightSteps, 'diverging');
-
-        // Combine scales (avoid duplicate at midpoint)
-        scale = [...leftScale, ...rightScale.slice(1)];
+        // Every stop counts: the outer stops end each arm at the target
+        // contrast, inner stops set the hue along the way, and an odd middle
+        // stop is the centre (otherwise the arms meet at the background).
+        scale = divergingScale(colors, bgColor, contrastRatio, steps);
       }
 
       generatedScale.value = applyAdjustments(scale);
@@ -647,147 +654,10 @@ const generateDivergingScale = () => {
   }
 };
 
-// Calculate relative luminance (WCAG formula)
-const getLuminance = (color) => {
-  try {
-    const rgb = chroma(color).rgb();
-    const [r, g, b] = rgb.map(val => {
-      val = val / 255;
-      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  } catch {
-    return 0;
-  }
-};
-
-// Calculate contrast ratio between two colors
-const calculateContrastRatio = (color1, color2) => {
-  if (!color1 || !color2) return 1;
-  const lum1 = getLuminance(color1);
-  const lum2 = getLuminance(color2);
-  const lighter = Math.max(lum1, lum2);
-  const darker = Math.min(lum1, lum2);
-  return (lighter + 0.05) / (darker + 0.05);
-};
-
-// Find a color that meets a target contrast ratio against a background
-const findColorAtContrast = (baseColor, bgColor, targetRatio, isSequential = true) => {
-  try {
-    const bgLum = getLuminance(bgColor);
-    const baseLum = getLuminance(baseColor);
-    
-    // Determine if we need lighter or darker color
-    const needsLighter = bgLum < baseLum;
-    
-    // Calculate target luminance
-    // contrast = (lighter + 0.05) / (darker + 0.05)
-    // If bg is darker, we need: targetRatio = (colorLum + 0.05) / (bgLum + 0.05)
-    // If bg is lighter, we need: targetRatio = (bgLum + 0.05) / (colorLum + 0.05)
-    
-    let targetLum;
-    if (needsLighter) {
-      // Background is darker, color needs to be lighter
-      targetLum = targetRatio * (bgLum + 0.05) - 0.05;
-    } else {
-      // Background is lighter, color needs to be darker
-      targetLum = (bgLum + 0.05) / targetRatio - 0.05;
-    }
-    
-    // Clamp luminance between 0 and 1
-    targetLum = Math.max(0, Math.min(1, targetLum));
-    
-    // Convert base color to HSL to preserve hue and saturation
-    const baseHsl = chroma(baseColor).hsl();
-    const hue = baseHsl[0] || 0;
-    const saturation = baseHsl[1] || 0;
-    
-    // Binary search for the right lightness
-    let minLightness = 0;
-    let maxLightness = 1;
-    let bestColor = baseColor;
-    let bestRatio = calculateContrastRatio(baseColor, bgColor);
-    
-    // Try to find a color close to the target contrast
-    for (let i = 0; i < 50; i++) {
-      const lightness = (minLightness + maxLightness) / 2;
-      const testColor = chroma.hsl(hue, saturation, lightness).hex();
-      const testLum = getLuminance(testColor);
-      const testRatio = calculateContrastRatio(testColor, bgColor);
-      
-      if (Math.abs(testRatio - targetRatio) < Math.abs(bestRatio - targetRatio)) {
-        bestRatio = testRatio;
-        bestColor = testColor;
-      }
-      
-      if (needsLighter) {
-        if (testLum < targetLum) {
-          minLightness = lightness;
-        } else {
-          maxLightness = lightness;
-        }
-      } else {
-        if (testLum > targetLum) {
-          maxLightness = lightness;
-        } else {
-          minLightness = lightness;
-        }
-      }
-      
-      if (Math.abs(testRatio - targetRatio) < 0.01) {
-        break;
-      }
-    }
-    
-    return bestColor;
-  } catch (error) {
-    console.error('Error finding color at contrast:', error);
-    return baseColor;
-  }
-};
-
-// Generate a contrast-based color scale
-const generateContrastBasedScale = (baseColor, bgColor, targetRatio, steps, type = 'sequential') => {
-  const scale = [];
-  const ratios = [];
-  
-  if (steps <= 1) return [findColorAtContrast(baseColor, bgColor, targetRatio, true)];
-
-  // Generate ratios from 1.0 (no contrast) to targetRatio
-  for (let i = 0; i < steps; i++) {
-    const ratio = 1.0 + (targetRatio - 1.0) * (i / (steps - 1));
-    ratios.push(ratio);
-  }
-  
-  // For diverging, we want to go from background to target contrast
-  // For sequential, we go from base color to target contrast
-  if (type === 'diverging') {
-    // Start with background color (or very close to it)
-    scale.push(bgColor);
-    
-    // Generate colors at increasing contrast ratios
-    for (let i = 1; i < steps; i++) {
-      const ratio = ratios[i];
-      const color = findColorAtContrast(baseColor, bgColor, ratio, false);
-      scale.push(color);
-    }
-  } else {
-    // Sequential: start from base color, increase contrast
-    for (let i = 0; i < steps; i++) {
-      const ratio = ratios[i];
-      const color = findColorAtContrast(baseColor, bgColor, ratio, true);
-      scale.push(color);
-    }
-  }
-  
-  // Ensure smooth transitions by interpolating between generated colors
-  if (scale.length > 2) {
-    const smoothed = chroma.scale(scale).mode('lch').colors(steps);
-    return smoothed;
-  }
-  
-  return scale;
-};
+// A single colour on a diverging scale: from the background up to the target contrast
+const generateContrastBasedScale = (baseColor, bgColor, targetRatio, steps) =>
+  Array.from({ length: steps }, (_, i) =>
+    i === 0 ? chroma(bgColor).hex() : findColorAtContrast(baseColor, bgColor, 1 + (targetRatio - 1) * (i / (steps - 1))));
 
 // Generate a contrast-based scale between two colors
 const generateContrastBasedScaleBetweenColors = (startColor, endColor, bgColor, targetRatio, steps) => {
@@ -806,7 +676,7 @@ const generateContrastBasedScaleBetweenColors = (startColor, endColor, bgColor, 
     // If contrast is below target, adjust the color to meet contrast requirement
     if (currentRatio < targetRatio) {
       // Find a color that meets the contrast requirement while preserving hue/saturation
-      const adjustedColor = findColorAtContrast(interpolatedColor, bgColor, targetRatio, true);
+      const adjustedColor = findColorAtContrast(interpolatedColor, bgColor, targetRatio);
       scale.push(adjustedColor);
     } else {
       // Color already meets contrast requirement
@@ -841,26 +711,9 @@ const generateQualitativeScale = () => {
   if (colors.length === 0) return;
   const steps = stepCount();
 
-  // Generate intermediate colors between the provided colors. Each segment
-  // stops short of the next color, so boundary colors are not repeated.
-  const stepsPerColor = Math.ceil(steps / colors.length);
-  const scale = [];
-  
-  for (let i = 0; i < colors.length; i++) {
-    const currentColor = colors[i];
-    const nextColor = colors[(i + 1) % colors.length];
-    
-    const colorScale = chroma.scale([currentColor, nextColor])
-      .mode('lch')
-      .colors(stepsPerColor + 1)
-      .slice(0, stepsPerColor);
-    
-    scale.push(...colorScale);
-  }
-  
-  // Trim to desired number of steps
-  const trimmedScale = scale.slice(0, steps);
-  generatedScale.value = applyAdjustments(trimmedScale);
+  // The user's colors as given, never dropped or blended; more steps than
+  // colors adds new, well-separated hues after them.
+  generatedScale.value = applyAdjustments(qualitativeScale(colors, steps));
 };
 
 const getContrastRatio = (color1, color2) => {
@@ -946,17 +799,8 @@ const getContrastStatus = (color1, color2) => {
 const getDeltaE = (color1, color2) => {
   if (!color1 || !color2) return 0;
   try {
-    // Convert colors to Lab color space for Delta E calculation
-    const lab1 = chroma(color1).lab();
-    const lab2 = chroma(color2).lab();
-    
-    // Calculate Delta E using CIE76 formula
-    const deltaL = lab1[0] - lab2[0];
-    const deltaA = lab1[1] - lab2[1];
-    const deltaB = lab1[2] - lab2[2];
-    
-    const deltaE = Math.sqrt(deltaL * deltaL + deltaA * deltaA + deltaB * deltaB);
-    return deltaE;
+    // CIEDE2000, the same difference the Compare colors tool reports
+    return deltaE2000(color1, color2);
   } catch (e) {
     return 0;
   }
