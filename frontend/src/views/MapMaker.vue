@@ -3,7 +3,7 @@
     <PageHero
       :back="{ to: '/data-viz', label: 'Data visualization' }"
       title="Map maker"
-      lead="Make choropleth, proportional symbol, dot and flow maps from your own data, for the world, a continent, any country's regions or US counties."
+      lead="Make choropleth, proportional symbol, dot and flow maps from your own data, for the world, a continent, any country's regions, or the US by state, county, Census region or a single state."
       spot="tools/map-maker"
       size="tool"
     />
@@ -22,8 +22,8 @@
               <UiSelect
                 v-if="countryOptions.length > 1"
                 :model-value="country || ''"
-                label="Country regions"
-                hint="Show a country's states, provinces or other first-level regions."
+                :label="usFocusMode ? 'Focus' : 'Country regions'"
+                :hint="usFocusMode ? 'Show one Census region or division, or one state with its counties.' : 'Show a country\'s states, provinces or other first-level regions.'"
                 :options="countryOptions"
                 @update:model-value="openCountry"
               />
@@ -85,7 +85,7 @@
         <div class="lg:col-span-2">
           <UiPanel title="Preview">
             <template #actions>
-              <UiButton v-if="country" ref="backButton" icon="arrow-left" size="sm" @click="backFromCountry">Back to {{ areaLabel }}</UiButton>
+              <UiButton v-if="country" ref="backButton" icon="arrow-left" size="sm" @click="backFromCountry">Back to {{ backLabel }}</UiButton>
               <UiButton
                 v-for="format in ['png', 'svg']"
                 :key="format"
@@ -103,12 +103,19 @@
 
             <nav v-if="country" aria-label="Map level" class="mb-2 flex items-center gap-2 text-sm text-ink-secondary">
               <span>{{ areaLabel }}</span>
+              <template v-if="previousFocusLabel">
+                <AppIcon name="chevron-right" class="text-xs" />
+                <span>{{ previousFocusLabel }}</span>
+              </template>
               <AppIcon name="chevron-right" class="text-xs" />
               <span aria-current="location">{{ geo?.countryName || 'Loading…' }}</span>
             </nav>
 
-            <UiCallout v-if="geo?.drillable && countryOptions.length > 1" class="mb-3">
+            <UiCallout v-if="geo?.drillable && countryOptions.length > 1 && !usFocusMode" class="mb-3">
               Select a country on the map, or under Country regions, to show its regions.
+            </UiCallout>
+            <UiCallout v-else-if="geo?.drillable && usFocusMode" class="mb-3">
+              Select a state on the map to show its counties, or choose a region, division or state under Focus.
             </UiCallout>
 
             <UiTabs v-model="previewTab" :tabs="previewTabs" label="Preview as">
@@ -141,7 +148,7 @@ import { useGeography } from '../components/maps/useGeography.js';
 import { useMapPalette, SEQUENTIAL, DIVERGING, CATEGORY_SLOTS } from '../components/maps/useMapPalette.js';
 import { formatCompact, formatValue, shapeFor } from '../components/maps/mapLegend.js';
 import { project, onMap } from '../components/maps/mapMarks.js';
-import { AREAS, areaOptions } from '../utils/mapAreas.js';
+import { AREAS, areaOptions, parseUsFocus } from '../utils/mapAreas.js';
 import { getFeatureCentroid } from '../utils/mapData.js';
 import { createAreaProjection, createProjection } from '../utils/mapProjections.js';
 import { importTable } from '../utils/mapImport.js';
@@ -195,8 +202,14 @@ const setArea = (value) => {
 
 const openCountry = (id) => {
   country.value = id || null;
+  previousFocus.value = null;
   includeRemote.value = false;
 };
+
+// A state opened from a region or division view goes back to that view, not the whole country
+const previousFocus = ref(null);
+const previousFocusLabel = computed(() => (previousFocus.value ? parseUsFocus(previousFocus.value)?.label : ''));
+const backLabel = computed(() => previousFocusLabel.value || areaLabel.value);
 
 const closeCountry = () => openCountry(null);
 
@@ -209,14 +222,18 @@ const backButton = ref(null);
 const refocusCountry = ref(null);
 
 const openFromMap = async (id) => {
+  const from = parseUsFocus(country.value);
   openCountry(id);
+  if (from && from.kind !== 'state' && parseUsFocus(id)?.kind === 'state') previousFocus.value = `${from.kind}:${from.key}`;
   await nextTick();
   backButton.value?.$el?.focus();
 };
 
 const backFromCountry = () => {
   refocusCountry.value = country.value;
+  const back = previousFocus.value;
   closeCountry();
+  if (back) country.value = back;
 };
 
 watch(loading, async (isLoading) => {
@@ -233,7 +250,13 @@ const palette = useMapPalette();
 // while a country is open, so the select can switch between them
 const countryList = ref([]);
 watch(geo, (g) => {
-  if (!g || country.value) return;
+  if (!g) return;
+  // US maps offer Census regions, divisions and states, and keep them while one is open
+  if (g.focusOptions) {
+    countryList.value = g.focusOptions;
+    return;
+  }
+  if (country.value) return;
   countryList.value = g.drillable
     ? g.features
       .map((f, i) => ({ value: g.drillable(f), label: g.index.labels[i] }))
@@ -244,7 +267,12 @@ watch(geo, (g) => {
 watch(area, () => {
   countryList.value = [];
 });
-const countryOptions = computed(() => (countryList.value.length ? [{ value: '', label: `None (all of ${areaLabel.value})` }, ...countryList.value] : []));
+// US focus lists bring their own "All of the United States" choice
+const usFocusMode = computed(() => countryList.value.some((o) => o.group) || /^(state|region|division):/.test(String(country.value || '')));
+const countryOptions = computed(() => {
+  if (!countryList.value.length) return [];
+  return usFocusMode.value ? countryList.value : [{ value: '', label: `None (all of ${areaLabel.value})` }, ...countryList.value];
+});
 
 // ---- Data -----------------------------------------------------------------
 
@@ -530,9 +558,16 @@ const report = computed(() => {
     expected: TABLE_HEADERS[activeTable.value].join(','),
     remote: g.remote,
   };
+  // In a focused US view, names found elsewhere in the US are outside the view, not unknown
+  const split = (unmatched) => {
+    if (!g.outsideIndex) return { unmatched, elsewhere: [] };
+    const elsewhere = unmatched.filter((u) => g.outsideIndex.lookup(u.name));
+    return { unmatched: unmatched.filter((u) => !elsewhere.includes(u)), elsewhere: elsewhere.map((u) => u.name) };
+  };
   if (mapType.value === 'choropleth') {
     const m = choroplethModel.value;
-    return { ...base, total: regionRows.value.length, unmatched: m.unmatched, duplicates: m.duplicates, invalid: m.invalid.length };
+    const { unmatched, elsewhere } = split(m.unmatched);
+    return { ...base, total: regionRows.value.length, unmatched, outside: elsewhere, duplicates: m.duplicates, invalid: m.invalid.length };
   }
   if (mapType.value === 'flowMap') {
     const m = flowModel.value;
@@ -540,8 +575,9 @@ const report = computed(() => {
     return { ...base, total: flowRows.value.length, unknown: m.unknown, invalid: m.invalid.length, outside };
   }
   const m = pointsModel.value;
-  const outside = m.points.filter((p) => !isOnMap(p)).map((p) => p.label);
-  return { ...base, total: pointRows.value.length, unmatched: m.unmatched, noValue: m.noValue, outside };
+  const { unmatched, elsewhere } = split(m.unmatched);
+  const outside = [...m.points.filter((p) => !isOnMap(p)).map((p) => p.label), ...elsewhere];
+  return { ...base, total: pointRows.value.length, unmatched, noValue: m.noValue, outside };
 });
 
 // ---- The map and its table ------------------------------------------------
