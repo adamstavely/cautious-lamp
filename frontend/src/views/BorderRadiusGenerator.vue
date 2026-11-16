@@ -15,15 +15,15 @@
             <UiSwitch v-model="locked" label="Lock corners" />
           </template>
           <div class="space-y-4">
-            <UiInput v-model.number="unifiedValue" type="number" min="0" step="1" label="Value" />
-            <UiSelect v-model="unit" :options="units" label="Unit" @update:model-value="updateUnified" />
+            <UiInput :model-value="unifiedValue" type="number" min="0" step="1" label="All corners" hint="Sets all four corners." @update:model-value="setAllCorners" />
+            <UiSelect v-model="unit" :options="units" label="Unit" />
             <div class="flex flex-wrap gap-2" role="group" aria-label="Presets">
               <UiButton v-for="preset in presets" :key="preset.name" size="sm" :label="preset.name" @click="loadPreset(preset.value)" />
             </div>
           </div>
         </UiPanel>
 
-        <UiPanel title="Individual corners" :description="locked ? 'Unlock the corners to set each one.' : ''">
+        <UiPanel title="Individual corners" :description="locked ? 'Unlock the corners to set each one.' : 'Presets and All corners still set every corner.'">
           <div class="grid grid-cols-2 gap-4">
             <UiInput
               v-for="corner in corners"
@@ -139,7 +139,6 @@ const corners = [
 
 const setCorner = (corner, value) => {
   corner.model.value = value;
-  updateFromIndividual();
 };
 
 const exportButtons = [
@@ -148,18 +147,21 @@ const exportButtons = [
   { format: 'json', icon: 'braces', label: 'Export JSON' },
 ];
 
-const updateUnified = () => {
-  if (locked.value) {
-    topLeft.value = unifiedValue.value;
-    topRight.value = unifiedValue.value;
-    bottomRight.value = unifiedValue.value;
-    bottomLeft.value = unifiedValue.value;
-  }
+// The unified value and the presets always set all four corners, locked or
+// not; unlocking only lets each corner be edited on its own afterwards.
+const setAllCorners = (value) => {
+  unifiedValue.value = value;
+  topLeft.value = value;
+  topRight.value = value;
+  bottomRight.value = value;
+  bottomLeft.value = value;
 };
 
-// Re-locking (or changing the unified value while locked) keeps all four
-// corners in step, so "Locked" never shows mismatched corners.
-watch([locked, unifiedValue], updateUnified);
+// Re-locking brings the corners back in step with the unified value, so
+// "Locked" never shows mismatched corners.
+watch(locked, (isLocked) => {
+  if (isLocked) setAllCorners(unifiedValue.value);
+});
 
 const downloadFile = (content, type, filename) => {
   const blob = new Blob([content], { type });
@@ -173,15 +175,8 @@ const downloadFile = (content, type, filename) => {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
-const updateFromIndividual = () => {
-  if (!locked.value) {
-    unifiedValue.value = topLeft.value;
-  }
-};
-
 const loadPreset = (value) => {
-  unifiedValue.value = value;
-  updateUnified();
+  setAllCorners(value);
 };
 
 const exportFormat = (format) => {

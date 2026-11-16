@@ -19,13 +19,19 @@
               prompt="Drag and drop an image here, or"
               button-label="Browse files"
               icon="upload"
-              hint="Supports PNG, JPG, GIF (Max: 10MB)"
+              hint="PNG, JPG or GIF, max 10MB. GIF animation is not kept."
               @select="handleSelect"
               @remove="clearFile"
             />
 
             <div v-if="selectedFile" class="space-y-6">
+              <UiCallout v-if="isGif" tone="warning" title="GIF animation is not kept">
+                The result is a still image of the first frame{{ gifFrames > 1 ? ` (this GIF has ${gifFrames} frames)` : '' }}, saved as
+                {{ outputLabel }}. Browsers can't write GIF files.
+              </UiCallout>
+              <UiSelect v-model="outputFormat" label="Output format" :options="outputOptions" />
               <UiRange
+                v-if="outputIsLossy"
                 v-model="compressionQuality"
                 label="Quality"
                 unit="%"
@@ -34,6 +40,10 @@
                 :step="5"
                 :hint="`${compressionQuality >= 80 ? 'High' : compressionQuality >= 50 ? 'Medium' : 'Low'}. Lower makes a smaller file, higher a larger one.`"
               />
+              <p v-else class="text-sm text-ink-secondary">
+                PNG is lossless, so there is no quality setting: only a smaller max width or height reduces the file, and re-encoding
+                can even make it larger. Choose JPEG or WebP for lossy compression.
+              </p>
               <div class="grid grid-cols-2 gap-4">
                 <UiInput v-model="maxWidth" type="number" label="Max width" suffix="px" min="100" max="10000" step="100" placeholder="Original" />
                 <UiInput v-model="maxHeight" type="number" label="Max height" suffix="px" min="100" max="10000" step="100" placeholder="Original" />
@@ -64,11 +74,11 @@
               </div>
               <div class="flex items-center justify-between">
                 <dt class="text-ink-secondary">Compressed size:</dt>
-                <dd class="font-medium text-success">{{ formatFileSize(compressedSize) }}</dd>
+                <dd class="font-medium" :class="isLarger ? 'text-warning' : 'text-success'">{{ formatFileSize(compressedSize) }}</dd>
               </div>
               <div class="flex items-center justify-between pt-2 border-t border-line">
                 <dt class="font-semibold text-ink-strong">Reduction:</dt>
-                <dd v-if="compressionPercentage >= 0" class="font-semibold text-success">
+                <dd v-if="!isLarger" class="font-semibold text-success">
                   {{ compressionPercentage }}% ({{ formatFileSize((selectedFile?.size || 0) - compressedSize) }} saved)
                 </dd>
                 <dd v-else class="font-semibold text-warning">
@@ -79,7 +89,9 @@
 
             <p class="text-sm text-ink-secondary"><strong class="text-ink">Dimensions:</strong> {{ imageWidth }}×{{ imageHeight }}px</p>
 
-            <UiButton v-if="compressedBlob" variant="primary" icon="download" class="w-full" @click="downloadCompressed">Download compressed image</UiButton>
+            <UiButton v-if="compressedBlob" :variant="isLarger ? 'secondary' : 'primary'" icon="download" class="w-full" @click="downloadCompressed">
+              {{ isLarger ? 'Download anyway (not smaller than the original)' : 'Download compressed image' }}
+            </UiButton>
           </div>
           <UiEmptyState v-else title="No image yet" body="Upload an image to see preview and compression results" />
         </UiPanel>
@@ -91,7 +103,8 @@
 <script setup>
 import { ref, computed } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiEmptyState, UiInput, UiPanel, UiRange } from '../components/ui';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiEmptyState, UiInput, UiPanel, UiRange, UiSelect } from '../components/ui';
+import { countGifFrames, isLossyType, resolveOutputType } from '../utils/imageCompress.js';
 import UiFileDropzone from '../components/ui/UiFileDropZone.vue';
 import { useNotice } from '../composables/useNotice.js';
 
@@ -112,6 +125,9 @@ const maxHeight = ref(null);
 const maintainAspectRatio = ref(true);
 const compressedBlob = ref(null);
 const compressedSize = ref(0);
+// 'original' keeps the format where the browser can write it (GIF becomes PNG)
+const outputFormat = ref('original');
+const gifFrames = ref(0);
 // Bumped whenever the selected file changes, so late async results for an old
 // file (FileReader, image decode, toBlob) are ignored.
 let fileToken = 0;
@@ -124,6 +140,22 @@ const compressionPercentage = computed(() => {
 });
 
 const isAcceptedImage = (file) => ACCEPTED_TYPES.includes(file.type);
+
+const isGif = computed(() => selectedFile.value?.type === 'image/gif');
+const outputType = computed(() => resolveOutputType(selectedFile.value?.type, outputFormat.value));
+const outputIsLossy = computed(() => isLossyType(outputType.value));
+const outputLabel = computed(() => EXTENSIONS[outputType.value]?.toUpperCase() || outputType.value);
+const isLarger = computed(() => compressedSize.value > 0 && compressedSize.value >= (selectedFile.value?.size || 0));
+
+const outputOptions = computed(() => {
+  const original = selectedFile.value?.type === 'image/jpeg' ? 'JPEG' : 'PNG';
+  return [
+    { value: 'original', label: isGif.value ? 'PNG (GIF can\'t be written; lossless)' : `Same as original (${original})` },
+    { value: 'image/jpeg', label: 'JPEG (lossy, no transparency)' },
+    { value: 'image/webp', label: 'WebP (lossy, keeps transparency)' },
+    { value: 'image/png', label: 'PNG (lossless)' },
+  ];
+});
 
 // A file dropped on the zone or chosen with Browse files
 const handleSelect = (file) => {
@@ -149,6 +181,12 @@ const processFile = (file) => {
   compressedSize.value = 0;
   imageWidth.value = 0;
   imageHeight.value = 0;
+  gifFrames.value = 0;
+  if (file.type === 'image/gif') {
+    file.arrayBuffer?.().then((buffer) => {
+      if (token === fileToken) gifFrames.value = countGifFrames(buffer);
+    }).catch(() => {});
+  }
 
   // Create preview
   const reader = new FileReader();
@@ -184,6 +222,7 @@ const clearFile = () => {
   imageHeight.value = 0;
   compressedBlob.value = null;
   compressedSize.value = 0;
+  gifFrames.value = 0;
   isCompressing.value = false;
   fileInput.value?.reset();
 };
@@ -251,10 +290,9 @@ const compressImage = async () => {
     const img = await loadImage(url);
     const { width, height } = targetDimensions(img.naturalWidth, img.naturalHeight);
 
-    // Canvas can't encode GIF, and PNG ignores the quality setting. JPEG is used
-    // for JPEG input, and for PNG/GIF input below 80% quality (lossy); otherwise
-    // PNG (lossless) is kept.
-    const mimeType = file.type === 'image/jpeg' || compressionQuality.value < 80 ? 'image/jpeg' : 'image/png';
+    // The format the user picked. Quality only applies to JPEG and WebP; PNG is
+    // lossless (canvas ignores the quality argument for it).
+    const mimeType = outputType.value;
     const quality = Math.min(1, Math.max(0.1, compressionQuality.value / 100));
 
     const canvas = document.createElement('canvas');
@@ -282,11 +320,18 @@ const compressImage = async () => {
 
     // The results list appears silently, so the outcome is also said as a notice
     const saved = file.size ? Math.round(((file.size - result.size) / file.size) * 100) : 0;
-    const converted = file.type !== result.type ? ` Converted to ${EXTENSIONS[result.type]?.toUpperCase() || result.type} for compression.` : '';
+    const resultLabel = EXTENSIONS[result.type]?.toUpperCase() || result.type;
+    let converted = file.type !== result.type ? ` Converted to ${resultLabel}.` : '';
+    // Browsers without WebP encoding hand back PNG instead
+    if (result.type !== mimeType) converted += ` This browser can't write ${EXTENSIONS[mimeType]?.toUpperCase() || mimeType}, so ${resultLabel} was used.`;
+    const animation = file.type === 'image/gif'
+      ? (gifFrames.value > 1 ? ` The animation was dropped: only the first of ${gifFrames.value} frames is kept.` : ' GIF animation is not kept: only the first frame is saved.')
+      : '';
     if (result.size >= file.size) {
-      showNotice(`The compressed image (${formatFileSize(result.size)}) is not smaller than the original. Try a lower quality or smaller dimensions.${converted}`, 'warning');
+      const tip = isLossyType(result.type) ? 'Try a lower quality or smaller dimensions' : 'Choose JPEG or WebP, or smaller dimensions';
+      showNotice(`The result (${formatFileSize(result.size)}) is not smaller than the original (${formatFileSize(file.size)}), so keep the original. ${tip}.${converted}${animation}`, 'warning');
     } else {
-      showNotice(`Compressed to ${formatFileSize(result.size)} (${saved}% smaller).${converted}`, 'success');
+      showNotice(`Compressed to ${formatFileSize(result.size)} (${saved}% smaller).${converted}${animation}`, animation ? 'warning' : 'success');
     }
   } catch (error) {
     console.error('Compression error:', error);

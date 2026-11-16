@@ -3,7 +3,7 @@
     <PageHero
       :back="{ to: '/tools', label: 'Tools' }"
       title="Font stack and subsetting"
-      lead="Build font stacks with fallback fonts, and generate smaller Google Fonts URLs by subsetting character sets."
+      lead="Build font stacks with fallback fonts, and generate smaller Google Fonts URLs that hold only the characters you need."
       spot="foundations/font-stack"
       size="tool"
     />
@@ -85,28 +85,23 @@
         <!-- Subsetting -->
         <UiPanel title="Font subsetting">
           <UiCallout title="What is font subsetting?">
-            Include only the character sets you need, which makes the font smaller and faster to load. Pick the sets your project
-            needs to generate a Google Fonts URL.
+            A subset holds only the characters you need, so the font file is smaller. Type the characters your text uses (a logo,
+            a heading) and the URL asks Google Fonts for a file with just those. Leave it empty for the full font: browsers already
+            download only the language blocks (Latin, Cyrillic…) a page actually uses.
           </UiCallout>
 
           <UiSelect :model-value="selectedFontForSubsetting" label="Font" :options="fontOptions" @update:model-value="selectFontForSubsetting" />
 
-          <UiSelect v-if="selectedFontForSubsetting" v-model="selectedWeightForSubsetting" label="Weight" :options="weightOptions" />
-
-          <fieldset v-if="selectedFontForSubsetting" class="flex flex-col gap-3">
-            <legend class="mb-1 text-sm font-medium text-ink">Character sets to include</legend>
-            <p class="text-xs text-ink-muted">Only sets this font supports are shown.</p>
-            <p v-if="getAvailableSubsetsForFont().length === 0" class="text-sm text-ink-muted">No character sets available for this font.</p>
-            <div v-else class="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <UiCheckbox
-                v-for="subset in getAvailableSubsetsForFont()"
-                :key="subset.value"
-                v-model="selectedSubsets"
-                :value="subset.value"
-                :label="subset.label"
-              />
-            </div>
-          </fieldset>
+          <template v-if="selectedFontForSubsetting">
+            <UiSelect v-model="selectedWeightForSubsetting" label="Weight" :options="weightOptions" />
+            <UiTextarea
+              v-model="subsetText"
+              label="Characters to include"
+              rows="3"
+              placeholder="e.g. Acme Inc. or 0123456789"
+              :hint="subsetHint"
+            />
+          </template>
 
           <template v-if="subsetUrl">
             <UiCodeBlock :code="subsetUrl" label="Google Fonts URL" @copied="onSubsetCopied" @copy-failed="onSubsetCopyFailed" />
@@ -122,7 +117,8 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
-import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiCode, UiCodeBlock, UiInput, UiPanel, UiSelect } from '../components/ui';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCode, UiCodeBlock, UiInput, UiPanel, UiSelect, UiTextarea } from '../components/ui';
+import { buildSubsetUrl, uniqueCharacters } from '../utils/fontSubset.js';
 import UiTypeSample from '../components/ui/UiTypeSample.vue';
 import fontData from '../assets/fonts.json';
 import { focusAfterRemoval } from '../utils/focusAfterRemoval';
@@ -136,7 +132,7 @@ const newFontInStack = ref('');
 const defaultFontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
 const selectedFontForSubsetting = ref('');
 const selectedWeightForSubsetting = ref('');
-const selectedSubsets = ref([]);
+const subsetText = ref('');
 
 // CSS generic families are keywords and must not be quoted ('sans-serif' in
 // quotes means a font literally named "sans-serif").
@@ -152,17 +148,22 @@ const formatFamily = (name) => {
 
 const fontFamilyValue = computed(() => fontStack.value.map(formatFamily).join(', '));
 
-// Load the selected Google font so the preview actually shows it.
+// Load every Google font in the stack (the primary font and any "Pairs well
+// with" font added to it), so the preview shows them rather than a fallback.
 const loadedFontLinks = new Map();
-watch(selectedFontForStack, (name) => {
-  const font = fontData.find((f) => f.name === name);
+const loadFont = (name) => {
+  const font = fontData.find((f) => f.name.toLowerCase() === String(name).toLowerCase());
   if (!font?.url || loadedFontLinks.has(font.url) || !font.url.startsWith('https://fonts.googleapis.com/')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = font.url;
   document.head.appendChild(link);
   loadedFontLinks.set(font.url, link);
-});
+};
+watch([selectedFontForStack, fontStack], () => {
+  if (selectedFontForStack.value) loadFont(selectedFontForStack.value);
+  fontStack.value.forEach(loadFont);
+}, { deep: true });
 
 onBeforeUnmount(() => {
   loadedFontLinks.forEach((link) => link.remove());
@@ -225,7 +226,6 @@ function selectFontForStack(name) {
 
 function selectFontForSubsetting(name) {
   selectedFontForSubsetting.value = name;
-  selectedSubsets.value = [];
   selectedWeightForSubsetting.value = '';
 }
 
@@ -257,35 +257,17 @@ function getAvailableWeightsForSubsetting() {
   return [...font.weights].sort((a, b) => parseInt(a) - parseInt(b));
 }
 
-function getAvailableSubsetsForFont() {
-  const font = getSelectedFontForSubsetting();
-  if (!font || !font.supports) return [];
-  
-  const allSubsets = [
-    { value: 'latin', label: 'Latin', base: 'latin' },
-    { value: 'latin-ext', label: 'Latin Extended', base: 'latin' },
-    { value: 'cyrillic', label: 'Cyrillic', base: 'cyrillic' },
-    { value: 'cyrillic-ext', label: 'Cyrillic Extended', base: 'cyrillic' },
-    { value: 'greek', label: 'Greek', base: 'greek' },
-    { value: 'greek-ext', label: 'Greek Extended', base: 'greek' },
-    { value: 'arabic', label: 'Arabic', base: 'arabic' },
-    { value: 'devanagari', label: 'Devanagari', base: 'devanagari' },
-    { value: 'chinese-simplified', label: 'Chinese (Simplified)', base: 'chinese' }
-  ];
-  
-  // Filter to only show subsets for scripts the font supports
-  return allSubsets.filter(subset => {
-    return font.supports.includes(subset.base);
-  });
-}
-
-// The css2 API ignores `subset`; the original css API still honours it.
+// Google Fonts ignores `&subset=` (every request gets the same unicode-range
+// blocks), so a real subset uses `&text=` with the characters typed above.
 const subsetUrl = computed(() => {
-  if (!selectedFontForSubsetting.value || selectedSubsets.value.length === 0 || !selectedWeightForSubsetting.value) return '';
-  const family = encodeURIComponent(selectedFontForSubsetting.value).replace(/%20/g, '+');
-  const weight = encodeURIComponent(selectedWeightForSubsetting.value);
-  const subsets = selectedSubsets.value.map(encodeURIComponent).join(',');
-  return `https://fonts.googleapis.com/css?family=${family}:${weight}&subset=${subsets}&display=swap`;
+  if (!selectedFontForSubsetting.value || !selectedWeightForSubsetting.value) return '';
+  return buildSubsetUrl(selectedFontForSubsetting.value, selectedWeightForSubsetting.value, subsetText.value);
+});
+
+const subsetHint = computed(() => {
+  const count = Array.from(uniqueCharacters(subsetText.value)).length;
+  if (!count) return 'Empty: the URL loads the whole font.';
+  return `${count} unique character${count === 1 ? '' : 's'}. Text using any other character falls back to the next font in the stack.`;
 });
 
 const onSubsetCopied = () => showSubsetNotice('Font subset URL copied to clipboard.', 'success');

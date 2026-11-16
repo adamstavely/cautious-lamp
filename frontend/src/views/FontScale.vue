@@ -16,7 +16,8 @@
             type="number"
             label="Base font size"
             suffix="px"
-            hint="Starting value for your typography scale"
+            hint="Starting value for your typography scale, 12 to 72px"
+            :error="fontSizeError"
             min="12"
             max="72"
             step="1"
@@ -29,6 +30,7 @@
               type="number"
               label="Custom ratio"
               hint="Between 1.1 and 2.0"
+              :error="customRatioError"
               min="1.1"
               max="2.0"
               step="0.001"
@@ -140,6 +142,25 @@ const currentRatio = computed(() => {
     return Math.min(2, Math.max(1.1, n));
   }
   return ratios[selectedRatio.value] ?? ratios['perfect-fourth'];
+});
+
+// The scale clamps the inputs; say so on the field instead of silently using
+// a different value from the one shown.
+const fontSizeError = computed(() => {
+  const raw = fontSize.value;
+  const n = Number(raw);
+  if (raw === '' || raw === null || !Number.isFinite(n) || n <= 0) return `Enter a size from 12 to 72px. The scale uses ${baseSize.value}px for now.`;
+  if (n < 12 || n > 72) return `The base size must be 12 to 72px, so the scale uses ${baseSize.value}px.`;
+  return '';
+});
+
+const customRatioError = computed(() => {
+  if (selectedRatio.value !== 'custom') return '';
+  const raw = customRatio.value;
+  const n = Number(raw);
+  if (raw === '' || raw === null || !Number.isFinite(n)) return `Enter a ratio from 1.1 to 2. The scale uses ${currentRatio.value} for now.`;
+  if (n < 1.1 || n > 2) return `The ratio must be 1.1 to 2, so the scale uses ${currentRatio.value}.`;
+  return '';
 });
 
 const round2 = (n) => Math.round(n * 100) / 100;

@@ -23,10 +23,21 @@
             <UiInput v-if="needsViewportWidth" v-model.number="viewportWidth" type="number" min="1" step="1" mono label="Viewport width" suffix="px" />
             <UiInput v-if="needsViewportHeight" v-model.number="viewportHeight" type="number" min="1" step="1" mono label="Viewport height" suffix="px" />
             <UiSelect
-              v-if="selectedMode === 'px-to-percent' || selectedMode === 'percent-to-vw'"
+              v-if="usesPercent"
               v-model="percentageContext"
               :options="contextOptions"
               label="Context"
+            />
+            <UiInput
+              v-if="usesPercent && percentageContext === 'dimension'"
+              v-model.number="parentSize"
+              type="number"
+              min="1"
+              step="1"
+              mono
+              label="Parent size"
+              suffix="px"
+              hint="The parent's width or height: what 100% stands for"
             />
           </div>
         </UiPanel>
@@ -291,6 +302,10 @@ const parentFontSize = ref(16);
 const viewportWidth = ref(1920);
 const viewportHeight = ref(1080);
 const percentageContext = ref('font-size');
+// Width/height percentages are relative to the parent's width or height
+const parentSize = ref(100);
+// The pixel size 100% stands for in the current context
+const percentBase = computed(() => (percentageContext.value === 'font-size' ? parentFontSize.value : parentSize.value));
 
 // Input values
 const pxValue = ref(16);
@@ -375,15 +390,15 @@ const convertEmToPx = () => {
 };
 
 const convertPxToPercent = () => {
-  if (hasValue(pxValue.value) && (percentageContext.value !== 'font-size' || isNonZero(parentFontSize.value))) {
-    const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
+  if (hasValue(pxValue.value) && isNonZero(percentBase.value)) {
+    const baseSize = percentBase.value;
     percentValue.value = parseFloat(((pxValue.value / baseSize) * 100).toFixed(2));
   }
 };
 
 const convertPercentToPx = () => {
-  if (hasValue(percentValue.value)) {
-    const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
+  if (hasValue(percentValue.value) && isNonZero(percentBase.value)) {
+    const baseSize = percentBase.value;
     pxValue.value = parseFloat(((percentValue.value / 100) * baseSize).toFixed(1));
   }
 };
@@ -399,7 +414,7 @@ const convertBaseToPx = () => {
   } else if (emMatch) {
     baseToPxResult.value = parseFloat((parseFloat(emMatch[1]) * parentFontSize.value).toFixed(1));
   } else if (percentMatch) {
-    const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
+    const baseSize = percentBase.value;
     baseToPxResult.value = parseFloat(((parseFloat(percentMatch[1]) / 100) * baseSize).toFixed(1));
   } else {
     baseToPxResult.value = '';
@@ -633,15 +648,15 @@ const convertVwToMm = () => {
 // Percentage to VW conversions
 const convertPercentToVw = () => {
   if (hasValue(percentValue.value) && isNonZero(viewportWidth.value)) {
-    const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
+    const baseSize = percentBase.value;
     const px = (percentValue.value / 100) * baseSize;
     vwValue.value = parseFloat(((px / viewportWidth.value) * 100).toFixed(4));
   }
 };
 
 const convertVwToPercent = () => {
-  if (hasValue(vwValue.value) && isNonZero(viewportWidth.value) && (percentageContext.value !== 'font-size' || isNonZero(parentFontSize.value))) {
-    const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
+  if (hasValue(vwValue.value) && isNonZero(viewportWidth.value) && isNonZero(percentBase.value)) {
+    const baseSize = percentBase.value;
     const px = (vwValue.value / 100) * viewportWidth.value;
     percentValue.value = parseFloat(((px / baseSize) * 100).toFixed(2));
   }
@@ -690,7 +705,8 @@ const pxToEmTable = computed(() => {
 
 const pxToPercentTable = computed(() => {
   const table = [];
-  const baseSize = percentageContext.value === 'font-size' ? parentFontSize.value : 100;
+  const baseSize = percentBase.value;
+  if (!isNonZero(baseSize)) return table;
   const pxValues = [1, 2, 4, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 50, 64, 72, 80, 96, 100];
   for (const px of pxValues) {
     const percent = parseFloat(((px / baseSize) * 100).toFixed(2));
@@ -809,6 +825,9 @@ const modeGroups = [
   { label: 'Frameworks', modes: frameworkModes },
 ];
 
+// Modes where a percentage is converted, so its context (and parent size) matter
+const usesPercent = computed(() => ['px-to-percent', 'percent-to-vw', 'base-to-px'].includes(selectedMode.value));
+
 const contextOptions = [
   { value: 'font-size', label: 'Font Size' },
   { value: 'dimension', label: 'Width/Height' },
@@ -819,7 +838,7 @@ const calculationNote = computed(() => {
   if (mode === 'px-to-rem') return `Calculation based on a root font-size of ${rootFontSize.value} pixel.`;
   if (mode === 'px-to-em') return `Calculation based on a parent font-size of ${parentFontSize.value} pixel.`;
   if (mode === 'px-to-vh') return `Calculation based on a viewport height of ${viewportHeight.value} pixel.`;
-  if (mode === 'px-to-percent') return `Calculation based on a parent size of ${percentageContext.value === 'font-size' ? parentFontSize.value : 100} pixel.`;
+  if (mode === 'px-to-percent') return `Calculation based on a parent size of ${percentBase.value} pixel.`;
   if (mode.includes('vw')) return `Calculation based on a viewport width of ${viewportWidth.value} pixel.`;
   if (mode === 'px-to-tailwind') return `Tailwind uses 0.25rem increments (${rootFontSize.value * 0.25}px at ${rootFontSize.value}px root).`;
   return '';
@@ -898,7 +917,7 @@ const runCurrentConversion = () => {
 };
 
 // Watch for configuration changes
-watch([rootFontSize, parentFontSize, percentageContext, viewportWidth, viewportHeight], runCurrentConversion);
+watch([rootFontSize, parentFontSize, percentageContext, parentSize, viewportWidth, viewportHeight], runCurrentConversion);
 
 onMounted(runCurrentConversion);
 </script>

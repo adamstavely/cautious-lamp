@@ -91,6 +91,7 @@ import { ref, computed } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { PageHero, PageSection, PageShell, UiButton, UiCode, UiPanel, UiSegmented, UiTable, UiTextarea } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
+import { decodeNamedEntity } from '../utils/htmlEntities.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const conversionMode = ref('escape');
@@ -120,39 +121,6 @@ const ESCAPE_MAP = {
 
 const escapeHTML = (text) => text.replace(/[&<>"']/g, (char) => ESCAPE_MAP[char]);
 
-// Named entities recognised when unescaping. Pure string mapping: the input is
-// never parsed as HTML, so nothing in it can execute or be injected.
-const NAMED_ENTITIES = {
-  amp: '&',
-  lt: '<',
-  gt: '>',
-  quot: '"',
-  apos: "'",
-  nbsp: '\u00A0',
-  copy: '\u00A9',
-  reg: '\u00AE',
-  trade: '\u2122',
-  hellip: '\u2026',
-  mdash: '\u2014',
-  ndash: '\u2013',
-  lsquo: '\u2018',
-  rsquo: '\u2019',
-  ldquo: '\u201C',
-  rdquo: '\u201D',
-  laquo: '\u00AB',
-  raquo: '\u00BB',
-  deg: '\u00B0',
-  euro: '\u20AC',
-  pound: '\u00A3',
-  yen: '\u00A5',
-  cent: '\u00A2',
-  sect: '\u00A7',
-  middot: '\u00B7',
-  bull: '\u2022',
-  times: '\u00D7',
-  divide: '\u00F7',
-};
-
 const toCodePoint = (match, code) => {
   // Valid Unicode scalar values only (no NUL, no surrogates, nothing past U+10FFFF).
   if (Number.isNaN(code) || code <= 0 || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) {
@@ -166,7 +134,7 @@ const unescapeHTML = (text) =>
   text.replace(/&(?:#[xX]([0-9a-fA-F]+)|#(\d+)|([a-zA-Z][a-zA-Z0-9]*));/g, (match, hex, dec, name) => {
     if (hex !== undefined) return toCodePoint(match, parseInt(hex, 16));
     if (dec !== undefined) return toCodePoint(match, parseInt(dec, 10));
-    return Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, name) ? NAMED_ENTITIES[name] : match;
+    return decodeNamedEntity(name) ?? match;
   });
 
 const outputText = computed(() => {
