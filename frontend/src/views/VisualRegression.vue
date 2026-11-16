@@ -131,6 +131,7 @@ import {
 } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient from '../services/api.js';
+import { takeListNotice } from '../components/visual-regression/vrApi.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const { notice: createNotice, showNotice: showCreateNotice, clearNotice: clearCreateNotice } = useNotice();
@@ -304,6 +305,9 @@ const pendingDiffs = computed(() =>
 );
 
 onMounted(() => {
+  // e.g. "Project deleted", set by the project page before coming back here
+  const pending = takeListNotice();
+  if (pending) showNotice(pending.message, pending.type);
   loadWorkspaces();
   loadProjects();
 });

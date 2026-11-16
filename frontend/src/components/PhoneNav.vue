@@ -16,7 +16,10 @@
     </div>
     <nav aria-label="Main navigation" class="phone-nav-body">
       <ul class="phone-nav-list">
-        <li v-for="item in items" :key="item.path" :class="{ 'phone-nav-divided': NAV_DIVIDERS_AFTER.includes(item.path) }">
+        <li v-for="item in items" :key="item.path">
+          <div v-if="NAV_DIVIDERS_BEFORE[item.path]" class="phone-nav-divider" aria-hidden="true">
+            <span class="phone-nav-divider-label">{{ NAV_DIVIDERS_BEFORE[item.path] }}</span>
+          </div>
           <router-link
             :to="item.path"
             class="phone-nav-item"
@@ -44,7 +47,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { usePhoneNav } from '../composables/usePhoneNav.js';
 import { useTheme } from '../composables/useTheme.js';
-import { ADMIN_NAV, MAIN_NAV, NAV_DIVIDERS_AFTER, isSectionActive } from '../navigation.js';
+import { ADMIN_NAV, MAIN_NAV, NAV_DIVIDERS_BEFORE, isSectionActive } from '../navigation.js';
 import { canAccessPath } from '../router/rbacGuards.js';
 import { UiButton } from './ui';
 
@@ -98,8 +101,16 @@ const closeOnBackdrop = (event) => {
 .phone-nav-list {
   @apply flex flex-col gap-1;
 }
-.phone-nav-divided {
-  @apply pb-1 mb-1 border-b border-line;
+.phone-nav-divider {
+  @apply flex items-center gap-2 px-3 mt-2 mb-1;
+}
+.phone-nav-divider::before,
+.phone-nav-divider::after {
+  content: '';
+  @apply flex-1 h-px bg-line;
+}
+.phone-nav-divider-label {
+  @apply text-xs leading-none text-ink-muted select-none;
 }
 .phone-nav-item {
   @apply flex items-center gap-3 w-full min-h-11 px-3 rounded-tile text-sm font-medium text-ink-secondary transition-colors;

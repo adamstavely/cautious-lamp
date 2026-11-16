@@ -13,7 +13,7 @@
         <UiPanel title="Take more control..." class="lg:col-span-1">
           <UiSegmented v-model="alignment" label="Align" :options="alignOptions" />
           <UiRange v-model="radius" label="Radius" :min="0" :max="20" unit="px" />
-          <UiRange v-model="words" label="Words" :min="1" :max="20" />
+          <UiRange v-model="words" label="Words per line" :min="1" :max="20" />
           <UiRange v-model="lines" label="Lines" :min="1" :max="10" />
           <UiRange v-model="height" label="Height" :min="8" :max="40" unit="px" />
           <UiRange v-model="spacing" label="Spacing" :min="4" :max="32" unit="px" />
@@ -61,6 +61,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
 import { PageHero, PageSection, PageShell, UiButton, UiInput, UiPanel, UiRange, UiSegmented } from '../components/ui';
+import { layoutPlaceholderLines, lineWidth } from '../utils/placeholderLayout.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const alignment = ref('left');
@@ -92,48 +93,17 @@ const safeNumber = (value, min, max, fallback) => {
 // Only a hex color may reach the SVG/HTML output.
 const safeColor = computed(() => (/^#[0-9a-f]{3,8}$/i.test(color.value) ? color.value : '#9ca3af'));
 
-// Random word widths between 30 and 100px, to simulate text
-const generateWordWidths = (numWords) =>
-  Array.from({ length: numWords }, () => Math.round(Math.random() * 70 + 30));
-
-// Lines of word widths. Generated once per refresh so the preview, the copied
-// SVG and the downloaded SVG are all the same layout.
+// Lines of word widths: exactly `words` per line. Generated once per refresh
+// so the preview, the copied SVG and the downloaded SVG are all the same layout.
 const layout = ref([]);
 
 const generateLayout = () => {
-  const lineCount = Math.round(safeNumber(lines.value, 1, 10, 3));
-  const wordCount = Math.round(safeNumber(words.value, 1, 20, 8));
-  const wordWidths = generateWordWidths(wordCount * lineCount);
-  const lineWidthVariation = [0.7, 0.5, 0.8, 0.6, 0.9, 0.65, 0.75, 0.55, 0.85, 0.6];
-  const result = [];
-  let wordIndex = 0;
-
-  for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
-    const lineWords = [];
-    let currentLineWidth = 0;
-    // Vary the target width per line so lines have different lengths
-    const targetLineWidth =
-      MAX_LINE_WIDTH * Math.min(1, lineWidthVariation[lineIndex % lineWidthVariation.length] + Math.random() * 0.2);
-
-    while (wordIndex < wordWidths.length && currentLineWidth < targetLineWidth) {
-      const wordWidth = wordWidths[wordIndex];
-      const extra = lineWords.length > 0 ? WORD_SPACING : 0;
-      if (currentLineWidth + extra + wordWidth > MAX_LINE_WIDTH && lineWords.length > 0) break;
-      // Sometimes stop early to create shorter lines (30% chance after minimum 2 words)
-      if (lineWords.length >= 2 && currentLineWidth >= targetLineWidth * 0.6 && Math.random() < 0.3) break;
-      lineWords.push(wordWidth);
-      currentLineWidth += extra + wordWidth;
-      wordIndex++;
-    }
-
-    // Ensure each line has at least one word
-    if (lineWords.length === 0) {
-      lineWords.push(wordWidths[wordIndex] ?? 60);
-      wordIndex++;
-    }
-    result.push(lineWords);
-  }
-  layout.value = result;
+  layout.value = layoutPlaceholderLines({
+    words: safeNumber(words.value, 1, 20, 8),
+    lines: safeNumber(lines.value, 1, 10, 3),
+    maxWidth: MAX_LINE_WIDTH,
+    wordSpacing: WORD_SPACING,
+  });
 };
 
 // The SVG from the current layout: the preview draws it and Copy/Download
@@ -149,7 +119,7 @@ const svgModel = computed(() => {
   let currentY = gap;
 
   lineRows.forEach((lineWords) => {
-    const totalLineWidth = lineWords.reduce((sum, w) => sum + w, 0) + (lineWords.length - 1) * WORD_SPACING;
+    const totalLineWidth = lineWidth(lineWords, WORD_SPACING);
     let currentX =
       alignment.value === 'center'
         ? (SVG_WIDTH - totalLineWidth) / 2

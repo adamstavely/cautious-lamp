@@ -83,6 +83,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
 import { PageHero, PageSection, PageShell, UiButton, UiCode, UiCodeBlock, UiPanel, UiSegmented, UiTextarea } from '../components/ui';
+import { evaluateValue } from '../utils/preprocessorValues.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 
@@ -394,8 +395,9 @@ const printCss = (nodes, depth = 0) => {
 };
 
 // ---------------------------------------------------------------------------
-// SCSS / Less -> CSS: variables, nesting (with &), @media bubbling and simple
-// mixins. Functions, operations and control flow are not evaluated.
+// SCSS / Less -> CSS: variables, nesting (with &), @media bubbling, simple
+// mixins and simple arithmetic between compatible units. Colour/maths
+// functions and control flow are not evaluated; they are reported as warnings.
 // ---------------------------------------------------------------------------
 
 // At-rules whose bodies are declarations or keyframe selectors, never nested under a parent selector
@@ -538,7 +540,10 @@ const compilePreprocessor = (tree, syntax) => {
             warnings.add(`Declaration "${node.prop}" outside of a rule was dropped`);
             break;
           }
-          target.decls.push({ prop: interpolateSelector(node.prop, ctx.vars), value: substitute(node.value, ctx.vars) });
+          // Simple maths is evaluated (4px * 2 -> 8px); what can't be is reported
+          const evaluated = evaluateValue(substitute(node.value, ctx.vars));
+          evaluated.warnings.forEach((w) => warnings.add(w));
+          target.decls.push({ prop: interpolateSelector(node.prop, ctx.vars), value: evaluated.value });
           break;
         }
         case 'rule': {

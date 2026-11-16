@@ -95,6 +95,14 @@
         @input="handleInput"
       />
     </UiDialog>
+
+    <UiDialog v-model:open="confirmingReset" :title="`Reset the ${activeLabel} tab?`" size="sm">
+      <p class="text-sm text-ink-secondary">This clears the code in the {{ activeLabel }} tab. It can't be undone.</p>
+      <template #footer>
+        <UiButton variant="ghost" @click="confirmingReset = false">Cancel</UiButton>
+        <UiButton variant="danger" @click="confirmReset">Reset</UiButton>
+      </template>
+    </UiDialog>
   </PageShell>
 </template>
 
@@ -103,6 +111,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { PageHero, PageSection, PageShell, UiButton, UiDialog, UiPanel, UiSwitch, UiTabs, UiTextarea } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
+import { formatCss, formatHtml, formatJs } from '../utils/codeFormat.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 // What the preview iframe shows. Only updated by updateOutput(), so turning
@@ -170,60 +179,19 @@ const updateOutput = () => {
   outputDoc.value = renderedHTML.value;
 };
 
+// Tokenizer-aware: strings, comments, regexes and url(...) are left untouched,
+// so formatting never changes what the code does.
+const FORMATTERS = { html: formatHtml, css: formatCss, js: formatJs };
+
 const formatCode = () => {
   const code = codeInputs.value[activeTab.value];
   if (!code) return;
-  
   try {
-    if (activeTab.value === 'html') {
-      // Basic HTML formatting
-      let formatted = code
-        .replace(/>\s+</g, '><')
-        .replace(/></g, '>\n<');
-      
-      // Add indentation
-      let indent = 0;
-      const lines = formatted.split('\n');
-      formatted = lines.map(line => {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('</')) {
-          indent = Math.max(0, indent - 1);
-        }
-        const result = '  '.repeat(indent) + trimmed;
-        if (trimmed.startsWith('<') && !trimmed.startsWith('</') && !trimmed.endsWith('/>')) {
-          indent++;
-        }
-        return result;
-      }).join('\n');
-      
-      codeInputs.value[activeTab.value] = formatted;
-    } else if (activeTab.value === 'css') {
-      // Basic CSS formatting
-      let formatted = code
-        .replace(/\s*{\s*/g, ' {\n  ')
-        .replace(/;\s*/g, ';\n  ')
-        .replace(/\s*}\s*/g, '\n}\n')
-        .replace(/\n\s*\n/g, '\n')
-        .trim();
-      
-      codeInputs.value[activeTab.value] = formatted;
-    } else if (activeTab.value === 'js') {
-      // Basic JS formatting (very simple)
-      let formatted = code
-        .replace(/;\s*/g, ';\n')
-        .replace(/\{\s*/g, ' {\n  ')
-        .replace(/\}\s*/g, '\n}\n')
-        .replace(/\n\s*\n/g, '\n')
-        .trim();
-      
-      codeInputs.value[activeTab.value] = formatted;
-    }
-    
-    if (autoUpdate.value) {
-      updateOutput();
-    }
+    codeInputs.value[activeTab.value] = FORMATTERS[activeTab.value](code);
+    if (autoUpdate.value) updateOutput();
   } catch (error) {
     console.error('Formatting error:', error);
+    showNotice('Could not format this code.', 'error');
   }
 };
 
@@ -240,13 +208,15 @@ const copyCode = async () => {
   }
 };
 
+// Reset asks first (in a dialog, not window.confirm)
+const confirmingReset = ref(false);
 const resetCode = () => {
-  if (confirm('Are you sure you want to reset the current tab?')) {
-    codeInputs.value[activeTab.value] = '';
-    if (autoUpdate.value) {
-      updateOutput();
-    }
-  }
+  confirmingReset.value = true;
+};
+const confirmReset = () => {
+  confirmingReset.value = false;
+  codeInputs.value[activeTab.value] = '';
+  if (autoUpdate.value) updateOutput();
 };
 
 const downloadCode = () => {

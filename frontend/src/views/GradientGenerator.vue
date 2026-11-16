@@ -17,7 +17,7 @@
               <UiChip v-if="animationEnabled" tone="accent" icon="refresh-cw">Animating</UiChip>
             </template>
 
-            <div class="gradient-preview" :class="{ 'animate-gradient': animationEnabled }" role="img" aria-label="Gradient preview"></div>
+            <GradientPreview :declarations="previewCss.declarations" />
 
             <div class="grid grid-cols-3 gap-3">
               <div v-for="tile in backdropTiles" :key="tile.key" class="flex flex-col gap-1.5">
@@ -31,6 +31,9 @@
             <div class="flex flex-col gap-3 pt-5 border-t border-line">
               <h3 class="text-sm font-medium text-ink">Accessibility check</h3>
               <div class="flex flex-wrap items-end gap-4">
+                <div class="w-36">
+                  <UiSelect v-model="accessibilityBackdrop" label="Backdrop" :options="backdropTiles.map((tile) => ({ value: tile.key, label: tile.label }))" />
+                </div>
                 <div class="flex items-end gap-2">
                   <button type="button" class="swatch-button" title="Pick text color" aria-label="Pick text color" @click="openAccessibilityColorPicker($event)">
                     <UiSwatch :color="accessibilityTextColor" size="fill" :label="`Text color: ${accessibilityTextColor}`" />
@@ -41,11 +44,13 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-2 h-11" role="status">
                   <span class="text-sm font-medium text-ink">Ratio</span>
-                  <UiChip :tone="contrastTone">{{ contrastRatio.toFixed(2) }}:1</UiChip>
+                  <UiChip :tone="contrastTone">{{ contrastRatio === null ? 'Invalid colour' : `${contrastRatio.toFixed(2)}:1` }}</UiChip>
                   <UiChip :tone="contrastRatio >= 4.5 ? 'success' : 'danger'" :icon="contrastRatio >= 4.5 ? 'check' : 'x'">AA</UiChip>
                   <UiChip :tone="contrastRatio >= 7 ? 'success' : 'danger'" :icon="contrastRatio >= 7 ? 'check' : 'x'">AAA</UiChip>
                 </div>
-                <div class="gradient-fill text-sample flex-1">Sample</div>
+                <div class="backdrop flex-1" :class="`backdrop-${accessibilityBackdrop}`">
+                  <div class="gradient-fill text-sample">Sample</div>
+                </div>
               </div>
             </div>
           </UiPanel>
@@ -120,6 +125,11 @@
                     </div>
                   </div>
 
+                  <div class="flex items-center">
+                    <UiButton v-if="index > 0" icon-only size="sm" variant="ghost" icon="arrow-up" :label="`Move stop ${index + 1} earlier`" @click="moveColorStop(index, index - 1)" />
+                    <UiButton v-if="index < colorStops.length - 1" icon-only size="sm" variant="ghost" icon="arrow-down" :label="`Move stop ${index + 1} later`" @click="moveColorStop(index, index + 1)" />
+                  </div>
+
                   <UiButton
                     v-if="colorStops.length > 2"
                     icon-only
@@ -170,7 +180,7 @@
             </ul>
 
             <UiCallout v-if="layers.length > 1">
-              Layers are stacked from bottom (Layer 1) to top. Click a layer to edit it. Use blend modes to combine layers.
+              Layer 1 paints on top and later layers sit beneath it, as in CSS. Click a layer to edit it. Use blend modes to combine layers.
             </UiCallout>
           </div>
 
@@ -212,9 +222,10 @@
 
           <!-- Animation -->
           <div class="flex flex-col gap-4 pt-5 border-t border-line">
-            <UiSwitch v-model="animationEnabled" label="Animation" hint="Animates the current active layer" />
+            <UiSwitch v-model="animationEnabled" label="Animation" hint="Position and angle move the current layer; colour cycles every layer's hues" />
             <template v-if="animationEnabled">
-              <UiCallout tone="success" role="status">Animation is active: watch the preview.</UiCallout>
+              <UiCallout v-if="previewCss.animated" tone="success" role="status">Animation is active: watch the preview. Exports include it.</UiCallout>
+              <UiCallout v-else tone="warning" role="status">{{ animationUnavailableMessage }}</UiCallout>
               <UiSelect v-model="animationType" label="Animation type" :options="animationTypeOptions" />
               <UiRange v-model="animationDuration" label="Duration" unit="s" :min="0.5" :max="10" :step="0.5" />
               <UiSelect v-model="animationDirection" label="Direction" :options="animationDirectionOptions" />
@@ -265,6 +276,11 @@ import {
   UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwatch, UiSwitch,
 } from '../components/ui';
 import { focusAfterRemoval } from '../utils/focusAfterRemoval';
+import GradientPreview from '../components/gradient/GradientPreview.vue';
+import {
+  canAnimateLayer, colorChannels, gradientStackCss, layerGradientCss, mixColors, moveStop, sortStops, stopRgba,
+  worstContrast,
+} from '../utils/gradientGenerator.js';
 
 const { notice: paletteNotice, showNotice: showPaletteNotice, clearNotice: clearPaletteNotice } = useNotice();
 const { notice: exportNotice, showNotice: showExportNotice, clearNotice: clearExportNotice } = useNotice();
@@ -321,6 +337,7 @@ const isDragging = ref(false);
 const exportFormat = ref('css');
 const showAccessibilityCheck = ref(false);
 const accessibilityTextColor = ref('#000000');
+const accessibilityBackdrop = ref('white');
 const availablePalettes = ref([]);
 const selectedPaletteId = ref('');
 const loadingPalettes = ref(false);
@@ -414,16 +431,6 @@ const updateGradient = () => {
   colorStops.value.sort((a, b) => a.position - b.position);
 };
 
-// Helper to convert hex + opacity to rgba
-const hexToRgba = (hex, opacity) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return `rgba(0, 0, 0, ${opacity / 100})`;
-  const r = parseInt(result[1], 16);
-  const g = parseInt(result[2], 16);
-  const b = parseInt(result[3], 16);
-  return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
-};
-
 // Sync current layer with main controls
 const syncCurrentLayer = () => {
   if (layers.value[currentLayerIndex.value]) {
@@ -472,153 +479,40 @@ watch(currentLayerIndex, () => {
   syncCurrentLayer();
 });
 
-const cssGradient = computed(() => {
-  const enabledLayers = layers.value.filter(layer => layer.enabled);
-  
-  if (enabledLayers.length === 0) return '';
-  
-  const gradientStrings = enabledLayers.map(layer => {
-    const stops = layer.colorStops
-      .map((stop) => {
-        const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
-        return `${color} ${stop.position}%`;
-      })
-      .join(', ');
-    
-    let gradient = '';
-    switch (layer.type) {
-      case 'linear':
-        gradient = `linear-gradient(${layer.linearAngle}deg, ${stops})`;
-        break;
-      case 'radial':
-        gradient = `radial-gradient(${layer.radialShape} ${layer.radialSize} at ${layer.radialPosition.x} ${layer.radialPosition.y}, ${stops})`;
-        break;
-      case 'conic':
-        gradient = `conic-gradient(from ${layer.conicAngle}deg at ${layer.conicPosition.x} ${layer.conicPosition.y}, ${stops})`;
-        break;
-      default:
-        gradient = `linear-gradient(90deg, ${stops})`;
-    }
-    
-    return gradient;
-  });
-  
-  return gradientStrings.join(', ');
+// The whole stack (every enabled layer) without animation: thumbnails, exports.
+const staticCss = computed(() => gradientStackCss(layers.value));
+const cssGradient = computed(() => staticCss.value.declarations.find(([name]) => name === 'background-image')?.[1] || '');
+const cssGradientWithBlend = cssGradient;
+const cssBlendModes = computed(() => layers.value.filter((layer) => layer.enabled).map((layer) => layer.blendMode || 'normal').join(', '));
+
+const animationSettings = computed(() => ({
+  enabled: animationEnabled.value,
+  type: animationType.value,
+  duration: animationDuration.value,
+  direction: animationDirection.value,
+  iterationCount: animationIterationCount.value,
+}));
+
+// The stack with the animation applied (if on): the preview and the code exports.
+const previewCss = computed(() => gradientStackCss(layers.value, {
+  animation: animationSettings.value,
+  animatedIndex: currentLayerIndex.value,
+}));
+
+const animationUnavailableMessage = computed(() => {
+  const layer = layers.value[currentLayerIndex.value];
+  if (!layer?.enabled) return 'The current layer is hidden, so there is nothing to animate. Show it or pick another layer.';
+  if (!canAnimateLayer(animationType.value, layer)) return 'Radial gradients have no angle to rotate. Pick another animation type or layer.';
+  return '';
 });
 
-const cssGradientWithBlend = computed(() => {
-  const enabledLayers = layers.value.filter(layer => layer.enabled);
-  
-  if (enabledLayers.length === 0) return '';
-  
-  // For multiple layers with blend modes, we need to use background-image with multiple gradients
-  const backgrounds = enabledLayers.map((layer) => {
-    const stops = layer.colorStops
-      .map((stop) => {
-        const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
-        return `${color} ${stop.position}%`;
-      })
-      .join(', ');
-    
-    let gradient = '';
-    switch (layer.type) {
-      case 'linear':
-        gradient = `linear-gradient(${layer.linearAngle}deg, ${stops})`;
-        break;
-      case 'radial':
-        gradient = `radial-gradient(${layer.radialShape} ${layer.radialSize} at ${layer.radialPosition.x} ${layer.radialPosition.y}, ${stops})`;
-        break;
-      case 'conic':
-        gradient = `conic-gradient(from ${layer.conicAngle}deg at ${layer.conicPosition.x} ${layer.conicPosition.y}, ${stops})`;
-        break;
-      default:
-        gradient = `linear-gradient(90deg, ${stops})`;
-    }
-    
-    return gradient;
-  });
-  
-  return backgrounds.join(', ');
-});
-
-const cssBlendModes = computed(() => {
-  const enabledLayers = layers.value.filter(layer => layer.enabled);
-  return enabledLayers.map(layer => layer.blendMode || 'normal').join(', ');
-});
-
-const animatedGradient = computed(() => {
-  if (!animationEnabled.value) return cssGradientWithBlend.value;
-  
-  const currentLayer = layers.value[currentLayerIndex.value];
-  if (!currentLayer || currentLayer.colorStops.length < 2) return cssGradientWithBlend.value;
-  
-  // For color animation, use normal gradient - filter handles it
-  if (animationType.value === 'color') {
-    return cssGradientWithBlend.value;
-  }
-  
-  // For position and angle animations, create a wider gradient
-  if (animationType.value === 'position' || animationType.value === 'angle') {
-    if (currentLayer.type === 'linear') {
-      const angle = currentLayer.linearAngle;
-      // Create stops that extend beyond 100% for seamless scrolling
-      const firstStop = currentLayer.colorStops[0];
-      const lastStop = currentLayer.colorStops[currentLayer.colorStops.length - 1];
-      
-      const stops = currentLayer.colorStops
-        .map((stop) => {
-          const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
-          return `${color} ${stop.position * 0.5}%`;
-        })
-        .concat(
-          currentLayer.colorStops.map((stop) => {
-            const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
-            return `${color} ${stop.position * 0.5 + 50}%`;
-          })
-        )
-        .join(', ');
-      
-      return `linear-gradient(${angle}deg, ${stops})`;
-    }
-  }
-  
-  return cssGradientWithBlend.value;
-});
-
-// The main preview's CSS, passed to the stylesheet through v-bind()
-const previewImage = computed(() => (animationEnabled.value ? animatedGradient.value : cssGradientWithBlend.value) || 'none');
-const previewBlend = computed(() => (animationEnabled.value ? 'normal' : cssBlendModes.value || 'normal'));
-const previewAnimation = computed(() => animationStyle.value.animation || 'none');
-const previewSize = computed(() => animationStyle.value.backgroundSize || 'auto');
-const previewRepeat = computed(() => animationStyle.value.backgroundRepeat || 'repeat');
-const previewPosition = computed(() => animationStyle.value.backgroundPosition || '0% 0%');
-const staticImage = computed(() => cssGradientWithBlend.value || 'none');
+// The swatches and text sample show the gradient still
+const staticImage = computed(() => cssGradient.value || 'none');
 const staticBlend = computed(() => cssBlendModes.value || 'normal');
 
-const contrastTone = computed(() => (contrastRatio.value >= 4.5 ? 'success' : contrastRatio.value >= 3 ? 'warning' : 'danger'));
-
-const animationStyle = computed(() => {
-  if (!animationEnabled.value) return {};
-  
-  const currentLayer = layers.value[currentLayerIndex.value];
-  if (!currentLayer) return {};
-  
-  const style = {};
-  
-  if (animationType.value === 'color') {
-    // Color animation uses filter
-    style.animation = `gradient-color ${animationDuration.value}s ${animationDirection.value} ${animationIterationCount.value}`;
-  } else if (animationType.value === 'position' || animationType.value === 'angle') {
-    if (currentLayer.type === 'linear') {
-      // Position and angle animations use background-position
-      style.backgroundSize = '200% 200%';
-      style.backgroundRepeat = 'no-repeat';
-      style.animation = `gradient-${animationType.value} ${animationDuration.value}s ${animationDirection.value} ${animationIterationCount.value}`;
-      style.backgroundPosition = '0% 50%'; // Initial position
-    }
-  }
-  
-  return style;
+const contrastTone = computed(() => {
+  const ratio = contrastRatio.value ?? 0;
+  return ratio >= 4.5 ? 'success' : ratio >= 3 ? 'warning' : 'danger';
 });
 
 const addLayer = () => {
@@ -680,28 +574,7 @@ const getLayerPreview = (layer) => {
     return { background: 'linear-gradient(90deg, #e5e7eb, #e5e7eb)' };
   }
   
-  const stops = layer.colorStops
-    .map((stop) => {
-      const color = stop.opacity === 100 ? stop.color : hexToRgba(stop.color, stop.opacity);
-      return `${color} ${stop.position}%`;
-    })
-    .join(', ');
-  
-  let gradient = '';
-  switch (layer.type) {
-    case 'linear':
-      gradient = `linear-gradient(${layer.linearAngle}deg, ${stops})`;
-      break;
-    case 'radial':
-      gradient = `radial-gradient(${layer.radialShape} ${layer.radialSize} at ${layer.radialPosition.x} ${layer.radialPosition.y}, ${stops})`;
-      break;
-    case 'conic':
-      gradient = `conic-gradient(from ${layer.conicAngle}deg at ${layer.conicPosition.x} ${layer.conicPosition.y}, ${stops})`;
-      break;
-    default:
-      gradient = `linear-gradient(90deg, ${stops})`;
-  }
-  
+  const gradient = layerGradientCss(layer);
   return { background: gradient };
 };
 
@@ -720,7 +593,7 @@ const addColorStop = () => {
   if (colorStops.value.length >= 2) {
     const last = colorStops.value[colorStops.value.length - 1];
     const secondLast = colorStops.value[colorStops.value.length - 2];
-    newColor = interpolateColor(secondLast.color, last.color, 0.5);
+    newColor = mixColors(secondLast.color, last.color, 0.5);
   } else if (colorStops.value.length === 1) {
     newColor = colorStops.value[0].color;
   }
@@ -734,6 +607,13 @@ const addColorStop = () => {
   updateGradient();
 };
 
+// Keyboard alternative to dragging: swap a stop's colour with its neighbour's
+// place (positions stay put, the order follows them).
+const moveColorStop = (from, to) => {
+  if (to < 0 || to >= colorStops.value.length) return;
+  colorStops.value = moveStop(colorStops.value, from, to);
+};
+
 const removeColorStop = (index) => {
   if (colorStops.value.length > 2) {
     colorStops.value.splice(index, 1);
@@ -741,27 +621,62 @@ const removeColorStop = (index) => {
   }
 };
 
+const camelCase = (property) => property.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+const indent = (text, pad) => text.split('\n').map((line) => (line ? pad + line : line)).join('\n');
+
 const formattedExportCode = computed(() => {
   const gradient = cssGradientWithBlend.value;
   const blendModes = cssBlendModes.value;
   const multiLayer = layers.value.filter((layer) => layer.enabled).length > 1;
-  
+  const { declarations, atRules, animated } = previewCss.value;
+  const rule = (selector, decls) => `${selector} {\n${decls.map(([p, v]) => `  ${p}: ${v};`).join('\n')}\n}`;
+  const extra = declarations.filter(([p]) => p !== 'background-image' && p !== 'background-blend-mode');
+  const animationJs = animated ? declarations.find(([p]) => p === 'animation')[1] : '';
+
   switch (exportFormat.value) {
     case 'css':
+      if (animated) return `${atRules}\n\n${rule('.gradient', declarations)}`;
       if (multiLayer) {
         return `background-image: ${gradient};\nbackground-blend-mode: ${blendModes};`;
       }
       return `background: ${gradient};\nbackground-image: ${gradient};`;
-      
+
     case 'css-vars':
-      return `:root {\n  --gradient-primary: ${gradient};\n${multiLayer ? `  --gradient-blend-mode: ${blendModes};\n` : ''}}\n\n.my-element {\n  background-image: var(--gradient-primary);${multiLayer ? '\n  background-blend-mode: var(--gradient-blend-mode);' : ''}\n}`;
-      
-    case 'tailwind':
-      return `// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n      backgroundImage: {\n        'gradient-primary': '${gradient}',\n      },\n    },\n  },\n}`;
-      
+      return `${animated ? `${atRules}\n\n` : ''}:root {\n  --gradient-primary: ${gradient};\n${multiLayer ? `  --gradient-blend-mode: ${blendModes};\n` : ''}}\n\n${rule('.my-element', [
+        ['background-image', 'var(--gradient-primary)'],
+        ...(multiLayer ? [['background-blend-mode', 'var(--gradient-blend-mode)']] : []),
+        ...extra,
+      ])}`;
+
+    case 'tailwind': {
+      const lines = [`      backgroundImage: {\n        'gradient-primary': '${gradient}',\n      },`];
+      const size = extra.find(([p]) => p === 'background-size');
+      const position = extra.find(([p]) => p === 'background-position');
+      if (size) lines.push(`      backgroundSize: {\n        'gradient-primary': '${size[1]}',\n      },`);
+      if (position) lines.push(`      backgroundPosition: {\n        'gradient-primary': '${position[1]}',\n      },`);
+      if (animated) {
+        const name = animationJs.split(' ')[0];
+        const frames = atRules.match(/@keyframes [\w-]+ \{\n([\s\S]*)\n\}/)[1]
+          .split('\n')
+          .map((line) => line.trim().match(/^([\w%]+) \{ ([\w-]+): (.+); \}$/))
+          .filter(Boolean)
+          .map(([, at, p, v]) => `          '${at}': { '${p}': '${v}' },`)
+          .join('\n');
+        lines.push(`      keyframes: {\n        '${name}': {\n${frames}\n        },\n      },`);
+        lines.push(`      animation: {\n        'gradient-primary': '${animationJs}',\n      },`);
+      }
+      const property = animated && atRules.startsWith('@property') ? `/* Add to your CSS (Tailwind can't register properties):\n${atRules.split('\n\n')[0]}\n*/\n\n` : '';
+      const blend = multiLayer ? `\n// Layers blend with: background-blend-mode: ${blendModes};` : '';
+      return `${property}// tailwind.config.js\nmodule.exports = {\n  theme: {\n    extend: {\n${lines.join('\n')}\n    },\n  },\n}${blend}`;
+    }
+
     case 'scss':
-      return `$gradient-primary: ${gradient};\n\n.my-element {\n  background-image: $gradient-primary;\n}`;
-      
+      return `$gradient-primary: ${gradient};\n${animated ? `\n${atRules}\n` : ''}\n${rule('.my-element', [
+        ['background-image', '$gradient-primary'],
+        ...(multiLayer ? [['background-blend-mode', blendModes]] : []),
+        ...extra,
+      ])}`;
+
     case 'json':
       return JSON.stringify({
         layers: layers.value,
@@ -772,16 +687,21 @@ const formattedExportCode = computed(() => {
           duration: animationDuration.value,
           direction: animationDirection.value,
           iterationCount: animationIterationCount.value,
+          css: animated ? { atRules, declarations: Object.fromEntries(extra) } : undefined,
         } : undefined,
       }, null, 2);
-      
+
     case 'react':
-      return `import styled from 'styled-components';\n\nconst GradientComponent = styled.div\`\n  background-image: ${gradient};\n${multiLayer ? `  background-blend-mode: ${blendModes};\n` : ''}\`;`;
-      
-    case 'vue':
-      // Vue component code - using style binding
-      return `const gradient = '${gradient}';\n${multiLayer ? `const blendMode = '${blendModes}';\n` : ''}\n// Use in template:\n// <div :style="{ backgroundImage: gradient${multiLayer ? ', backgroundBlendMode: blendMode' : ''} }">Your content</div>`;
-      
+      return `import styled${animated ? ', { createGlobalStyle }' : ''} from 'styled-components';\n${animated ? `\n// Render <GradientAnimation /> once, e.g. next to your app root.\nexport const GradientAnimation = createGlobalStyle\`\n${indent(atRules, '  ')}\n\`;\n` : ''}\nconst GradientComponent = styled.div\`\n  background-image: ${gradient};\n${multiLayer ? `  background-blend-mode: ${blendModes};\n` : ''}${extra.map(([p, v]) => `  ${p}: ${v};\n`).join('')}\`;`;
+
+    case 'vue': {
+      const binding = [['backgroundImage', 'gradient'], ...(multiLayer ? [['backgroundBlendMode', 'blendMode']] : []), ...extra.map(([p, v]) => [camelCase(p), `'${v}'`])]
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+      const styleBlock = animated ? `\n\n// Add to a global <style> block (the animation needs these):\n/*\n${atRules}\n*/` : '';
+      return `const gradient = '${gradient}';\n${multiLayer ? `const blendMode = '${blendModes}';\n` : ''}\n// Use in template:\n// <div :style="{ ${binding} }">Your content</div>${styleBlock}`;
+    }
+
     default:
       return gradient;
   }
@@ -849,8 +769,8 @@ const radialRadii = (shape, size, x, y, w, h) => {
   return { rx: sideX[which] * factor, ry: sideY[which] * factor };
 };
 
-const stopColor = (stop) => hexToRgba(stop.color, stop.opacity ?? 100);
-const sortedStops = (layer) => [...layer.colorStops].sort((a, b) => a.position - b.position);
+const stopColor = (stop) => stopRgba(stop);
+const sortedStops = (layer) => sortStops(layer.colorStops);
 const clampOffset = (position) => Math.min(1, Math.max(0, (Number(position) || 0) / 100));
 
 // Canvas composite operations share their names with CSS blend modes.
@@ -973,9 +893,12 @@ const exportAsSVG = () => {
     sortedStops(layer).forEach((stop) => {
       const stopEl = document.createElementNS(svgNS, 'stop');
       stopEl.setAttribute('offset', String(clampOffset(stop.position)));
-      stopEl.setAttribute('stop-color', stop.color);
-      if (stop.opacity !== 100) {
-        stopEl.setAttribute('stop-opacity', String((stop.opacity ?? 100) / 100));
+      // SVG readers don't all take #rgba or every colour name, so write rgb + opacity.
+      const { r, g, b, a } = colorChannels(stop.color);
+      stopEl.setAttribute('stop-color', `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`);
+      const opacity = a * ((stop.opacity ?? 100) / 100);
+      if (opacity !== 1) {
+        stopEl.setAttribute('stop-opacity', String(Math.round(opacity * 1000) / 1000));
       }
       gradient.appendChild(stopEl);
     });
@@ -998,107 +921,9 @@ const exportAsSVG = () => {
   }
 };
 
-// Color interpolation helper
-const hexToRgb = (hex) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : { r: 0, g: 0, b: 0 };
-};
-
-const rgbToHex = (r, g, b) => {
-  return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('');
-};
-
-const interpolateColor = (color1, color2, factor) => {
-  const rgb1 = hexToRgb(color1);
-  const rgb2 = hexToRgb(color2);
-  const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * factor);
-  const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * factor);
-  const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * factor);
-  return rgbToHex(r, g, b);
-};
-
-// Calculate contrast ratio for accessibility
-const calculateLuminance = (rgb) => {
-  const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {
-    val = val / 255;
-    return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-// Sample color at a specific position in the gradient
-const sampleGradientColor = (position) => {
-  const currentLayer = layers.value[currentLayerIndex.value];
-  if (!currentLayer || !currentLayer.colorStops || currentLayer.colorStops.length === 0) {
-    return { r: 0, g: 0, b: 0 };
-  }
-  
-  const layerStops = currentLayer.colorStops;
-  if (layerStops.length === 1) return hexToRgb(layerStops[0].color);
-  
-  // Find the two stops that bracket this position
-  const sortedStops = [...layerStops].sort((a, b) => a.position - b.position);
-  
-  if (position <= sortedStops[0].position) {
-    return hexToRgb(sortedStops[0].color);
-  }
-  if (position >= sortedStops[sortedStops.length - 1].position) {
-    return hexToRgb(sortedStops[sortedStops.length - 1].color);
-  }
-  
-  // Find the two stops that bracket this position
-  for (let i = 0; i < sortedStops.length - 1; i++) {
-    if (position >= sortedStops[i].position && position <= sortedStops[i + 1].position) {
-      const stop1 = sortedStops[i];
-      const stop2 = sortedStops[i + 1];
-      const range = stop2.position - stop1.position;
-      const factor = range > 0 ? (position - stop1.position) / range : 0;
-      
-      const rgb1 = hexToRgb(stop1.color);
-      const rgb2 = hexToRgb(stop2.color);
-      
-      // Interpolate between the two colors
-      const r = Math.round(rgb1.r + (rgb2.r - rgb1.r) * factor);
-      const g = Math.round(rgb1.g + (rgb2.g - rgb1.g) * factor);
-      const b = Math.round(rgb1.b + (rgb2.b - rgb1.b) * factor);
-      
-      return { r, g, b };
-    }
-  }
-  
-  return hexToRgb(sortedStops[0].color);
-};
-
-const contrastRatio = computed(() => {
-  const textRgb = hexToRgb(accessibilityTextColor.value);
-  const textLuminance = calculateLuminance(textRgb);
-  
-  // Sample multiple points across the gradient (at 0%, 25%, 50%, 75%, 100%)
-  const samplePositions = [0, 25, 50, 75, 100];
-  const sampleLuminances = samplePositions.map(pos => {
-    const gradientRgb = sampleGradientColor(pos);
-    return calculateLuminance(gradientRgb);
-  });
-  
-  // Calculate average luminance
-  const avgGradientLuminance = sampleLuminances.reduce((sum, lum) => sum + lum, 0) / sampleLuminances.length;
-  
-  // Use the worst case contrast ratio for accessibility
-  const contrastRatios = sampleLuminances.map(lum => {
-    const lighter = Math.max(textLuminance, lum);
-    const darker = Math.min(textLuminance, lum);
-    return (lighter + 0.05) / (darker + 0.05);
-  });
-  
-  // Return the minimum contrast ratio (worst case)
-  return Math.min(...contrastRatios);
-});
+// Worst contrast between the text colour and the gradient as it paints: every
+// visible layer with its stops' opacity, over the chosen backdrop.
+const contrastRatio = computed(() => worstContrast(layers.value, accessibilityTextColor.value, backdrops[accessibilityBackdrop.value]));
 
 // Turn an API error into a message for the palette panel.
 const paletteErrorMessage = (error, fallback) => {
@@ -1197,15 +1022,10 @@ const exportToPenpot = () => {
   const gradientData = {
     type: 'gradient',
     gradientType: gradientType.value === 'linear' ? 'linear' : gradientType.value === 'radial' ? 'radial' : 'linear',
-    stops: colorStops.value.map((stop) => ({
-      offset: stop.position / 100,
-      color: {
-        r: hexToRgb(stop.color).r / 255,
-        g: hexToRgb(stop.color).g / 255,
-        b: hexToRgb(stop.color).b / 255,
-        a: stop.opacity / 100,
-      },
-    })),
+    stops: colorStops.value.map((stop) => {
+      const { r, g, b, a } = colorChannels(stop.color);
+      return { offset: stop.position / 100, color: { r: r / 255, g: g / 255, b: b / 255, a: (a * stop.opacity) / 100 } };
+    }),
     transform: gradientType.value === 'linear' 
       ? {
           sx: Math.cos(linearAngle.value * Math.PI / 180),
@@ -1246,11 +1066,10 @@ const handleDrop = (index, event) => {
     return;
   }
   
-  const draggedStop = colorStops.value[draggedIndex.value];
-  colorStops.value.splice(draggedIndex.value, 1);
-  colorStops.value.splice(index, 0, draggedStop);
-  
-  updateGradient();
+  // Order is defined by position: the dragged colour takes the target's place
+  // and the positions stay where they were (sorting would otherwise undo it).
+  colorStops.value = moveStop(colorStops.value, draggedIndex.value, index);
+  draggedIndex.value = null;
   isDragging.value = false;
 };
 
@@ -1328,15 +1147,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.gradient-preview {
-  @apply w-full h-64 rounded-tile border border-line transition-all;
-  background-image: v-bind(previewImage);
-  background-blend-mode: v-bind(previewBlend);
-  background-size: v-bind(previewSize);
-  background-repeat: v-bind(previewRepeat);
-  background-position: v-bind(previewPosition);
-  animation: v-bind(previewAnimation);
-}
 .gradient-fill {
   background-image: v-bind(staticImage);
   background-blend-mode: v-bind(staticBlend);
@@ -1380,45 +1190,5 @@ onMounted(() => {
 }
 .layer-row-on .layer-select {
   @apply text-accent-text;
-}
-</style>
-
-<style>
-/* Global keyframes: the preview's animation names them through v-bind() */
-@keyframes gradient-angle {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes gradient-position {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-@keyframes gradient-color {
-  0% {
-    filter: hue-rotate(0deg);
-  }
-  100% {
-    filter: hue-rotate(360deg);
-  }
-}
-
-.animate-gradient {
-  animation-play-state: running !important;
 }
 </style>

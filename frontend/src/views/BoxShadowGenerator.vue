@@ -49,11 +49,11 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div class="grid grid-cols-aside-content gap-2 items-end">
               <div class="w-16"><UiInput v-model="shadow.color" type="color" label="Color" /></div>
-              <UiInput v-model="shadow.color" mono label="Color value" />
+              <UiInput v-model="shadow.color" mono label="Color value" :error="colorError(shadow)" />
             </div>
             <div class="grid grid-cols-content-aside gap-2 items-end">
               <UiRange v-model="shadow.opacity" :min="0" :max="1" :step="0.01" label="Opacity" />
-              <div class="w-24"><UiInput v-model.number="shadow.opacity" type="number" min="0" max="1" step="0.01" label="Opacity value" /></div>
+              <div class="w-24"><UiInput v-model.number="shadow.opacity" type="number" min="0" max="1" step="0.01" label="Opacity value" :error="opacityError(shadow)" /></div>
             </div>
           </div>
           <div class="mt-4">
@@ -110,22 +110,47 @@ const px = (value) => {
   return n === 0 ? '0' : `${n}px`;
 };
 
+// A 3- or 6-digit hex colour as 6 digits, or null when it isn't one.
+const parseHex = (hex) => {
+  let value = String(hex ?? '').trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{3}$/.test(value)) value = value.split('').map((c) => c + c).join('');
+  return /^[0-9a-fA-F]{6}$/.test(value) ? value.toLowerCase() : null;
+};
+
+// Opacity from 0 to 1, or null when empty or out of range.
+const parseOpacity = (value) => {
+  if (value === '' || value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : null;
+};
+
+const colorError = (shadow) => (parseHex(shadow.color) ? '' : 'Enter a hex colour such as #000000. Until then the shadow keeps its last valid colour.');
+const opacityError = (shadow) => (parseOpacity(shadow.opacity) !== null ? '' : 'Enter an opacity from 0 to 1. Until then the shadow keeps its last valid opacity.');
+
+// While a field holds an invalid value (cleared, mistyped) the shadow keeps
+// its last valid colour and opacity instead of silently turning black or opaque.
+const lastValid = new Map();
+const effective = (shadow) => {
+  const previous = lastValid.get(shadow.id) ?? { hex: '000000', opacity: 0.1 };
+  const current = {
+    hex: parseHex(shadow.color) ?? previous.hex,
+    opacity: parseOpacity(shadow.opacity) ?? previous.opacity,
+  };
+  lastValid.set(shadow.id, current);
+  return current;
+};
+
 const hexToRgba = (hex, opacity) => {
-  let value = String(hex || '').trim().replace(/^#/, '');
-  if (/^[0-9a-fA-F]{3}$/.test(value)) {
-    value = value.split('').map((c) => c + c).join('');
-  }
-  if (!/^[0-9a-fA-F]{6}$/.test(value)) value = '000000';
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  const alpha = Math.min(1, Math.max(0, toNumber(opacity, 1)));
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 };
 
 const computedBoxShadow = computed(() => {
   const shadowStrings = shadows.value.map(shadow => {
-    const rgba = hexToRgba(shadow.color, shadow.opacity);
+    const { hex, opacity } = effective(shadow);
+    const rgba = hexToRgba(hex, opacity);
     const inset = shadow.inset ? 'inset ' : '';
     // Blur radius can't be negative in CSS (the whole declaration would be dropped).
     const blur = Math.max(0, toNumber(shadow.blur));
@@ -206,15 +231,18 @@ const exportFormat = (format) => {
   } else if (format === 'json') {
     const config = {
       type: 'box-shadow',
-      shadows: shadows.value.map(s => ({
-        x: toNumber(s.x),
-        y: toNumber(s.y),
-        blur: Math.max(0, toNumber(s.blur)),
-        spread: toNumber(s.spread),
-        color: s.color,
-        opacity: Math.min(1, Math.max(0, toNumber(s.opacity, 1))),
-        inset: s.inset
-      })),
+      shadows: shadows.value.map(s => {
+        const { hex, opacity } = effective(s);
+        return {
+          x: toNumber(s.x),
+          y: toNumber(s.y),
+          blur: Math.max(0, toNumber(s.blur)),
+          spread: toNumber(s.spread),
+          color: `#${hex}`,
+          opacity,
+          inset: s.inset
+        };
+      }),
       css: computedBoxShadow.value.boxShadow
     };
     downloadFile(JSON.stringify(config, null, 2), 'application/json', `box-shadow-${Date.now()}.json`);
