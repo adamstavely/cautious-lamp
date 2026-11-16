@@ -9,7 +9,7 @@
 
     <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
 
-    <UiTabs v-model="activeTab" :tabs="TABS" label="Accessibility reports">
+    <UiTabs ref="tabsRef" v-model="activeTab" :tabs="TABS" label="Accessibility reports">
       <!-- Dashboard -->
       <template #dashboard>
         <div class="space-y-6">
@@ -203,9 +203,9 @@
 
       <!-- Report history -->
       <template #reports>
-        <UiPanel title="Report history">
+        <UiPanel ref="reportPanel" title="Report history">
           <p v-if="reports.length === 0" class="text-sm text-ink-secondary">No reports generated yet.</p>
-          <ul v-else class="space-y-3">
+          <ul v-else ref="reportList" class="space-y-3">
             <li
               v-for="report in reports"
               :key="report.id"
@@ -223,8 +223,8 @@
                 <div class="text-xs text-ink-muted">{{ report.totalIssues }} issues</div>
               </div>
               <template v-if="canAdmin">
-                <UiButton v-if="confirmingDelete === `report:${report.id}`" size="sm" variant="danger" @click="deleteReport(report.id)">Confirm delete</UiButton>
-                <UiButton v-else size="sm" variant="ghost" icon="trash-2" @click="confirmingDelete = `report:${report.id}`">Delete</UiButton>
+                <UiButton v-if="confirmingDelete === `report:${report.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteReport(report.id)">Confirm delete</UiButton>
+                <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`report:${report.id}`" data-focus-after-remove @click="askDelete(`report:${report.id}`)">Delete</UiButton>
               </template>
             </li>
           </ul>
@@ -297,10 +297,10 @@
           description="The backend checks for due schedules every minute and scans the page in a browser. Times are UTC. Reports appear in the history; nothing is emailed."
         >
           <template v-if="canAdmin" #actions>
-            <UiButton variant="primary" icon="plus" @click="openScheduleModal()">Create schedule</UiButton>
+            <UiButton ref="createScheduleButton" variant="primary" icon="plus" @click="openScheduleModal()">Create schedule</UiButton>
           </template>
           <p v-if="schedules.length === 0" class="text-sm text-ink-secondary">No schedules configured.</p>
-          <ul v-else class="space-y-3">
+          <ul v-else ref="scheduleList" class="space-y-3">
             <li v-for="schedule in schedules" :key="schedule.id" class="list-row">
               <div class="flex-1 min-w-0">
                 <div class="font-semibold mb-1 text-ink-strong">{{ getApplicationName(schedule.applicationId) }}</div>
@@ -322,8 +322,8 @@
                 <template v-if="canAdmin">
                   <UiButton size="sm" @click="toggleSchedule(schedule)">{{ schedule.enabled ? 'Disable' : 'Enable' }}</UiButton>
                   <UiButton size="sm" icon="pencil" @click="openScheduleModal(schedule)">Edit</UiButton>
-                  <UiButton v-if="confirmingDelete === `schedule:${schedule.id}`" size="sm" variant="danger" @click="deleteSchedule(schedule.id)">Confirm delete</UiButton>
-                  <UiButton v-else size="sm" variant="ghost" icon="trash-2" @click="confirmingDelete = `schedule:${schedule.id}`">Delete</UiButton>
+                  <UiButton v-if="confirmingDelete === `schedule:${schedule.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteSchedule(schedule.id)">Confirm delete</UiButton>
+                  <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`schedule:${schedule.id}`" data-focus-after-remove @click="askDelete(`schedule:${schedule.id}`)">Delete</UiButton>
                 </template>
               </div>
             </li>
@@ -338,10 +338,10 @@
           description="One SLA per application. Non-compliant: below the target score, failures at or below the target level, or more critical issues than allowed. At risk: more high issues than allowed, at a limit, or within 5 points of the target score. Needs review: nothing failed, but the automated checks couldn't verify the target level (criteria need a manual check, or the scan was HTML-only)."
         >
           <template v-if="canAdmin" #actions>
-            <UiButton variant="primary" icon="plus" @click="openSLAModal()">Create SLA</UiButton>
+            <UiButton ref="createSLAButton" variant="primary" icon="plus" @click="openSLAModal()">Create SLA</UiButton>
           </template>
           <p v-if="slas.length === 0" class="text-sm text-ink-secondary">No SLAs configured.</p>
-          <ul v-else class="space-y-3">
+          <ul v-else ref="slaList" class="space-y-3">
             <li v-for="sla in slas" :key="sla.id" class="list-row">
               <div class="flex-1">
                 <div class="font-semibold mb-2 text-ink-strong">{{ getApplicationName(sla.applicationId) }}</div>
@@ -354,8 +354,8 @@
               </div>
               <div v-if="canAdmin" class="flex items-center gap-2">
                 <UiButton size="sm" icon="pencil" @click="openSLAModal(sla)">Edit</UiButton>
-                <UiButton v-if="confirmingDelete === `sla:${sla.id}`" size="sm" variant="danger" @click="deleteSLA(sla.id)">Confirm delete</UiButton>
-                <UiButton v-else size="sm" variant="ghost" icon="trash-2" @click="confirmingDelete = `sla:${sla.id}`">Delete</UiButton>
+                <UiButton v-if="confirmingDelete === `sla:${sla.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteSLA(sla.id)">Confirm delete</UiButton>
+                <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`sla:${sla.id}`" data-focus-after-remove @click="askDelete(`sla:${sla.id}`)">Delete</UiButton>
               </div>
             </li>
           </ul>
@@ -454,7 +454,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { nextTick, ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import jsPDF from 'jspdf';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
@@ -480,6 +480,7 @@ import {
 import { useNotice } from '../composables/useNotice.js';
 import { useAuth } from '../composables/useAuth.js';
 import apiClient, { apiErrorMessage } from '../services/api.js';
+import { focusAfterRemoval, focusSoon } from '../utils/focusAfterRemoval.js';
 
 const TABS = [
   { value: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
@@ -536,6 +537,27 @@ const schedules = ref([]);
 const slas = ref([]);
 const complianceSummary = ref(null);
 const confirmingDelete = ref(null);
+const tabsRef = ref(null);
+const reportPanel = ref(null);
+const reportList = ref(null);
+const scheduleList = ref(null);
+const slaList = ref(null);
+const createScheduleButton = ref(null);
+const createSLAButton = ref(null);
+
+/** Delete swaps for Confirm delete: keep focus on the button that's there now */
+const askDelete = async (key) => {
+  confirmingDelete.value = key;
+  await nextTick();
+  focusSoon(document.querySelector('[data-confirm-delete]'));
+};
+
+/** When a delete fails, Confirm delete goes back to Delete: focus it */
+const backToDelete = async (key) => {
+  confirmingDelete.value = null;
+  await nextTick();
+  focusSoon([...document.querySelectorAll('[data-delete-for]')].find((el) => el.dataset.deleteFor === key));
+};
 const savingForm = ref(false);
 
 const generateSource = ref('url');
@@ -694,7 +716,13 @@ const openReport = async (reportId) => {
       skipNextLoad = true;
       selectedApplicationId.value = data.applicationId;
     }
+    const switching = activeTab.value !== 'dashboard';
     activeTab.value = 'dashboard';
+    // Opened from another tab: the button that had focus went with that tab
+    if (switching) {
+      await nextTick();
+      focusSoon(tabsRef.value?.$el?.querySelector('[role="tabpanel"]'));
+    }
   } catch (error) {
     fail(error, 'Could not load the report.');
   }
@@ -740,14 +768,18 @@ const generateReport = async () => {
 };
 
 const deleteReport = async (reportId) => {
+  const index = reports.value.findIndex((r) => r.id === reportId);
   try {
     await apiClient.delete(`/api/v1/accessibility-reports/reports/${encodeURIComponent(reportId)}`);
     reports.value = reports.value.filter((r) => r.id !== reportId);
     if (currentReport.value?.id === reportId) currentReport.value = null;
     complianceSummary.value = null;
     showNotice('Report deleted.', 'success');
+    await nextTick();
+    focusAfterRemoval(reportList.value, index, { fallback: reportPanel.value?.$el?.querySelector('h2') });
   } catch (error) {
     fail(error, 'Could not delete the report.');
+    backToDelete(`report:${reportId}`);
   } finally {
     confirmingDelete.value = null;
   }
@@ -814,12 +846,16 @@ const toggleSchedule = async (schedule) => {
 };
 
 const deleteSchedule = async (scheduleId) => {
+  const index = schedules.value.findIndex((s) => s.id === scheduleId);
   try {
     await apiClient.delete(`/api/v1/accessibility-reports/schedules/${encodeURIComponent(scheduleId)}`);
     schedules.value = schedules.value.filter((s) => s.id !== scheduleId);
     showNotice('Schedule deleted.', 'success');
+    await nextTick();
+    focusAfterRemoval(scheduleList.value, index, { fallback: createScheduleButton.value });
   } catch (error) {
     fail(error, 'Could not delete the schedule.');
+    backToDelete(`schedule:${scheduleId}`);
   } finally {
     confirmingDelete.value = null;
   }
@@ -866,13 +902,17 @@ const saveSLA = async () => {
 };
 
 const deleteSLA = async (slaId) => {
+  const index = slas.value.findIndex((s) => s.id === slaId);
   try {
     await apiClient.delete(`/api/v1/accessibility-reports/slas/${encodeURIComponent(slaId)}`);
     slas.value = slas.value.filter((s) => s.id !== slaId);
     complianceSummary.value = null;
     showNotice('SLA deleted.', 'success');
+    await nextTick();
+    focusAfterRemoval(slaList.value, index, { fallback: createSLAButton.value });
   } catch (error) {
     fail(error, 'Could not delete the SLA.');
+    backToDelete(`sla:${slaId}`);
   } finally {
     confirmingDelete.value = null;
   }

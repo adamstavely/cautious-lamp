@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-3" aria-live="polite">
+  <div ref="root" class="flex flex-col gap-3" aria-live="polite">
     <UiCallout v-if="report.missing?.length" tone="danger" title="Nothing imported" role="alert">
       No column for {{ report.missing.join(', ') }}. Use a header row, e.g. <code class="font-code">{{ report.expected }}</code>.
     </UiCallout>
@@ -21,7 +21,8 @@
                 size="sm"
                 variant="secondary"
                 :title="`Use ${suggestion} for ${item.name}`"
-                @click="$emit('use-suggestion', item, suggestion)"
+                data-suggestion
+                @click="useSuggestion($event, item, suggestion)"
               >
                 {{ suggestion }}
               </UiButton>
@@ -72,8 +73,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { UiButton, UiCallout } from '../ui';
+import { focusSoon } from '../../utils/focusAfterRemoval';
 
 /**
  * What happened to the data on its way to the map: rows skipped on import,
@@ -89,7 +91,21 @@ const props = defineProps({
   report: { type: Object, required: true },
 });
 
-defineEmits(['use-suggestion']);
+const emit = defineEmits(['use-suggestion']);
+
+const root = ref(null);
+
+// Applying a suggestion fixes that name, so its buttons disappear: focus moves
+// to the next name's first suggestion (or the one before), else the report's
+// title, rather than falling to the page
+const useSuggestion = async (event, item, suggestion) => {
+  const first = event.currentTarget.closest('li')?.querySelector('[data-suggestion]');
+  const index = [...root.value.querySelectorAll('[data-suggestion]')].indexOf(first);
+  emit('use-suggestion', item, suggestion);
+  await nextTick();
+  const buttons = root.value ? [...root.value.querySelectorAll('[data-suggestion]')] : [];
+  focusSoon(buttons[Math.min(Math.max(index, 0), buttons.length - 1)] ?? root.value?.querySelector('.ui-callout-title, .ui-callout'));
+};
 
 const LIMIT = 12;
 const head = (list) => list.slice(0, LIMIT);

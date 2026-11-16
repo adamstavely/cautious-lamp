@@ -11,7 +11,7 @@
 
     <PageSection title="Flags">
       <template #actions>
-        <UiButton variant="primary" icon="plus" @click="showCreateModal = true">Create flag</UiButton>
+        <UiButton ref="createFlagButton" variant="primary" icon="plus" @click="showCreateModal = true">Create flag</UiButton>
       </template>
 
       <UiSpinner v-if="loading" label="Loading feature flags…" />
@@ -23,7 +23,7 @@
         body="Create your first flag to get started."
       />
 
-      <ul v-else class="space-y-4">
+      <ul v-else ref="flagList" class="space-y-4">
         <li v-for="flag in flags" :key="flag.id" class="flag-card">
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-3 mb-2">
@@ -231,10 +231,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { nextTick, ref, onMounted } from 'vue';
 import apiClient from '../services/api.js';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval.js';
 import {
   PageHero,
   PageSection,
@@ -287,6 +288,8 @@ const selectedRoute = ref('');
 const saving = ref(false);
 const saveError = ref('');
 const flagToDelete = ref(null);
+const flagList = ref(null);
+const createFlagButton = ref(null);
 
 // Route to flag key mapping (reverse of featureFlagGuards)
 const routeToFlagKey = {
@@ -521,9 +524,13 @@ const confirmDeleteFlag = async () => {
   const id = flagToDelete.value?.id;
   flagToDelete.value = null;
   if (!id) return;
+  const index = flags.value.findIndex((flag) => flag.id === id);
   try {
     await apiClient.delete(`${API_BASE_URL}/api/v1/feature-flags/${id}`);
     await loadFlags();
+    // The deleted card's button is gone: focus the card now in its place
+    await nextTick();
+    focusAfterRemoval(flagList.value, index, { fallback: createFlagButton.value });
   } catch (error) {
     console.error('Failed to delete feature flag:', error);
     showNotice('Failed to delete feature flag. Please try again.', 'error');

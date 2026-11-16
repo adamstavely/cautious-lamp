@@ -76,21 +76,21 @@
               <!-- Multi-dataset input (stacked, grouped, combo, multi-line) -->
               <fieldset v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo' || selectedChartType === 'line'" class="flex flex-col gap-3">
                 <legend class="mb-2 text-sm font-semibold text-ink-strong">Datasets</legend>
-                <div v-for="(dataset, datasetIndex) in multiDatasetData" :key="datasetIndex" class="data-card">
+                <div v-for="(dataset, datasetIndex) in multiDatasetData" :key="datasetIndex" class="data-card" data-row>
                   <div class="flex items-center gap-2">
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="dataset.label" placeholder="Dataset label" :aria-label="`Dataset ${datasetIndex + 1} label`" />
                     </div>
-                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove dataset ${datasetIndex + 1}`" :disabled="multiDatasetData.length <= 1" @click="removeDataset(datasetIndex)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove dataset ${datasetIndex + 1}`" :disabled="multiDatasetData.length <= 1" :data-focus-after-remove="multiDatasetData.length > 1 || undefined" @click="removeDataset(datasetIndex); focusNextRow($event, datasetIndex)" />
                   </div>
-                  <div v-for="(item, itemIndex) in dataset.data" :key="itemIndex" class="flex items-center gap-2">
+                  <div v-for="(item, itemIndex) in dataset.data" :key="itemIndex" class="flex items-center gap-2" data-row>
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="item.label" placeholder="Label" :aria-label="`Dataset ${datasetIndex + 1} point ${itemIndex + 1} label`" />
                     </div>
                     <div class="w-24">
                       <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Dataset ${datasetIndex + 1} point ${itemIndex + 1} value`" />
                     </div>
-                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove point ${itemIndex + 1}`" :disabled="dataset.data.length <= 1" @click="removeMultiDataItem(datasetIndex, itemIndex)" />
+                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove point ${itemIndex + 1}`" :disabled="dataset.data.length <= 1" :data-focus-after-remove="dataset.data.length > 1 || undefined" @click="removeMultiDataItem(datasetIndex, itemIndex); focusNextRow($event, itemIndex)" />
                   </div>
                   <UiButton icon="plus" size="sm" variant="ghost" class="self-start" @click="addMultiDataItem(datasetIndex)">Add point</UiButton>
                 </div>
@@ -112,14 +112,14 @@
               <fieldset v-else-if="selectedChartType === 'waterfall'" class="flex flex-col gap-2">
                 <legend class="mb-2 text-sm font-semibold text-ink-strong">Waterfall data</legend>
                 <UiInput v-model.number="waterfallData.base" type="number" label="Base" placeholder="Base value" />
-                <div v-for="(change, index) in waterfallData.changes" :key="index" class="flex items-center gap-2">
+                <div v-for="(change, index) in waterfallData.changes" :key="index" class="flex items-center gap-2" data-row>
                   <div class="flex-1 min-w-0">
                     <UiInput v-model="change.label" placeholder="Label" :aria-label="`Change ${index + 1} label`" />
                   </div>
                   <div class="w-28">
                     <UiInput v-model.number="change.value" type="number" placeholder="Change" :aria-label="`Change ${index + 1} value`" />
                   </div>
-                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove change ${index + 1}`" :disabled="waterfallData.changes.length <= 1" @click="waterfallData.changes.splice(index, 1)" />
+                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove change ${index + 1}`" :disabled="waterfallData.changes.length <= 1" :data-focus-after-remove="waterfallData.changes.length > 1 || undefined" @click="waterfallData.changes.splice(index, 1); focusNextRow($event, index)" />
                 </div>
                 <UiButton icon="plus" size="sm" class="self-start" @click="waterfallData.changes.push({ label: `Change ${waterfallData.changes.length + 1}`, value: 0 })">Add change</UiButton>
               </fieldset>
@@ -127,7 +127,7 @@
               <!-- Candlestick -->
               <fieldset v-else-if="selectedChartType === 'candlestick'" class="flex flex-col gap-3">
                 <legend class="mb-2 text-sm font-semibold text-ink-strong">OHLC data</legend>
-                <div v-for="(item, index) in candlestickData" :key="index" class="data-card">
+                <div v-for="(item, index) in candlestickData" :key="index" class="data-card" data-row>
                   <div class="grid grid-cols-2 gap-2">
                     <div class="col-span-2">
                       <UiInput v-model="item.date" type="date" :label="`Row ${index + 1} date`" />
@@ -137,7 +137,7 @@
                     <UiInput v-model.number="item.low" type="number" step="0.01" label="Low" />
                     <UiInput v-model.number="item.close" type="number" step="0.01" label="Close" />
                   </div>
-                  <UiButton icon="trash-2" variant="ghost" size="sm" class="self-end" :disabled="candlestickData.length <= 1" @click="candlestickData.splice(index, 1)">Remove row</UiButton>
+                  <UiButton icon="trash-2" variant="ghost" size="sm" class="self-end" :disabled="candlestickData.length <= 1" :data-focus-after-remove="candlestickData.length > 1 || undefined" @click="candlestickData.splice(index, 1); focusNextRow($event, index)">Remove row</UiButton>
                 </div>
                 <UiButton
                   icon="plus"
@@ -206,20 +206,20 @@
               <div v-else-if="selectedChartType === 'sankey'" class="flex flex-col gap-6">
                 <fieldset class="flex flex-col gap-2">
                   <legend class="mb-2 text-sm font-semibold text-ink-strong">Nodes</legend>
-                  <div v-for="(node, index) in sankeyData.nodes" :key="index" class="flex items-center gap-2">
+                  <div v-for="(node, index) in sankeyData.nodes" :key="index" class="flex items-center gap-2" data-row>
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="node.id" placeholder="Node ID" :aria-label="`Node ${index + 1} ID`" />
                     </div>
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="node.label" placeholder="Label" :aria-label="`Node ${index + 1} label`" />
                     </div>
-                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove node ${index + 1}`" :disabled="sankeyData.nodes.length <= 2" @click="sankeyData.nodes.splice(index, 1)" />
+                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove node ${index + 1}`" :disabled="sankeyData.nodes.length <= 2" :data-focus-after-remove="sankeyData.nodes.length > 2 || undefined" @click="sankeyData.nodes.splice(index, 1); focusNextRow($event, index)" />
                   </div>
                   <UiButton icon="plus" size="sm" class="self-start" @click="sankeyData.nodes.push({ id: `Node${sankeyData.nodes.length + 1}`, label: `Node ${sankeyData.nodes.length + 1}` })">Add node</UiButton>
                 </fieldset>
                 <fieldset class="flex flex-col gap-2">
                   <legend class="mb-2 text-sm font-semibold text-ink-strong">Links</legend>
-                  <div v-for="(link, index) in sankeyData.links" :key="index" class="data-card">
+                  <div v-for="(link, index) in sankeyData.links" :key="index" class="data-card" data-row>
                     <div class="flex items-center gap-2">
                       <div class="flex-1 min-w-0"><UiSelect v-model="link.source" :options="sankeyNodeOptions" :aria-label="`Link ${index + 1} from`" /></div>
                       <AppIcon name="arrow-right" class="text-base text-ink-muted" />
@@ -227,13 +227,14 @@
                     </div>
                     <div class="flex items-center gap-2">
                       <div class="flex-1 min-w-0"><UiInput v-model.number="link.value" type="number" placeholder="Value" :aria-label="`Link ${index + 1} value`" /></div>
-                      <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove link ${index + 1}`" @click="sankeyData.links.splice(index, 1)" />
+                      <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove link ${index + 1}`" data-focus-after-remove @click="sankeyData.links.splice(index, 1); focusNextRow($event, index)" />
                     </div>
                   </div>
                   <UiButton
                     icon="plus"
                     size="sm"
                     class="self-start"
+                    data-add-row
                     @click="sankeyData.links.push({ source: sankeyData.nodes[0]?.id || '', target: sankeyData.nodes[1]?.id || '', value: 10 })"
                   >
                     Add link
@@ -244,14 +245,14 @@
               <!-- Funnel -->
               <fieldset v-else-if="selectedChartType === 'funnel'" class="flex flex-col gap-2">
                 <legend class="mb-2 text-sm font-semibold text-ink-strong">Funnel stages</legend>
-                <div v-for="(item, index) in funnelData" :key="index" class="flex items-center gap-2">
+                <div v-for="(item, index) in funnelData" :key="index" class="flex items-center gap-2" data-row>
                   <div class="flex-1 min-w-0">
                     <UiInput v-model="item.label" placeholder="Stage label" :aria-label="`Stage ${index + 1} label`" />
                   </div>
                   <div class="w-28">
                     <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Stage ${index + 1} value`" />
                   </div>
-                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove stage ${index + 1}`" :disabled="funnelData.length <= 1" @click="funnelData.splice(index, 1)" />
+                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove stage ${index + 1}`" :disabled="funnelData.length <= 1" :data-focus-after-remove="funnelData.length > 1 || undefined" @click="funnelData.splice(index, 1); focusNextRow($event, index)" />
                 </div>
                 <UiButton icon="plus" size="sm" class="self-start" @click="funnelData.push({ label: `Stage ${funnelData.length + 1}`, value: 0 })">Add stage</UiButton>
               </fieldset>
@@ -259,12 +260,12 @@
               <!-- Bullet graph -->
               <fieldset v-else-if="selectedChartType === 'bulletGraph'" class="flex flex-col gap-3">
                 <legend class="mb-2 text-sm font-semibold text-ink-strong">Bullet items</legend>
-                <div v-for="(item, index) in bulletGraphData" :key="index" class="data-card">
+                <div v-for="(item, index) in bulletGraphData" :key="index" class="data-card" data-row>
                   <div class="flex items-center gap-2">
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="item.label" placeholder="Item label" :aria-label="`Bullet item ${index + 1} label`" />
                     </div>
-                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove bullet item ${index + 1}`" :disabled="bulletGraphData.length <= 1" @click="bulletGraphData.splice(index, 1)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove bullet item ${index + 1}`" :disabled="bulletGraphData.length <= 1" :data-focus-after-remove="bulletGraphData.length > 1 || undefined" @click="bulletGraphData.splice(index, 1); focusNextRow($event, index)" />
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <UiInput v-model.number="item.value" type="number" label="Value" />
@@ -287,14 +288,14 @@
               <div v-else-if="selectedChartType === 'chordDiagram'" class="flex flex-col gap-6">
                 <fieldset class="flex flex-col gap-2">
                   <legend class="mb-2 text-sm font-semibold text-ink-strong">Entities</legend>
-                  <div v-for="(node, index) in chordDiagramData.nodes" :key="index" class="flex items-center gap-2">
+                  <div v-for="(node, index) in chordDiagramData.nodes" :key="index" class="flex items-center gap-2" data-row>
                     <div class="w-24">
                       <UiInput v-model="node.id" placeholder="ID" :aria-label="`Entity ${index + 1} ID`" />
                     </div>
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="node.label" placeholder="Entity name" :aria-label="`Entity ${index + 1} name`" />
                     </div>
-                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove entity ${index + 1}`" :disabled="chordDiagramData.nodes.length <= 2" @click="chordDiagramData.nodes.splice(index, 1)" />
+                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove entity ${index + 1}`" :disabled="chordDiagramData.nodes.length <= 2" :data-focus-after-remove="chordDiagramData.nodes.length > 2 || undefined" @click="chordDiagramData.nodes.splice(index, 1); focusNextRow($event, index)" />
                   </div>
                   <UiButton
                     icon="plus"
@@ -307,7 +308,7 @@
                 </fieldset>
                 <fieldset class="flex flex-col gap-2">
                   <legend class="mb-2 text-sm font-semibold text-ink-strong">Relationships</legend>
-                  <div v-for="(link, index) in chordDiagramData.links" :key="index" class="data-card">
+                  <div v-for="(link, index) in chordDiagramData.links" :key="index" class="data-card" data-row>
                     <div class="flex items-center gap-2">
                       <div class="flex-1 min-w-0"><UiSelect v-model="link.source" :options="chordNodeOptions" :aria-label="`Relationship ${index + 1} from`" /></div>
                       <AppIcon name="arrow-right-left" class="text-base text-ink-muted" />
@@ -315,13 +316,14 @@
                     </div>
                     <div class="flex items-center gap-2">
                       <div class="flex-1 min-w-0"><UiInput v-model.number="link.value" type="number" placeholder="Value" :aria-label="`Relationship ${index + 1} value`" /></div>
-                      <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove relationship ${index + 1}`" @click="chordDiagramData.links.splice(index, 1)" />
+                      <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove relationship ${index + 1}`" data-focus-after-remove @click="chordDiagramData.links.splice(index, 1); focusNextRow($event, index)" />
                     </div>
                   </div>
                   <UiButton
                     icon="plus"
                     size="sm"
                     class="self-start"
+                    data-add-row
                     @click="chordDiagramData.links.push({ source: chordDiagramData.nodes[0]?.id || '', target: chordDiagramData.nodes[1]?.id || '', value: 10 })"
                   >
                     Add relationship
@@ -332,14 +334,14 @@
               <!-- Single dataset -->
               <fieldset v-else class="flex flex-col gap-2">
                 <legend class="mb-2 text-sm font-semibold text-ink-strong">Data</legend>
-                <div v-for="(item, index) in chartData" :key="index" class="flex items-center gap-2">
+                <div v-for="(item, index) in chartData" :key="index" class="flex items-center gap-2" data-row>
                   <div class="flex-1 min-w-0">
                     <UiInput v-model="item.label" placeholder="Label" :aria-label="`Point ${index + 1} label`" />
                   </div>
                   <div class="w-24">
                     <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Point ${index + 1} value`" />
                   </div>
-                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove point ${index + 1}`" :disabled="chartData.length <= 1" @click="removeDataItem(index)" />
+                  <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove point ${index + 1}`" :disabled="chartData.length <= 1" :data-focus-after-remove="chartData.length > 1 || undefined" @click="removeDataItem(index); focusNextRow($event, index)" />
                 </div>
                 <UiButton icon="plus" size="sm" class="self-start" @click="addDataItem">Add data point</UiButton>
               </fieldset>
@@ -642,6 +644,7 @@ import { calculateContrast } from '../composables/useContrast.js';
 import axe from 'axe-core';
 import { AXE_SCAN_OPTIONS, axeCategoryState } from '../utils/axeScan.js';
 import { scriptSafeJson } from '../utils/scriptSafeJson.js';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -2224,6 +2227,13 @@ const chartOptions = computed(() => {
 
 const addDataItem = () => {
   chartData.value.push({ label: `Item ${chartData.value.length + 1}`, value: 0 });
+};
+
+// A data row's Remove button hands focus to the row that takes its place (or
+// the one before), else the list's Add button, rather than dropping it to the page
+const focusNextRow = (event, index) => {
+  const list = event.currentTarget.closest('[data-row]')?.parentElement;
+  focusAfterRemoval(list, index, { rows: ':scope > [data-row]', fallback: list?.querySelector(':scope > [data-add-row]') });
 };
 
 const removeDataItem = (index) => {

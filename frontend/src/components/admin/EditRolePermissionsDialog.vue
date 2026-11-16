@@ -1,5 +1,6 @@
 <template>
   <AdminDialog
+    ref="dialog"
     :model-value="modelValue"
     :title="step === 'review' ? `Review changes to ${role?.name}` : `Edit permissions: ${role?.name}`"
     :subtitle="role?.description || ''"
@@ -76,7 +77,7 @@
     <template #actions>
       <template v-if="step === 'edit'">
         <UiButton @click="close(false)">Cancel</UiButton>
-        <UiButton variant="primary" :disabled="!added.length && !removed.length" @click="step = 'review'">Review changes</UiButton>
+        <UiButton variant="primary" :disabled="!added.length && !removed.length" @click="goTo('review')">Review changes</UiButton>
       </template>
       <template v-else>
         <UiButton :disabled="saving" @click="back">Back</UiButton>
@@ -87,7 +88,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import AdminDialog from './AdminDialog.vue';
 import InlineNotice from '../InlineNotice.vue';
 import UiButton from '../ui/UiButton.vue';
@@ -96,6 +97,7 @@ import UiCheckbox from '../ui/UiCheckbox.vue';
 import UiChip from '../ui/UiChip.vue';
 import UiCode from '../ui/UiCode.vue';
 import { adminErrorMessage, rbacApi } from '../../composables/useAccessAdmin.js';
+import { focusSoon } from '../../utils/focusAfterRemoval.js';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -112,6 +114,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'saved']);
 
 const step = ref('edit');
+const dialog = ref(null);
 const selected = ref(new Set());
 const saving = ref(false);
 const error = ref('');
@@ -163,9 +166,16 @@ const toggleGroup = (group) => {
   selected.value = next;
 };
 
+/** Changes step; the button that had focus goes with the old step, so focus the dialog's heading (now the new step's title) */
+const goTo = async (next) => {
+  step.value = next;
+  await nextTick();
+  focusSoon(dialog.value?.$el?.querySelector('h2'));
+};
+
 const back = () => {
   error.value = '';
-  step.value = 'edit';
+  goTo('edit');
 };
 
 const close = (value = false) => {

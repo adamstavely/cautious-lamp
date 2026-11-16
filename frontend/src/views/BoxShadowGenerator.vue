@@ -24,9 +24,9 @@
     <PageSection title="Shadows" description="Start from a preset or add layers; the first shadow is drawn on top." divided>
       <template #actions>
         <UiButton v-for="preset in presetButtons" :key="preset.size" size="sm" :label="preset.label" @click="loadPreset(preset.size)" />
-        <UiButton size="sm" variant="primary" icon="plus" label="Add shadow" @click="addShadow" />
+        <UiButton ref="addShadowButton" size="sm" variant="primary" icon="plus" label="Add shadow" @click="addShadow" />
       </template>
-      <div class="space-y-4">
+      <div ref="shadowList" class="space-y-4">
         <UiPanel v-for="(shadow, index) in shadows" :key="shadow.id" :title="`Shadow ${index + 1}`" heading-tag="h3">
           <template #actions>
             <UiButton
@@ -36,7 +36,8 @@
               icon-only
               :label="`Remove shadow ${index + 1}`"
               :disabled="shadows.length === 1"
-              @click="removeShadow(shadow.id)"
+              :data-focus-after-remove="shadows.length > 1 || undefined"
+              @click="removeShadow(shadow.id); focusAfterRemoval(shadowList, index, { fallback: addShadowButton })"
             />
           </template>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -77,8 +78,11 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiCodeBlock, UiInput, UiPanel, UiRange, UiSwitch } from '../components/ui';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval';
 
 const previewDarkMode = ref(false);
+const shadowList = ref(null);
+const addShadowButton = ref(null);
 let shadowIdCounter = 0;
 
 const shadows = ref([

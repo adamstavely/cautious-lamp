@@ -1,5 +1,6 @@
 <template>
   <AdminDialog
+    ref="dialog"
     :model-value="modelValue"
     :title="created ? 'User created' : 'Create user'"
     :persistent="saving"
@@ -82,6 +83,7 @@ import {
   usersApi,
   validationErrors,
 } from '../../composables/useAccessAdmin.js';
+import { focusSoon } from '../../utils/focusAfterRemoval.js';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -99,6 +101,7 @@ const errors = reactive({ email: '', name: '', password: '', roles: '' });
 const generalError = ref('');
 const saving = ref(false);
 const created = ref(null);
+const dialog = ref(null);
 
 const reset = () => {
   Object.assign(form, { email: '', name: '', roles: [] });
@@ -149,6 +152,9 @@ const submit = async () => {
     const user = await usersApi.create(body);
     created.value = user;
     emit('created', user);
+    // The form (and its Create button) is replaced by the result: focus its heading, "User created"
+    await nextTick();
+    focusSoon(dialog.value?.$el?.querySelector('h2'));
   } catch (error) {
     const { fields, general } = validationErrors(error, ['email', 'name', 'password', 'roles']);
     Object.assign(errors, { email: '', name: '', password: '', roles: '' }, fields);

@@ -9,7 +9,7 @@
 
     <PageSection title="Keys" description="Keys created here or through the API. Keys set in the server's environment (API_KEYS) aren't listed.">
       <template #actions>
-        <UiButton variant="primary" icon="plus" @click="openCreate">Create key</UiButton>
+        <UiButton ref="createKeyButton" variant="primary" icon="plus" @click="openCreate">Create key</UiButton>
       </template>
 
       <div class="flex flex-col gap-4">
@@ -46,7 +46,7 @@
                 <th scope="col" class="text-right"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody ref="keyRows">
               <tr v-for="key in visibleKeys" :key="key.id">
                 <td>
                   <div class="font-medium text-ink-strong">{{ key.name }}</div>
@@ -69,7 +69,7 @@
                     <UiButton variant="ghost" size="sm" icon="refresh-cw" :aria-label="`Rotate ${key.name}`" @click="askRotate(key)">
                       Rotate
                     </UiButton>
-                    <UiButton variant="ghost" size="sm" icon="ban" :aria-label="`Revoke ${key.name}`" @click="askRevoke(key)">
+                    <UiButton variant="ghost" size="sm" icon="ban" :aria-label="`Revoke ${key.name}`" data-focus-after-remove @click="askRevoke(key)">
                       Revoke
                     </UiButton>
                   </div>
@@ -174,7 +174,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import AdminDialog from '../components/admin/AdminDialog.vue';
 import ConfirmActionDialog from '../components/admin/ConfirmActionDialog.vue';
@@ -199,6 +199,7 @@ import { useNotice } from '../composables/useNotice.js';
 import { useAuth } from '../composables/useAuth.js';
 import { adminErrorMessage, apiKeysApi, copyText, formatDateTime } from '../composables/useAccessAdmin.js';
 import { errorStatus } from '../services/api.js';
+import { focusAfterRemoval, focusSoon } from '../utils/focusAfterRemoval.js';
 
 const STATUS = {
   active: { label: 'Active', tone: 'success', icon: 'circle-check' },
@@ -226,6 +227,8 @@ const keys = ref([]);
 const loadState = ref('idle');
 const loadError = ref('');
 const showInactive = ref(false);
+const keyRows = ref(null);
+const createKeyButton = ref(null);
 
 const keyErrorMessage = (error, fallback) =>
   errorStatus(error) === 503 ? 'API keys are temporarily unavailable. Please try again shortly.' : adminErrorMessage(error, fallback);
@@ -301,6 +304,8 @@ const submit = async () => {
     created.value = { apiKey: result.apiKey };
     keys.value = [result.metadata, ...keys.value];
     showNotice(`Created ${result.metadata.name}.`, 'success');
+    // The form (and its Create button) is replaced by the key: focus the key
+    focusSoon('#api-key-value');
   } catch (error) {
     formError.value = keyErrorMessage(error, "Couldn't create the key.");
   } finally {
@@ -341,6 +346,7 @@ const rotate = async () => {
     copyStatus.value = '';
     created.value = { apiKey: result.newApiKey, rotated: true };
     createOpen.value = true;
+    focusSoon('#api-key-value');
   } catch (error) {
     rotateError.value = keyErrorMessage(error, "Couldn't rotate the key.");
   } finally {
@@ -366,11 +372,15 @@ const revoke = async () => {
   if (!key) return;
   revokeBusy.value = true;
   revokeError.value = '';
+  const index = visibleKeys.value.findIndex((k) => k.id === key.id);
   try {
     await apiKeysApi.revoke(key.id);
     revokeOpen.value = false;
     showNotice(`Revoked ${key.name}.`, 'success');
     await loadKeys();
+    // The dialog returns focus to the Revoke button, which went with the key
+    await nextTick();
+    focusAfterRemoval(keyRows.value, index, { fallback: createKeyButton.value });
   } catch (error) {
     revokeError.value = keyErrorMessage(error, "Couldn't revoke the key.");
   } finally {

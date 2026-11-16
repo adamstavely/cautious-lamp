@@ -7,6 +7,8 @@
     :aria-label="iconOnly ? label : undefined"
     :title="iconOnly ? label : undefined"
     :aria-busy="loading || undefined"
+    ref="root"
+    :aria-disabled="(loading && !disabled) || undefined"
   >
     <AppIcon name="loader-circle" v-if="loading" class="ui-button-icon animate-spin" />
     <AppIcon :name="icon" v-else-if="icon" class="ui-button-icon" />
@@ -16,7 +18,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 /**
  * A pill button, or a link styled as one (`to` for app routes, `href` for
@@ -44,8 +46,22 @@ const tag = computed(() => (props.to ? 'router-link' : props.href ? 'a' : 'butto
 const linkAttrs = computed(() => {
   if (props.to) return { to: props.to };
   if (props.href) return { href: props.href };
-  return { type: props.type, disabled: props.disabled || props.loading };
+  return { type: props.type, disabled: props.disabled };
 });
+
+// While loading the button keeps focus (a disabled button would drop it to the
+// page), so clicks and form submissions are stopped here instead. A plain DOM
+// listener in the capture phase, so it runs before the page's @click handler
+// without becoming a second Vue listener on the same event.
+const root = ref(null);
+const element = () => root.value?.$el ?? root.value;
+const blockWhileLoading = (event) => {
+  if (!props.loading) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+};
+onMounted(() => element()?.addEventListener('click', blockWhileLoading, true));
+onBeforeUnmount(() => element()?.removeEventListener('click', blockWhileLoading, true));
 </script>
 
 <style scoped>
@@ -55,6 +71,9 @@ const linkAttrs = computed(() => {
   @apply inline-flex flex-shrink-0 items-center justify-center gap-2 max-w-full rounded-pill border border-solid font-medium text-center transition-colors;
   @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.ui-button[aria-busy='true'] {
+  @apply opacity-70 cursor-wait;
 }
 .ui-button-md {
   @apply min-h-11 py-2 px-5 text-sm;

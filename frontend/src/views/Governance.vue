@@ -22,7 +22,7 @@
           </template>
         </UiCallout>
         <p v-else-if="filteredRules.length === 0" class="text-sm text-ink-secondary">No rules in this category.</p>
-        <ul v-else class="space-y-3">
+        <ul v-else ref="ruleList" class="space-y-3">
           <li
             v-for="rule in filteredRules"
             :key="rule.id"
@@ -37,7 +37,7 @@
               class="mt-1 accent-accent"
               @change="toggleRule(rule, $event.target.checked)"
             />
-            <button type="button" class="rule-select" :aria-pressed="editingRule?.id === rule.id" @click="selectRule(rule)">
+            <button type="button" class="rule-select" :aria-pressed="editingRule?.id === rule.id" data-focus-after-remove @click="selectRule(rule)">
               <span class="block text-sm font-medium text-ink-strong">{{ rule.name }}</span>
               <span class="block text-xs mt-1 text-ink-secondary">{{ rule.description }}</span>
               <span class="mt-2 flex flex-wrap items-center gap-2">
@@ -51,7 +51,7 @@
 
         <template #footer>
           <div v-if="canAdmin" class="flex flex-wrap gap-2 w-full">
-            <UiButton size="sm" icon="plus" @click="newRule">Add rule</UiButton>
+            <UiButton ref="addRuleButton" size="sm" icon="plus" @click="newRule">Add rule</UiButton>
             <UiButton size="sm" variant="ghost" icon="upload" @click="importInput?.click()">Import</UiButton>
             <input ref="importInput" type="file" accept="application/json,.json" class="sr-only" tabindex="-1" aria-hidden="true" @change="importRules" />
             <UiButton size="sm" variant="ghost" icon="download" @click="exportRules">Export</UiButton>
@@ -276,8 +276,8 @@
               </UiButton>
               <UiButton @click="closeEditor">{{ canAdmin ? 'Cancel' : 'Close' }}</UiButton>
               <template v-if="canAdmin && editingRule.id">
-                <UiButton v-if="confirmDelete" class="ml-auto" variant="danger" @click="deleteRule">Confirm delete</UiButton>
-                <UiButton v-else class="ml-auto" variant="ghost" icon="trash-2" @click="confirmDelete = true">Delete</UiButton>
+                <UiButton v-if="confirmDelete" ref="confirmDeleteButton" class="ml-auto" variant="danger" @click="deleteRule">Confirm delete</UiButton>
+                <UiButton v-else ref="deleteButton" class="ml-auto" variant="ghost" icon="trash-2" @click="askDelete">Delete</UiButton>
               </template>
             </div>
           </form>
@@ -328,7 +328,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { nextTick, ref, computed, watch, onMounted } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
@@ -349,6 +349,7 @@ import {
 import { useNotice } from '../composables/useNotice.js';
 import { useAuth } from '../composables/useAuth.js';
 import apiClient, { apiErrorMessage } from '../services/api.js';
+import { focusAfterRemoval, focusSoon } from '../utils/focusAfterRemoval.js';
 
 // Rules are declarative (docs/GOVERNANCE.md): this page edits data and the
 // server runs it. Nothing here evaluates code.
@@ -426,6 +427,10 @@ const scanResult = ref(null);
 const editingRule = ref(null);
 const saving = ref(false);
 const confirmDelete = ref(false);
+const confirmDeleteButton = ref(null);
+const deleteButton = ref(null);
+const ruleList = ref(null);
+const addRuleButton = ref(null);
 const testing = ref(false);
 const testResult = ref(null);
 const testSample = ref({ html: '', css: '', javascript: '' });
@@ -676,15 +681,30 @@ const toggleRule = async (rule, enabled) => {
   }
 };
 
+/** Delete is replaced by Confirm delete: keep focus on the button that's there now */
+const askDelete = async () => {
+  confirmDelete.value = true;
+  await nextTick();
+  focusSoon(confirmDeleteButton.value);
+};
+
 const deleteRule = async () => {
   const rule = editingRule.value;
+  const index = filteredRules.value.findIndex((r) => r.id === rule.id);
   try {
     await apiClient.delete(`/api/v1/governance/rules/${encodeURIComponent(rule.id)}`);
     rules.value = rules.value.filter((r) => r.id !== rule.id);
     closeEditor();
     showNotice(`Deleted "${rule.name}".`, 'success');
+    // The editor closed with the rule: focus the rule now in its place in the list
+    await nextTick();
+    focusAfterRemoval(ruleList.value, index, { fallback: addRuleButton.value });
   } catch (error) {
     showNotice(apiErrorMessage(error, 'Could not delete the rule.'), 'error');
+    // Confirm delete goes back to Delete
+    confirmDelete.value = false;
+    await nextTick();
+    focusSoon(deleteButton.value);
   } finally {
     confirmDelete.value = false;
   }

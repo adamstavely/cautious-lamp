@@ -6,7 +6,7 @@
   >
     <form id="vr-share" class="grid gap-4 sm:grid-cols-3 items-end" @submit.prevent="share">
       <div class="sm:col-span-2">
-        <UiInput v-model="email" type="email" label="Email" required placeholder="name@example.com" autocomplete="off" />
+        <UiInput ref="emailInput" v-model="email" type="email" label="Email" required placeholder="name@example.com" autocomplete="off" />
       </div>
       <UiSelect v-model="role" id="share-role" label="Role" :options="roleOptions" />
     </form>
@@ -14,7 +14,7 @@
 
     <UiSpinner v-if="loading" label="Loading people…" class="py-6" />
     <p v-else-if="cannotManage" class="mt-4 text-sm text-ink-secondary">Only people who manage this project can see and change who it is shared with.</p>
-    <ul v-else-if="shares.length" class="mt-5 divide-y divide-line">
+    <ul v-else-if="shares.length" ref="shareList" class="mt-5 divide-y divide-line">
       <li v-for="item in shares" :key="item.userId" class="flex flex-wrap items-center justify-between gap-3 py-3">
         <div>
           <p class="font-medium text-ink">{{ item.name }}</p>
@@ -22,7 +22,7 @@
         </div>
         <div class="flex items-center gap-2">
           <UiChip :tone="item.role === 'editor' ? 'accent' : 'neutral'">{{ item.role === 'editor' ? 'Editor' : 'Viewer' }}</UiChip>
-          <UiButton size="sm" variant="ghost" icon="trash-2" :disabled="busy" @click="unshare(item)">
+          <UiButton size="sm" variant="ghost" icon="trash-2" :disabled="busy" data-focus-after-remove @click="unshare(item)">
             Remove<span class="sr-only"> {{ item.name }}</span>
           </UiButton>
         </div>
@@ -39,12 +39,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
 import { UiButton, UiChip, UiInput, UiPanel, UiSelect, UiSpinner } from '../ui';
 import { useNotice } from '../../composables/useNotice.js';
 import apiClient from '../../services/api.js';
 import { formatDateTime, vrErrorMessage } from './vrApi.js';
+import { focusAfterRemoval } from '../../utils/focusAfterRemoval';
 
 /** People given access to this project alone (besides its workspace) */
 const props = defineProps({
@@ -64,6 +65,8 @@ const busy = ref(false);
 const cannotManage = ref(false);
 const email = ref('');
 const role = ref('viewer');
+const shareList = ref(null);
+const emailInput = ref(null);
 
 const workspaceNote = computed(() =>
   props.project.workspaceId
@@ -107,7 +110,11 @@ const unshare = async (item) => {
   try {
     await apiClient.delete(`${props.projectPath}/share/${encodeURIComponent(item.userId)}`);
     showNotice(`${item.name} no longer has access through a share.`, 'success');
+    const index = shares.value.findIndex((s) => s.userId === item.userId);
     await load();
+    // The list is drawn again after loading: focus moves to the person now in that place, else the Email field
+    await nextTick();
+    focusAfterRemoval(shareList.value, index, { fallback: emailInput.value?.$el.querySelector('input') });
   } catch (error) {
     showNotice(vrErrorMessage(error, 'The share could not be removed.'), 'error');
   } finally {

@@ -32,7 +32,7 @@
               <UiButton v-for="preset in presets" :key="preset.name" size="sm" :label="preset.name" @click="loadPreset(preset)" />
             </div>
           </template>
-          <div class="space-y-4">
+          <div ref="keyframeList" class="space-y-4">
             <div v-for="(keyframe, index) in keyframes" :key="keyframe.id" class="p-4 rounded-tile border border-line-faint bg-surface-sunken">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="font-medium text-sm text-ink-strong">{{ keyframeTitle(keyframe, index) }}</h3>
@@ -43,7 +43,8 @@
                   icon="trash-2"
                   icon-only
                   :label="`Remove ${keyframeTitle(keyframe, index).toLowerCase()}`"
-                  @click="removeKeyframe(index)"
+                  data-focus-after-remove
+                  @click="removeKeyframe(index); focusAfterRemoval(keyframeList, index, { rows: ':scope > div', fallback: addKeyframeButton })"
                 />
               </div>
               <div v-if="index > 0 && index < keyframes.length - 1" class="mb-3">
@@ -67,7 +68,7 @@
                 </div>
               </div>
             </div>
-            <UiButton icon="plus" label="Add keyframe" @click="addKeyframe" />
+            <UiButton ref="addKeyframeButton" icon="plus" label="Add keyframe" @click="addKeyframe" />
           </div>
         </UiPanel>
       </div>
@@ -99,6 +100,7 @@
 <script setup>
 import { ref, computed, watchEffect, onBeforeUnmount } from 'vue';
 import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiCodeBlock, UiInput, UiPanel, UiSelect } from '../components/ui';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval';
 
 const animationName = ref('fadeIn');
 const duration = ref(300);
@@ -135,6 +137,8 @@ const propertyDefaults = {
 let keyframeIdCounter = 0;
 const withId = (kf) => ({ id: keyframeIdCounter++, offset: kf.offset, properties: { ...kf.properties } });
 
+const keyframeList = ref(null);
+const addKeyframeButton = ref(null);
 const keyframes = ref([
   { offset: 0, properties: { opacity: 0 } },
   { offset: 1, properties: { opacity: 1 } }

@@ -41,7 +41,7 @@
                 <h3 class="text-sm font-medium text-ink">Font stack</h3>
                 <UiButton size="sm" variant="ghost" icon="rotate-ccw" @click="resetFontStack">Reset to default</UiButton>
               </div>
-              <ol class="flex flex-wrap items-center gap-2" aria-label="Fonts in the stack, in order">
+              <ol ref="fontStackList" class="flex flex-wrap items-center gap-2" aria-label="Fonts in the stack, in order">
                 <li v-for="(fontName, index) in fontStack" :key="`${fontName}-${index}`" class="stack-item">
                   <span class="font-code text-sm text-ink">{{ fontName }}</span>
                   <UiButton
@@ -51,7 +51,8 @@
                     size="sm"
                     variant="ghost"
                     :label="`Remove ${fontName} from the stack`"
-                    @click="removeFromFontStack(index)"
+                    data-focus-after-remove
+                    @click="removeFromFontStack(index); focusAfterRemoval(fontStackList, index)"
                   />
                 </li>
               </ol>
@@ -124,11 +125,13 @@ import { useNotice } from '../composables/useNotice.js';
 import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiCode, UiCodeBlock, UiInput, UiPanel, UiSelect } from '../components/ui';
 import UiTypeSample from '../components/ui/UiTypeSample.vue';
 import fontData from '../assets/fonts.json';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval';
 
 const { notice: stackNotice, showNotice: showStackNotice, clearNotice: clearStackNotice } = useNotice();
 const { notice: subsetNotice, showNotice: showSubsetNotice, clearNotice: clearSubsetNotice } = useNotice();
 const selectedFontForStack = ref('');
 const fontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
+const fontStackList = ref(null);
 const newFontInStack = ref('');
 const defaultFontStack = ref(['Arial', 'Helvetica', 'sans-serif']);
 const selectedFontForSubsetting = ref('');

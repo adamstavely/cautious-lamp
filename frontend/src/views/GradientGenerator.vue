@@ -56,7 +56,7 @@
               <UiButton size="sm" :loading="loadingPalettes" icon="palette" @click="fetchPalettes">
                 {{ loadingPalettes ? 'Loading…' : 'Load from Palette Builder' }}
               </UiButton>
-              <UiButton size="sm" variant="primary" icon="plus" @click="addColorStop">Add stop</UiButton>
+              <UiButton ref="addStopButton" size="sm" variant="primary" icon="plus" @click="addColorStop">Add stop</UiButton>
             </template>
 
             <InlineNotice :notice="paletteNotice" @dismiss="clearPaletteNotice" />
@@ -72,7 +72,7 @@
               <UiButton variant="primary" :disabled="!selectedPaletteId" @click="importPaletteColors">Import colors</UiButton>
             </div>
 
-            <ol class="flex flex-col gap-3">
+            <ol ref="stopList" class="flex flex-col gap-3">
               <li
                 v-for="(stop, index) in colorStops"
                 :key="stop.id"
@@ -126,7 +126,8 @@
                     icon="trash-2"
                     variant="ghost"
                     :label="`Remove stop ${index + 1}`"
-                    @click="removeColorStop(index)"
+                    data-focus-after-remove
+                    @click="removeColorStop(index); focusAfterRemoval(stopList, index, { fallback: addStopButton })"
                   />
                 </fieldset>
               </li>
@@ -147,10 +148,10 @@
                 <h3 class="text-sm font-medium text-ink">Layers</h3>
                 <p class="text-xs text-ink-muted">Stack multiple gradients with blend modes</p>
               </div>
-              <UiButton size="sm" icon="plus" @click="addLayer">Add layer</UiButton>
+              <UiButton ref="addLayerButton" size="sm" icon="plus" @click="addLayer">Add layer</UiButton>
             </div>
 
-            <ul class="flex flex-col gap-2 max-h-64 overflow-y-auto">
+            <ul ref="layerList" class="flex flex-col gap-2 max-h-64 overflow-y-auto">
               <li v-for="(layer, index) in layers" :key="layer.id" class="layer-row" :class="{ 'layer-row-on': currentLayerIndex === index }">
                 <UiCheckbox v-model="layer.enabled"><span class="sr-only">Show layer {{ index + 1 }}</span></UiCheckbox>
                 <UiSwatch :color="getLayerPreview(layer).background" :label="`Layer ${index + 1} preview`" />
@@ -163,7 +164,7 @@
                 <div class="flex items-center">
                   <UiButton v-if="index > 0" icon-only size="sm" variant="ghost" icon="arrow-up" :label="`Move layer ${index + 1} up`" @click="moveLayer(index, index - 1)" />
                   <UiButton v-if="index < layers.length - 1" icon-only size="sm" variant="ghost" icon="arrow-down" :label="`Move layer ${index + 1} down`" @click="moveLayer(index, index + 1)" />
-                  <UiButton v-if="layers.length > 1" icon-only size="sm" variant="ghost" icon="trash-2" :label="`Delete layer ${index + 1}`" @click="removeLayer(index)" />
+                  <UiButton v-if="layers.length > 1" icon-only size="sm" variant="ghost" icon="trash-2" :label="`Delete layer ${index + 1}`" data-focus-after-remove @click="removeLayer(index); focusAfterRemoval(layerList, index, { fallback: addLayerButton })" />
                 </div>
               </li>
             </ul>
@@ -262,10 +263,15 @@ import {
   PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChip, UiCodeBlock, UiDialog,
   UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwatch, UiSwitch,
 } from '../components/ui';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval';
 
 const { notice: paletteNotice, showNotice: showPaletteNotice, clearNotice: clearPaletteNotice } = useNotice();
 const { notice: exportNotice, showNotice: showExportNotice, clearNotice: clearExportNotice } = useNotice();
 
+const stopList = ref(null);
+const addStopButton = ref(null);
+const layerList = ref(null);
+const addLayerButton = ref(null);
 const gradientType = ref('linear');
 const linearAngle = ref(90);
 const radialPosition = ref({ x: '50%', y: '50%' });

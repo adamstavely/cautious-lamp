@@ -92,15 +92,15 @@
         </UiCallout>
 
         <div class="flex justify-end mb-6">
-          <UiButton variant="primary" icon="plus" @click="showCreateModal = true">Create budget</UiButton>
+          <UiButton ref="createBudgetButton" variant="primary" icon="plus" @click="showCreateModal = true">Create budget</UiButton>
         </div>
 
-        <div v-if="budgets.length" class="grid gap-4">
+        <div v-if="budgets.length" ref="budgetList" class="grid gap-4">
           <UiPanel v-for="item in budgetViews" :key="item.budget.id" :title="item.budget.name" heading-tag="h3">
             <template #actions>
               <UiChip :tone="item.budget.enabled ? 'success' : 'neutral'">{{ item.budget.enabled ? 'Active' : 'Disabled' }}</UiChip>
               <UiButton variant="ghost" size="sm" icon="pencil" icon-only :label="`Edit ${item.budget.name}`" @click="editBudget(item.budget)" />
-              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${item.budget.name}`" @click="deleteBudget(item.budget.id)" />
+              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${item.budget.name}`" data-focus-after-remove @click="deleteBudget(item.budget.id)" />
             </template>
 
             <div class="flex items-center gap-2 mb-2">
@@ -292,7 +292,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { nextTick, ref, computed, onMounted } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
@@ -314,6 +314,7 @@ import {
 } from '../components/ui';
 import UiMeter from '../components/ui/UiMeter.vue';
 import { useNotice } from '../composables/useNotice.js';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval.js';
 import apiClient from '../services/api.js';
 import { componentMetadataService } from '../services/componentMetadataService.js';
 import { BUDGET_STATES, MEASURED_METRICS, compareBudget, metricLabel } from '../utils/performanceBudgets.js';
@@ -333,6 +334,8 @@ const loading = ref(false);
 const budgets = ref([]);
 const showCreateModal = ref(false);
 const editingBudget = ref(null);
+const budgetList = ref(null);
+const createBudgetButton = ref(null);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`;
 
@@ -591,10 +594,14 @@ const editBudget = (budget) => {
 
 const deleteBudget = async (id) => {
   if (!confirm('Are you sure you want to delete this budget?')) return;
-  
+  const index = budgetViews.value.findIndex((item) => item.budget.id === id);
+
   try {
     await apiClient.delete(`${API_BASE_URL}/performance/budgets/${id}`);
-    loadBudgets();
+    await loadBudgets();
+    // Its Delete button went with it: focus the budget now in its place
+    await nextTick();
+    focusAfterRemoval(budgetList.value, index, { fallback: createBudgetButton.value });
   } catch (error) {
     console.error('Error deleting budget:', error);
     showNotice('Error deleting budget. Please try again.', 'error');

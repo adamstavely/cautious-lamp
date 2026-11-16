@@ -68,6 +68,7 @@
                   variant="ghost"
                   size="sm"
                   icon="user-plus"
+                  :ref="(el) => (addMemberButtons[role.id] = el)"
                   :aria-label="`Add a member to ${role.name}`"
                   @click="openAddMember(role)"
                 >
@@ -82,7 +83,7 @@
                 </template>
               </UiCallout>
               <p v-else-if="!members[role.id].items.length" class="text-sm text-ink-muted">No users assigned</p>
-              <ul v-else class="flex flex-col gap-2">
+              <ul v-else :ref="(el) => (memberLists[role.id] = el)" class="flex flex-col gap-2">
                 <li v-for="member in members[role.id].items" :key="member.id" class="role-row">
                   <div class="min-w-0 text-sm">
                     <span class="font-medium text-ink-strong">{{ member.name }}</span>
@@ -96,7 +97,8 @@
                     icon="trash-2"
                     icon-only
                     :label="`Remove ${member.name} from ${role.name}`"
-                    @click="confirmRemove(member, role)"
+                    data-focus-after-remove
+                    @click="confirmRemove(member, role, 'members')"
                   />
                 </li>
               </ul>
@@ -122,7 +124,7 @@
           <UiCallout v-else-if="lookup.state === 'error'" tone="danger" role="alert">{{ lookup.error }}</UiCallout>
           <template v-else>
             <p v-if="!lookup.roles.length" class="text-sm text-ink-muted">No roles</p>
-            <ul v-else class="flex flex-col gap-2">
+            <ul v-else ref="lookupRoleList" class="flex flex-col gap-2">
               <li v-for="role in lookup.roles" :key="role.id" class="role-row">
                 <div class="text-sm">
                   <span class="font-medium text-ink-strong">{{ role.name }}</span>
@@ -135,7 +137,8 @@
                   icon="trash-2"
                   icon-only
                   :label="`Remove ${role.name} from ${lookup.user.name}`"
-                  @click="confirmRemove(lookup.user, role)"
+                  data-focus-after-remove
+                  @click="confirmRemove(lookup.user, role, 'lookup')"
                 />
               </li>
             </ul>
@@ -214,7 +217,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
@@ -234,6 +237,7 @@ import ConfirmActionDialog from '../components/admin/ConfirmActionDialog.vue';
 import EditRolePermissionsDialog from '../components/admin/EditRolePermissionsDialog.vue';
 import UserPicker from '../components/admin/UserPicker.vue';
 import { useNotice } from '../composables/useNotice.js';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval.js';
 import { useAuth } from '../composables/useAuth.js';
 import { adminErrorMessage, groupPermissions, rbacApi } from '../composables/useAccessAdmin.js';
 
@@ -255,7 +259,11 @@ const members = reactive({});
 
 const edit = reactive({ open: false, role: null });
 const add = reactive({ open: false, role: null, user: null, busy: false, error: '' });
-const remove = reactive({ open: false, user: null, role: null, busy: false, error: '' });
+const remove = reactive({ open: false, user: null, role: null, source: 'members', busy: false, error: '' });
+/** Where focus goes once a remove button has gone with its row */
+const memberLists = {};
+const addMemberButtons = {};
+const lookupRoleList = ref(null);
 const lookup = reactive({ user: null, roles: [], state: 'idle', error: '', roleToAdd: '', assigning: false });
 
 const lookupAssignable = computed(() => roles.value.filter((role) => !lookup.roles.some((r) => r.id === role.id)));
@@ -376,12 +384,15 @@ const assignToLookup = async () => {
   }
 };
 
-const confirmRemove = (user, role) => {
-  Object.assign(remove, { open: true, user, role, busy: false, error: '' });
+const confirmRemove = (user, role, source) => {
+  Object.assign(remove, { open: true, user, role, source, busy: false, error: '' });
 };
 
 const removeMember = async () => {
-  const { user, role } = remove;
+  const { user, role, source } = remove;
+  const index = source === 'lookup'
+    ? lookup.roles.findIndex((r) => r.id === role.id)
+    : (members[role.id]?.items ?? []).findIndex((m) => m.id === user.id);
   remove.busy = true;
   remove.error = '';
   try {
@@ -389,6 +400,10 @@ const removeMember = async () => {
     remove.open = false;
     showNotice(`Removed ${user.name} from ${role.name}.`, 'success');
     await afterAssignmentChange(user.id, role.id);
+    // The dialog would return focus to the removed row's button: focus the next row's instead
+    await nextTick();
+    if (source === 'lookup') focusAfterRemoval(lookupRoleList.value, index, { fallback: '#lookup-assign' });
+    else focusAfterRemoval(memberLists[role.id], index, { fallback: addMemberButtons[role.id] });
   } catch (error) {
     // 409 when this would leave no active user with admin:rbac
     remove.error = adminErrorMessage(error, "Couldn't remove the role.");
