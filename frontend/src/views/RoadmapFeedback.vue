@@ -184,6 +184,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../composables/useConfirm.js';
 import { ref, computed, onMounted } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import ComponentRequests from '../components/feedback/ComponentRequests.vue';
@@ -395,7 +396,7 @@ const editRoadmapItem = (item) => {
 };
 
 const deleteRoadmapItem = async (id) => {
-  if (!confirm('Are you sure you want to delete this roadmap item?')) return;
+  if (!(await confirmDialog({ title: 'Delete this roadmap item?', confirmLabel: 'Delete item', danger: true }))) return;
   
   try {
     await apiClient.delete(`${API_BASE_URL}/roadmap/items/${id}`);

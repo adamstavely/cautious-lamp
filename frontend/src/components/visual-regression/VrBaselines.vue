@@ -72,6 +72,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../../composables/useConfirm.js';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
 import { UiButton, UiChip, UiEmptyState, UiInput, UiPanel, UiSelect, UiSpinner, UiTable, UiTextarea } from '../ui';
@@ -151,7 +152,7 @@ const record = async () => {
 };
 
 const rollback = async (baseline) => {
-  if (!window.confirm(`Roll back to “${baseline.name}”? Later uploads will be compared against its commit. Newer baselines are kept.`)) return;
+  if (!(await confirmDialog({ title: `Roll back to “${baseline.name}”?`, message: 'Later uploads will be compared against its commit. Newer baselines are kept.', confirmLabel: 'Roll back' }))) return;
   busy.value = true;
   clearNotice();
   try {

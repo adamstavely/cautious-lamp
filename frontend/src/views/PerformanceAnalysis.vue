@@ -293,6 +293,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../composables/useConfirm.js';
 import { nextTick, ref, computed, onMounted, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
@@ -603,7 +604,7 @@ const editBudget = (budget) => {
 };
 
 const deleteBudget = async (id) => {
-  if (!confirm('Are you sure you want to delete this budget?')) return;
+  if (!(await confirmDialog({ title: 'Delete this budget?', message: 'Components will no longer be checked against it.', confirmLabel: 'Delete budget', danger: true }))) return;
   const index = budgetViews.value.findIndex((item) => item.budget.id === id);
 
   try {

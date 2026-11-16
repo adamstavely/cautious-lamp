@@ -39,6 +39,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../../composables/useConfirm.js';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
 import { UiButton, UiChip, UiInput, UiPanel, UiSelect, UiSpinner } from '../ui';
@@ -104,7 +105,7 @@ const share = async () => {
 };
 
 const unshare = async (item) => {
-  if (!window.confirm(`Stop sharing this project with ${item.name}?`)) return;
+  if (!(await confirmDialog({ title: `Stop sharing with ${item.name}?`, message: 'They will lose access to this project.', confirmLabel: 'Stop sharing', danger: true }))) return;
   busy.value = true;
   clearNotice();
   try {

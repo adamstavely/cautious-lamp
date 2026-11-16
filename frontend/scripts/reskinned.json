@@ -8,6 +8,7 @@
     "src/components/ComponentDependencyGraphCard.vue",
     "src/components/ComponentPreview.vue",
     "src/components/ComponentVersionHistory.vue",
+    "src/components/ConfirmHost.vue",
     "src/components/DocumentationDrawer.vue",
     "src/components/Dropdown.vue",
     "src/components/EeroChatbot.vue",

@@ -418,6 +418,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../composables/useConfirm.js';
 import { ref, computed, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import ComponentPreview from '../components/ComponentPreview.vue';
@@ -1258,7 +1259,7 @@ const loadVariants = async () => {
 };
 
 const deleteVariant = async (variantName) => {
-  if (!confirm(`Are you sure you want to delete the "${variantName}" variant?`)) {
+  if (!(await confirmDialog({ title: `Delete the “${variantName}” variant?`, confirmLabel: 'Delete variant', danger: true }))) {
     return;
   }
   

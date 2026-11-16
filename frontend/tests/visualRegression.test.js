@@ -4,6 +4,7 @@
 // setup instead of a fake "run tests", baselines with rollback, and sharing.
 import { nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { answerConfirm, useConfirmRequest } from '../src/composables/useConfirm.js';
 import apiClient from '../src/services/api.js';
 import VisualRegressionProject from '../src/views/VisualRegressionProject.vue';
 import VisualRegressionResults from '../src/views/VisualRegressionResults.vue';
@@ -254,12 +255,15 @@ describe('Project page', () => {
   });
 
   it('rolls back to an earlier baseline', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     await openProject();
     page.state.activeTab = 'baselines';
     await flush();
     expect(text()).toContain('v2');
     buttonNamed('Roll back').click();
+    await flush();
+    // Asked in the app's dialog (ConfirmHost), not window.confirm
+    expect(useConfirmRequest().value.title).toBe('Roll back to “v1”?');
+    answerConfirm(true);
     await flush();
     expect(calls.map((c) => c.key)).toContain('POST /api/v1/visual-regression/projects/vr_1/baselines/b1/rollback');
     expect(text()).toContain('“v1” is the current baseline again.');

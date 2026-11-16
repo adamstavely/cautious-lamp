@@ -668,6 +668,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../composables/useConfirm.js';
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
@@ -2783,7 +2784,7 @@ const exportChart = async (format) => {
   }
   
   if (warnings.length > 0) {
-    const proceed = confirm('Accessibility warnings detected:\n\n' + warnings.join('\n') + '\n\nDo you want to export anyway?');
+    const proceed = await confirmDialog({ title: 'Export with accessibility warnings?', message: warnings.join('\n'), confirmLabel: 'Export anyway' });
     if (!proceed) {
       return;
     }

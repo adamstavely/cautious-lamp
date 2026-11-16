@@ -134,6 +134,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../composables/useConfirm.js';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
@@ -499,8 +500,8 @@ const editToken = (token) => {
   showTokenDialog.value = true;
 };
 
-const deleteToken = (token) => {
-  if (!window.confirm(`Delete ${token.name}?`)) return;
+const deleteToken = async (token) => {
+  if (!(await confirmDialog({ title: `Delete ${token.name}?`, confirmLabel: 'Delete', danger: true }))) return;
   tokens.value = tokens.value.filter((t) => t.id !== token.id);
   saveDraft();
 };
