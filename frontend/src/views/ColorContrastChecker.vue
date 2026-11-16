@@ -65,7 +65,7 @@
             <div class="flex items-center gap-4" role="status">
               <span class="pair-preview" aria-hidden="true"><span class="pair-preview-fg"></span></span>
               <div v-if="pairValid">
-                <p class="text-4xl font-semibold tracking-tight text-ink-strong" data-contrast-ratio>{{ contrastRatio.toFixed(2) }}</p>
+                <p class="text-4xl font-semibold tracking-tight text-ink-strong" data-contrast-ratio>{{ contrastRatioLabel }}</p>
                 <p class="text-sm text-ink-secondary">Contrast ratio</p>
               </div>
               <!-- A colour that doesn't parse has no ratio; never show (or announce) a made-up one -->
@@ -130,13 +130,13 @@
                   <td><UiChip :tone="vision.safe ? 'success' : 'danger'">{{ vision.safe ? 'Safe' : 'Unsafe' }}</UiChip></td>
                   <td>
                     <div class="flex items-center gap-3 min-w-40">
-                      <span class="font-code text-sm">{{ vision.deltaE.toFixed(2) }}</span>
+                      <span class="font-code text-sm">{{ vision.deltaELabel }}</span>
                       <UiMeter
                         :value="vision.deltaE"
                         :max="100"
                         :tone="vision.safe ? 'success' : 'danger'"
                         :label="`${vision.name} color difference`"
-                        :value-text="`ΔE ${vision.deltaE.toFixed(2)}, ${vision.safe ? 'safe' : 'unsafe'}`"
+                        :value-text="`ΔE ${vision.deltaELabel}, ${vision.safe ? 'safe' : 'unsafe'}`"
                       />
                     </div>
                   </td>
@@ -178,6 +178,7 @@ import ColorPicker from '../components/ColorPicker.vue';
 import chroma from 'chroma-js';
 import { PageHero, PageSection, PageShell, UiChip, UiInput, UiPanel, UiRange, UiSwatch, UiTable } from '../components/ui';
 import UiMeter from '../components/ui/UiMeter.vue';
+import { DELTA_E_SAFE, deltaE2000, formatContrastRatio, formatDeltaE } from '../utils/colourCompare.js';
 
 const foregroundColor = ref('#7AC600');
 const backgroundColor = ref('#0E55A8');
@@ -260,6 +261,10 @@ const contrastRatio = computed(() => {
   }
 });
 
+// Shown truncated, never rounded up across a threshold: 4.499 reads 4.49 next to
+// its AA fail. Pass/fail below uses the unrounded ratio.
+const contrastRatioLabel = computed(() => (contrastRatio.value === null ? '' : formatContrastRatio(contrastRatio.value)));
+
 // WCAG Criteria
 const wcagCriteria = computed(() => {
   const ratio = contrastRatio.value ?? 0;
@@ -325,51 +330,6 @@ const simulateColorblind = (rgb, type) => {
   ];
 };
 
-// Calculate Delta E (CIE76)
-const calculateDeltaE = (rgb1, rgb2) => {
-  // Convert RGB to LAB
-  const lab1 = rgbToLab(rgb1);
-  const lab2 = rgbToLab(rgb2);
-  
-  // Calculate Delta E
-  const deltaL = lab1[0] - lab2[0];
-  const deltaA = lab1[1] - lab2[1];
-  const deltaB = lab1[2] - lab2[2];
-  
-  return Math.sqrt(deltaL * deltaL + deltaA * deltaA + deltaB * deltaB);
-};
-
-// Convert RGB to LAB
-const rgbToLab = (rgb) => {
-  // Convert RGB to XYZ
-  let r = rgb[0] / 255;
-  let g = rgb[1] / 255;
-  let b = rgb[2] / 255;
-  
-  r = r > 0.04045 ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
-  g = g > 0.04045 ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
-  b = b > 0.04045 ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
-  
-  r *= 100;
-  g *= 100;
-  b *= 100;
-  
-  // Observer = 2°, Illuminant = D65
-  let x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 95.047;
-  let y = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 100.000;
-  let z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 108.883;
-  
-  x = x > 0.008856 ? Math.pow(x, 1/3) : (7.787 * x + 16/116);
-  y = y > 0.008856 ? Math.pow(y, 1/3) : (7.787 * y + 16/116);
-  z = z > 0.008856 ? Math.pow(z, 1/3) : (7.787 * z + 16/116);
-  
-  return [
-    (116 * y) - 16,
-    500 * (x - y),
-    200 * (y - z)
-  ];
-};
-
 // Vision types with simulated colors
 const visionTypes = computed(() => {
   if (!pairValid.value) return [];
@@ -388,14 +348,16 @@ const visionTypes = computed(() => {
       const simFgRgb = type.type ? simulateColorblind(fgRgb, type.type) : fgRgb;
       const simBgRgb = type.type ? simulateColorblind(bgRgb, type.type) : bgRgb;
       
-      const deltaE = calculateDeltaE(simFgRgb, simBgRgb);
-      const safe = deltaE >= 11;
+      // CIEDE2000, as the page says; the threshold is checked on the unrounded value
+      const deltaE = deltaE2000(simFgRgb, simBgRgb);
+      const safe = deltaE >= DELTA_E_SAFE;
       
       return {
         name: type.name,
         fgColor: chroma(simFgRgb).hex(),
         bgColor: chroma(simBgRgb).hex(),
         deltaE,
+        deltaELabel: formatDeltaE(deltaE),
         safe
       };
     });

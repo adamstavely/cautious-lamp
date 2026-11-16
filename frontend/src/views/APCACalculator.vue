@@ -129,7 +129,8 @@ import { ref, computed, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
 import { PageHero, PageSection, PageShell, UiAnnounce, UiButton, UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwatch, UiSwitch } from '../components/ui';
-import { apcach, crToBg, crToFg, maxChroma, apcachToCss, setContrast, setChroma, setHue } from 'apcach';
+import { apcachToCss, setContrast, setChroma, setHue } from 'apcach';
+import { achievedContrast, solveInSrgb } from '../utils/apcaSrgb.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const { notice: copyNotice, showNotice: showCopyNotice, clearNotice: clearCopyNotice } = useNotice();
@@ -223,6 +224,12 @@ const announceResult = (verb) => {
   resultAnnouncement.value = `${verb}: ${calculatedColorHex.value}, ${contrast}`;
 };
 
+// The contrast the produced hex actually has, truncated so it never reads as the target when it isn't
+const formatContrast = (value) => {
+  const v = Math.floor(Math.abs(Number(value)) * 100 + 1e-9) / 100;
+  return contrastModel.value === 'apca' ? `Lc ${v}` : `${v}:1`;
+};
+
 const calculateColor = () => {
   const cr = Number(contrastRatio.value);
   const c = Number(chroma.value);
@@ -246,32 +253,46 @@ const calculateColor = () => {
   }
 
   try {
-    const chromaValue = useMaxChroma.value
-      ? (Number.isFinite(limit) && limit > 0 ? maxChroma(Math.min(limit, 0.37)) : maxChroma())
-      : Math.min(c, 0.37);
-
-    // crToBg: the reference is the background and we solve for the foreground;
-    // crToFg: the reference is the foreground and we solve for the background.
-    // Signature: crToBg(color, contrast, model?, direction?)
-    const crFunction = colorPosition.value === 'bg' ? crToBg : crToFg;
-    const contrastConfig = crFunction(
-      referenceColor.value.trim(),
-      clampContrast(cr),
-      contrastModel.value,
-      searchDirection.value
-    );
-
-    const result = apcach(contrastConfig, chromaValue, wrapHue(h));
-    if (!Number.isFinite(result?.lightness)) {
-      throw new Error('apcach returned no lightness');
-    }
-    calculatedColor.value = result;
-    syncInputs(result);
+    // Solved in sRGB (apcach defaults to P3), so the HEX and RGB shown are the
+    // colour that was solved rather than a clipped one that can miss the target.
+    const { color, hex, achieved, meetsTarget, reducedChroma } = solveInSrgb({
+      reference: referenceColor.value.trim(),
+      position: colorPosition.value,
+      contrast: clampContrast(cr),
+      model: contrastModel.value,
+      direction: searchDirection.value,
+      chroma: useMaxChroma.value ? null : c,
+      chromaCap: Number.isFinite(limit) && limit > 0 ? limit : undefined,
+      hue: wrapHue(h),
+    });
+    calculatedColor.value = color;
+    syncInputs(color);
     clearNotice();
+    const shown = formatContrast(achieved);
+    if (!meetsTarget) {
+      showNotice(`No sRGB color at this hue reaches the target: the closest, ${hex}, gives ${shown}.`, 'warning');
+    } else if (reducedChroma !== null) {
+      showNotice(`Chroma reduced to ${reducedChroma} to stay in sRGB. ${hex} gives ${shown}.`, 'info');
+    }
     announceResult('Calculated');
   } catch (error) {
     console.error('Error calculating color:', error);
     showNotice('Could not calculate a color. Please check your inputs.', 'error');
+  }
+};
+
+// After an adjustment, say so if the hex shown no longer reaches the contrast asked for
+// (a higher chroma can leave sRGB and be clipped).
+const checkAdjusted = () => {
+  const color = calculatedColor.value;
+  const target = Number(color?.contrastConfig?.cr);
+  const hex = calculatedColorHex.value;
+  if (!hex || !Number.isFinite(target)) return;
+  const achieved = achievedContrast(hex, referenceColor.value.trim(), colorPosition.value, contrastModel.value);
+  if (Math.abs(achieved) < Math.abs(target) - 1e-9) {
+    showNotice(`${hex} gives ${formatContrast(achieved)}, short of the target: it is outside sRGB at this chroma. Lower the chroma or recalculate.`, 'warning');
+  } else {
+    clearNotice();
   }
 };
 
@@ -287,6 +308,7 @@ const adjustContrast = () => {
     const clampedContrast = clampContrast(current + delta);
     calculatedColor.value = setContrast(cloneColor(calculatedColor.value), clampedContrast);
     syncInputs(calculatedColor.value);
+    checkAdjusted();
     announceResult('Adjusted');
   } catch (error) {
     console.error('Error adjusting contrast:', error);
@@ -301,6 +323,7 @@ const adjustChroma = () => {
   try {
     calculatedColor.value = setChroma(cloneColor(calculatedColor.value), (c) => Number(c) + delta);
     syncInputs(calculatedColor.value);
+    checkAdjusted();
     announceResult('Adjusted');
   } catch (error) {
     console.error('Error adjusting chroma:', error);
@@ -316,6 +339,7 @@ const adjustHue = () => {
     // Hue is an angle: wrap it (apcach would clamp 370 to 360).
     calculatedColor.value = setHue(cloneColor(calculatedColor.value), wrapHue(Number(calculatedColor.value.hue) + delta));
     syncInputs(calculatedColor.value);
+    checkAdjusted();
     announceResult('Adjusted');
   } catch (error) {
     console.error('Error adjusting hue:', error);

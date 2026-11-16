@@ -43,6 +43,7 @@
               </svg>
             </li>
           </ul>
+          <p v-if="precisionNote" class="pt-3 text-xs text-ink-muted" data-precision-note>{{ precisionNote }}</p>
         </UiPanel>
 
         <UiPanel title="Visual preview">
@@ -82,25 +83,17 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { PageHero, PageSection, PageShell, UiButton, UiInput, UiPanel, UiSelect } from '../components/ui';
+import { SPACING_RATIOS, SPACING_RATIO_LABELS, spacingScale } from '../utils/spacingScale.js';
 
 const baseSpacing = ref(4);
-const selectedRatio = ref('major-third');
+const selectedRatio = ref('perfect-fourth');
 const customRatio = ref(1.333);
 
+// Named as in the font scale tool: 1.25 is a major third, 1.333 a perfect fourth, 1.5 a perfect fifth
 const ratioOptions = [
-  { value: 'major-third', label: 'Major Third (1.333)' },
-  { value: 'perfect-fourth', label: 'Perfect Fourth (1.5)' },
-  { value: 'golden-ratio', label: 'Golden Ratio (1.618)' },
-  { value: 'minor-third', label: 'Minor Third (1.2)' },
-  { value: 'custom', label: 'Custom' }
+  ...Object.keys(SPACING_RATIOS).map((value) => ({ value, label: SPACING_RATIO_LABELS[value] })),
+  { value: 'custom', label: 'Custom' },
 ];
-
-const ratios = {
-  'major-third': 1.333,
-  'perfect-fourth': 1.5,
-  'golden-ratio': 1.618,
-  'minor-third': 1.2
-};
 
 const DEFAULT_BASE = 4;
 const DEFAULT_RATIO = 1.333;
@@ -119,27 +112,17 @@ const currentRatio = computed(() => {
     const n = Number(customRatio.value);
     return customRatio.value === '' || !Number.isFinite(n) || n <= 1 || n > 4 ? DEFAULT_RATIO : n;
   }
-  return ratios[selectedRatio.value] ?? DEFAULT_RATIO;
+  return SPACING_RATIOS[selectedRatio.value] ?? DEFAULT_RATIO;
 });
 
-const computedSpacingScale = computed(() => {
-  const ratio = currentRatio.value;
-  const base = effectiveBase.value;
-  
-  // Generate scale: xs, sm, base, md, lg, xl, 2xl, 3xl, 4xl, 5xl
-  // Using negative powers for smaller values and positive for larger
-  return {
-    xs: Math.round(base / Math.pow(ratio, 2)),
-    sm: Math.round(base / ratio),
-    base: base,
-    md: Math.round(base * ratio),
-    lg: Math.round(base * Math.pow(ratio, 2)),
-    xl: Math.round(base * Math.pow(ratio, 3)),
-    '2xl': Math.round(base * Math.pow(ratio, 4)),
-    '3xl': Math.round(base * Math.pow(ratio, 5)),
-    '4xl': Math.round(base * Math.pow(ratio, 6)),
-    '5xl': Math.round(base * Math.pow(ratio, 7))
-  };
+// xs, sm, base, md … 5xl: base × ratio^n. Steps are whole pixels unless that
+// would make two steps the same (small bases), then 0.5 or 0.25px.
+const spacing = computed(() => spacingScale(effectiveBase.value, currentRatio.value));
+const computedSpacingScale = computed(() => spacing.value.scale);
+const precisionNote = computed(() => {
+  const { precision, duplicates } = spacing.value;
+  if (duplicates.length) return `The ratio is too small to keep ${duplicates.join(', ')} apart from the step below.`;
+  return precision < 1 ? `Rounded to ${precision}px so that no two steps are the same.` : '';
 });
 
 // The bars in the scale list are drawn relative to the largest step
