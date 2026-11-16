@@ -73,9 +73,11 @@
             </div>
 
             <div class="mt-6 pt-6 border-t border-line">
+              <InlineNotice v-if="dataNotice" class="mb-4" :notice="dataNotice" @dismiss="clearDataNotice" />
               <!-- Multi-dataset input (stacked, grouped, combo, multi-line) -->
-              <fieldset v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo' || selectedChartType === 'line'" class="flex flex-col gap-3">
+              <fieldset v-if="isMultiSeries(selectedChartType)" class="flex flex-col gap-3">
                 <legend class="mb-2 text-sm font-semibold text-ink-strong">Datasets</legend>
+                <p class="text-xs text-ink-secondary">Points are shared rows: a label, added point or removed point applies to every dataset.</p>
                 <div v-for="(dataset, datasetIndex) in multiDatasetData" :key="datasetIndex" class="data-card" data-row>
                   <div class="flex items-center gap-2">
                     <div class="flex-1 min-w-0">
@@ -85,14 +87,14 @@
                   </div>
                   <div v-for="(item, itemIndex) in dataset.data" :key="itemIndex" class="flex items-center gap-2" data-row>
                     <div class="flex-1 min-w-0">
-                      <UiInput v-model="item.label" placeholder="Label" :aria-label="`Dataset ${datasetIndex + 1} point ${itemIndex + 1} label`" />
+                      <UiInput :model-value="item.label" placeholder="Label" :aria-label="`Dataset ${datasetIndex + 1} point ${itemIndex + 1} label`" @update:model-value="setMultiRowLabel(itemIndex, $event)" />
                     </div>
                     <div class="w-24">
                       <UiInput v-model.number="item.value" type="number" placeholder="Value" :aria-label="`Dataset ${datasetIndex + 1} point ${itemIndex + 1} value`" />
                     </div>
-                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove point ${itemIndex + 1}`" :disabled="dataset.data.length <= 1" :data-focus-after-remove="dataset.data.length > 1 || undefined" @click="removeMultiDataItem(datasetIndex, itemIndex); focusNextRow($event, itemIndex)" />
+                    <UiButton icon-only icon="x" variant="ghost" size="sm" :label="`Remove point ${itemIndex + 1} from every dataset`" :disabled="dataset.data.length <= 1" :data-focus-after-remove="dataset.data.length > 1 || undefined" @click="removeMultiDataItem(datasetIndex, itemIndex); focusNextRow($event, itemIndex)" />
                   </div>
-                  <UiButton icon="plus" size="sm" variant="ghost" class="self-start" @click="addMultiDataItem(datasetIndex)">Add point</UiButton>
+                  <UiButton icon="plus" size="sm" variant="ghost" class="self-start" @click="addMultiDataItem(datasetIndex)">Add point to every dataset</UiButton>
                 </div>
                 <UiButton icon="plus" size="sm" class="self-start" @click="addDataset">Add dataset</UiButton>
               </fieldset>
@@ -156,13 +158,13 @@
                   :model-value="heatmapData.rows.join(',')"
                   label="Rows"
                   placeholder="Mon, Tue, Wed, Thu, Fri"
-                  @update:model-value="heatmapData.rows = $event.split(',').map(r => r.trim()).filter(r => r)"
+                  @update:model-value="setHeatmapLabels('rows', $event)"
                 />
                 <UiInput
                   :model-value="heatmapData.columns.join(',')"
                   label="Columns"
                   placeholder="Week 1, Week 2, Week 3, Week 4"
-                  @update:model-value="heatmapData.columns = $event.split(',').map(c => c.trim()).filter(c => c)"
+                  @update:model-value="setHeatmapLabels('columns', $event)"
                 />
                 <UiTable caption="Heatmap values" compact bordered>
                   <thead>
@@ -208,7 +210,7 @@
                   <legend class="mb-2 text-sm font-semibold text-ink-strong">Nodes</legend>
                   <div v-for="(node, index) in sankeyData.nodes" :key="index" class="flex items-center gap-2" data-row>
                     <div class="flex-1 min-w-0">
-                      <UiInput v-model="node.id" placeholder="Node ID" :aria-label="`Node ${index + 1} ID`" />
+                      <UiInput :model-value="node.id" placeholder="Node ID" :aria-label="`Node ${index + 1} ID`" @update:model-value="renameNodeId(sankeyData, index, $event)" />
                     </div>
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="node.label" placeholder="Label" :aria-label="`Node ${index + 1} label`" />
@@ -290,7 +292,7 @@
                   <legend class="mb-2 text-sm font-semibold text-ink-strong">Entities</legend>
                   <div v-for="(node, index) in chordDiagramData.nodes" :key="index" class="flex items-center gap-2" data-row>
                     <div class="w-24">
-                      <UiInput v-model="node.id" placeholder="ID" :aria-label="`Entity ${index + 1} ID`" />
+                      <UiInput :model-value="node.id" placeholder="ID" :aria-label="`Entity ${index + 1} ID`" @update:model-value="renameNodeId(chordDiagramData, index, $event)" />
                     </div>
                     <div class="flex-1 min-w-0">
                       <UiInput v-model="node.label" placeholder="Entity name" :aria-label="`Entity ${index + 1} name`" />
@@ -330,6 +332,25 @@
                   </UiButton>
                 </fieldset>
               </div>
+
+              <!-- Scatter and bubble: x, y (and size) per point -->
+              <fieldset v-else-if="selectedChartType === 'scatter' || selectedChartType === 'bubble'" class="flex flex-col gap-3">
+                <legend class="mb-2 text-sm font-semibold text-ink-strong">Points</legend>
+                <div v-for="(point, index) in pointData" :key="index" class="data-card" data-row>
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 min-w-0">
+                      <UiInput v-model="point.label" placeholder="Label" :aria-label="`Point ${index + 1} label`" />
+                    </div>
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove point ${index + 1}`" :disabled="pointData.length <= 1" :data-focus-after-remove="pointData.length > 1 || undefined" @click="removePoint(index); focusNextRow($event, index)" />
+                  </div>
+                  <div class="grid gap-2" :class="selectedChartType === 'bubble' ? 'grid-cols-3' : 'grid-cols-2'">
+                    <UiInput v-model.number="point.x" type="number" label="X" :aria-label="`Point ${index + 1} x`" />
+                    <UiInput v-model.number="point.y" type="number" label="Y" :aria-label="`Point ${index + 1} y`" />
+                    <UiInput v-if="selectedChartType === 'bubble'" v-model.number="point.r" type="number" min="1" label="Size" :aria-label="`Point ${index + 1} size`" />
+                  </div>
+                </div>
+                <UiButton icon="plus" size="sm" class="self-start" @click="addPoint">Add point</UiButton>
+              </fieldset>
 
               <!-- Single dataset -->
               <fieldset v-else class="flex flex-col gap-2">
@@ -384,12 +405,11 @@
               <h3 class="text-sm font-semibold text-ink-strong" aria-hidden="true">Motion and animation controls</h3>
               <UiCheckbox v-model="chartConfig.reduceMotion" label="Reduce motion" />
               <UiCheckbox v-model="chartConfig.pauseAnimation" label="Pause animation" />
-              <UiCheckbox v-model="chartConfig.disableAutoUpdate" label="Disable auto-update" />
             </fieldset>
 
             <div class="mt-6 pt-6 border-t border-line flex flex-col gap-4">
               <UiSelect
-                v-if="selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo' || selectedChartType === 'line' || selectedChartType === 'pie' || selectedChartType === 'doughnut' || selectedChartType === 'polar'"
+                v-if="encodingsFor(selectedChartType).length"
                 v-model="chartConfig.secondaryEncoding"
                 label="Secondary encoding"
                 :options="secondaryEncodingOptions"
@@ -656,7 +676,12 @@ import {
 import UiChoiceCards from '../components/ui/UiChoiceCards.vue';
 import { useChartTheme, rgbToHex } from '../composables/useChartTheme.js';
 import { useNotice } from '../composables/useNotice.js';
-import { calculateContrast } from '../composables/useContrast.js';
+import {
+  dataKind, isMultiSeries, tableFrom, storeFrom, addSharedRow, removeSharedRow, setSharedRowLabel,
+  waterfallBars, gaugeSegments, buildDataTable, sankeyColumns, renameNodeId, heatmapStep,
+  heatmapLegendSteps, realignHeatmap, ENCODINGS, encodingsFor, pointStyleFor, dashFor, patternFor,
+  chartContrastIssues, inlineSvgPaint,
+} from '../utils/chartBuilderData.js';
 import axe from 'axe-core';
 import { AXE_SCAN_OPTIONS, axeCategoryState } from '../utils/axeScan.js';
 import { scriptSafeJson } from '../utils/scriptSafeJson.js';
@@ -679,33 +704,44 @@ import { Line as LineChart, Bar as BarChart, Pie as PieChart, Doughnut as Doughn
 import { CandlestickController, CandlestickElement } from 'chartjs-chart-financial';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 
-// Helper function to draw the color scale legend
-function drawLegend(ctx, x, y, width, height, options, chartArea) {
-  // Draw gradient background
-  const gradient = ctx.createLinearGradient(x, y, x + width, y);
-  if (options.colors && options.colors.length > 0) {
-    options.colors.forEach((color, index) => {
-      gradient.addColorStop(index / (options.colors.length - 1), color);
-    });
-  }
-  
-  // Draw gradient rectangle
-  ctx.fillStyle = gradient;
-  ctx.fillRect(x, y, width, height);
-  
-  // Draw border
+// Draw the heatmap colour legend: one block per colour step, matching the
+// stepped cell colours, with the value at each step boundary.
+function drawLegend(ctx, x, y, width, height, options) {
+  const steps = options.steps || [];
+  if (!steps.length) return;
+  const blockWidth = width / steps.length;
+  const format = (value) => String(Math.round(value * 10) / 10);
+
+  steps.forEach((step, index) => {
+    ctx.fillStyle = step.color;
+    ctx.fillRect(x + index * blockWidth, y, blockWidth, height);
+  });
+
   ctx.strokeStyle = options.gridColor || '#e2e8f0';
   ctx.lineWidth = 1;
   ctx.strokeRect(x, y, width, height);
-  
-  // Draw min/max labels
+  steps.forEach((_, index) => {
+    if (index === 0) return;
+    ctx.beginPath();
+    ctx.moveTo(x + index * blockWidth, y);
+    ctx.lineTo(x + index * blockWidth, y + height);
+    ctx.stroke();
+  });
+
+  // Boundary values under the blocks (inner ones only when there is room)
   ctx.fillStyle = options.textColor || '#1e293b';
   ctx.font = '12px sans-serif';
-  ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.fillText(options.min.toFixed(1), x, y + height + 5);
+  ctx.textAlign = 'left';
+  ctx.fillText(format(steps[0].from), x, y + height + 5);
   ctx.textAlign = 'right';
-  ctx.fillText(options.max.toFixed(1), x + width, y + height + 5);
+  ctx.fillText(format(steps[steps.length - 1].to), x + width, y + height + 5);
+  if (blockWidth >= 36) {
+    ctx.textAlign = 'center';
+    steps.slice(1).forEach((step, index) => {
+      ctx.fillText(format(step.from), x + (index + 1) * blockWidth, y + height + 5);
+    });
+  }
 }
 
 // Custom color scale legend plugin for heatmaps
@@ -733,7 +769,7 @@ const colorScaleLegendPlugin = {
       const canvasHeight = canvas.height;
       
       const legendHeight = 30;
-      const legendWidth = 200;
+      const legendWidth = Math.min(chartArea.right - chartArea.left, Math.max(200, (options.steps?.length || 0) * 48));
       const labelHeight = 15;
       const totalHeight = legendHeight + labelHeight + 5;
       
@@ -746,15 +782,64 @@ const colorScaleLegendPlugin = {
         // If not enough space below, position above chart
         const newY = chartArea.top - totalHeight - 20;
         if (newY >= 0) {
-          drawLegend(ctx, legendX, newY, legendWidth, legendHeight, options, chartArea);
+          drawLegend(ctx, legendX, newY, legendWidth, legendHeight, options);
         }
       } else {
-        drawLegend(ctx, legendX, legendY, legendWidth, legendHeight, options, chartArea);
+        drawLegend(ctx, legendX, legendY, legendWidth, legendHeight, options);
       }
     } catch (error) {
       console.error('Error drawing color scale legend:', error);
     }
   }
+};
+
+// "Value labels" secondary encoding: write each value on its bar, point or slice
+const valueLabelsPlugin = {
+  id: 'valueLabels',
+  afterDatasetsDraw(chart, _args, options) {
+    if (!options?.display) return;
+    const { ctx } = chart;
+    ctx.save();
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = options.color || '#1e293b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      if (!chart.isDatasetVisible(datasetIndex)) return;
+      const meta = chart.getDatasetMeta(datasetIndex);
+      meta.data.forEach((element, index) => {
+        const raw = dataset.data[index];
+        const value = Array.isArray(raw) ? raw[1] - raw[0] : raw && typeof raw === 'object' ? raw.y : raw;
+        if (value === null || value === undefined || Number.isNaN(value)) return;
+        const { x, y } = element.tooltipPosition();
+        ctx.fillText(String(value), x, meta.type === 'pie' || meta.type === 'doughnut' || meta.type === 'polarArea' ? y + 6 : y - 4);
+      });
+    });
+    ctx.restore();
+  },
+};
+
+// Gauge: the real value (even beyond the dial's range) written in the middle
+const gaugeReadoutPlugin = {
+  id: 'gaugeReadout',
+  afterDraw(chart, _args, options) {
+    if (!options?.text || !chart.chartArea) return;
+    const { ctx, chartArea } = chart;
+    const x = (chartArea.left + chartArea.right) / 2;
+    const y = (chartArea.top + chartArea.bottom) / 2;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = options.color || '#1e293b';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(options.text, x, y);
+    if (options.subtext) {
+      ctx.font = '13px sans-serif';
+      ctx.fillStyle = options.subColor || options.color || '#475569';
+      ctx.fillText(options.subtext, x, y + 26);
+    }
+    ctx.restore();
+  },
 };
 
 // Register Chart.js components
@@ -774,12 +859,52 @@ ChartJS.register(
   CandlestickElement,
   MatrixController,
   MatrixElement,
-  colorScaleLegendPlugin
+  colorScaleLegendPlugin,
+  valueLabelsPlugin,
+  gaugeReadoutPlugin
 );
+
+// Pattern fills (the "Pattern fills" secondary encoding), one canvas pattern
+// per colour and pattern, drawn over the series colour.
+const patternCache = new Map();
+const makePattern = (color, kind) => {
+  if (!kind || typeof document === 'undefined') return color;
+  const key = `${color}|${kind}`;
+  if (patternCache.has(key)) return patternCache.get(key);
+  let pattern = color;
+  try {
+    const size = 12;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, size, size);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (kind === 'diagonal') { ctx.moveTo(0, size); ctx.lineTo(size, 0); ctx.moveTo(-2, 2); ctx.lineTo(2, -2); ctx.moveTo(size - 2, size + 2); ctx.lineTo(size + 2, size - 2); }
+      else if (kind === 'reverseDiagonal') { ctx.moveTo(0, 0); ctx.lineTo(size, size); ctx.moveTo(size - 2, -2); ctx.lineTo(size + 2, 2); ctx.moveTo(-2, size - 2); ctx.lineTo(2, size + 2); }
+      else if (kind === 'horizontal') { ctx.moveTo(0, size / 2); ctx.lineTo(size, size / 2); }
+      else if (kind === 'grid') { ctx.moveTo(0, size / 2); ctx.lineTo(size, size / 2); ctx.moveTo(size / 2, 0); ctx.lineTo(size / 2, size); }
+      else if (kind === 'dots') { ctx.arc(size / 2, size / 2, 2, 0, Math.PI * 2); ctx.fill(); }
+      ctx.stroke();
+      pattern = ctx.createPattern(canvas, 'repeat') || color;
+    }
+  } catch {
+    pattern = color;
+  }
+  patternCache.set(key, pattern);
+  return pattern;
+};
 
 // Token colours resolved for the canvas charts (axes, grid, labels, tooltips)
 const chartTheme = useChartTheme();
 const { notice, showNotice, clearNotice } = useNotice();
+// Messages about the chart's data (e.g. what happened to it on a type change)
+const { notice: dataNotice, showNotice: showDataNotice, clearNotice: clearDataNotice } = useNotice();
 // This page's own chart <figure> (exports and the axe scan target it, not the
 // first figure[role="img"] in the document).
 const chartFigure = ref(null);
@@ -796,6 +921,16 @@ const chartData = ref([
   { label: 'Apr', value: 81 },
   { label: 'May', value: 56 },
   { label: 'Jun', value: 55 }
+]);
+
+// Scatter and bubble points: x, y and (bubble) size
+const pointData = ref([
+  { label: 'Point 1', x: 10, y: 20, r: 8 },
+  { label: 'Point 2', x: 20, y: 35, r: 12 },
+  { label: 'Point 3', x: 30, y: 50, r: 6 },
+  { label: 'Point 4', x: 40, y: 45, r: 14 },
+  { label: 'Point 5', x: 50, y: 60, r: 10 },
+  { label: 'Point 6', x: 60, y: 70, r: 16 }
 ]);
 
 // Multi-dataset support for stacked/grouped/combo charts
@@ -945,9 +1080,9 @@ const chartConfig = ref({
   // Accessibility settings
   reduceMotion: false,
   pauseAnimation: false,
-  disableAutoUpdate: false,
-  // Secondary encoding for color independence
-  secondaryEncoding: 'none', // 'none', 'shape', 'pattern', 'lineStyle', 'icon', 'text'
+  // Secondary encoding for color independence: 'none' or a key of ENCODINGS
+  // that encodingsFor(chart type) offers
+  secondaryEncoding: 'none',
   // Units for data table
   dataUnit: ''
 });
@@ -959,12 +1094,12 @@ const customColors = ref([]);
 const getDataForColors = () => {
   const chartType = selectedChartType.value;
   
-  // For multi-dataset charts, use first dataset
-  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
-    if (multiDatasetData.value.length > 0 && multiDatasetData.value[0].data.length > 0) {
-      return multiDatasetData.value[0].data;
-    }
-    return [];
+  // Multi-dataset charts colour each dataset (series), not each point
+  if (isMultiSeries(chartType)) {
+    return multiDatasetData.value;
+  }
+  if (dataKind(chartType) === 'points') {
+    return pointData.value;
   }
   
   // For single dataset charts
@@ -1038,6 +1173,9 @@ const generatedInsights = computed(() => {
       const targetNode = chordDiagramData.value.nodes.find(n => n.id === link.target);
       return `${sourceNode?.label || link.source} ↔ ${targetNode?.label || link.target}`;
     });
+  } else if (dataKind(chartType) === 'points') {
+    values = pointData.value.map(point => point.y);
+    labels = pointData.value.map(point => point.label);
   } else if (chartData.value && chartData.value.length > 0) {
     values = chartData.value.map(item => item.value);
     labels = chartData.value.map(item => item.label);
@@ -1126,12 +1264,23 @@ const validationErrors = computed(() => {
     if (multiDatasetData.value.length === 0 || multiDatasetData.value.some(d => d.data.length === 0)) {
       errors.push({ field: 'data', message: 'Chart data cannot be empty' });
     }
-  } else if (chartData.value.length === 0) {
+  } else if (dataKind(chartType) === 'points' ? pointData.value.length === 0 : chartData.value.length === 0) {
     errors.push({ field: 'data', message: 'Chart data cannot be empty' });
   }
   
   return errors;
 });
+
+// The secondary encoding in effect: 'none' unless this chart type offers it
+const activeEncoding = computed(() => {
+  const encoding = chartConfig.value.secondaryEncoding;
+  return encodingsFor(selectedChartType.value).includes(encoding) ? encoding : 'none';
+});
+
+const secondaryEncodingOptions = computed(() => [
+  { value: 'none', label: 'None' },
+  ...encodingsFor(selectedChartType.value).map((value) => ({ value, label: ENCODINGS[value] })),
+]);
 
 // Color-Independent Encoding Check
 const colorOnlyEncoding = computed(() => {
@@ -1139,13 +1288,13 @@ const colorOnlyEncoding = computed(() => {
   
   // Only applies to charts with multiple series
   if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
-    if (multiDatasetData.value.length > 1 && chartConfig.value.secondaryEncoding === 'none') {
+    if (multiDatasetData.value.length > 1 && activeEncoding.value === 'none') {
       return true;
     }
   } else if (chartType === 'pie' || chartType === 'doughnut' || chartType === 'polar') {
     // Pie charts with multiple slices need secondary encoding if more than 3-4 slices
     const dataLength = chartData.value.length;
-    if (dataLength > 4 && chartConfig.value.secondaryEncoding === 'none') {
+    if (dataLength > 4 && activeEncoding.value === 'none') {
       return true;
     }
   }
@@ -1155,38 +1304,14 @@ const colorOnlyEncoding = computed(() => {
 
 // Contrast Checking
 const contrastIssues = computed(() => {
-  const issues = [];
   const colors = chartConfig.value.colorScheme === 'custom' 
     ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
     : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
   
-  // The surface the chart sits on, in the current theme
-  const bgColor = rgbToHex(chartTheme.value.surface);
-  
-  // Check each color against background
-  colors.forEach((color, index) => {
-    const contrast = calculateContrast(color, bgColor);
-    if (contrast) {
-      // Text needs 4.5:1, graphical objects need 3:1
-      if (contrast.ratio < 4.5) {
-        issues.push({
-          element: `Color ${index + 1} (${color})`,
-          ratio: contrast.ratio,
-          required: 4.5,
-          type: 'text'
-        });
-      } else if (contrast.ratio < 3) {
-        issues.push({
-          element: `Color ${index + 1} (${color})`,
-          ratio: contrast.ratio,
-          required: 3,
-          type: 'graphical'
-        });
-      }
-    }
-  });
-  
-  return issues;
+  // The surface the chart sits on, in the current theme. Chart colours are
+  // graphical objects (3:1, WCAG 1.4.11); the chart's text colours need 4.5:1.
+  const theme = chartTheme.value;
+  return chartContrastIssues(colors, rgbToHex(theme.surface), { Axis: rgbToHex(theme.text), Title: rgbToHex(theme.title) });
 });
 
 // Zoom and Scaling Validation
@@ -1242,9 +1367,10 @@ const accessibilityScore = computed(() => {
   maxScore += 20;
   if (contrastIssues.value.length === 0) score += 20;
   else {
-    const passingColors = (chartConfig.value.colorScheme === 'custom' ? customColors.value.length : 6) - contrastIssues.value.length;
-    const totalColors = chartConfig.value.colorScheme === 'custom' ? customColors.value.length : 6;
-    score += (passingColors / totalColors) * 20;
+    const totalColors = (chartConfig.value.colorScheme === 'custom' ? customColors.value.length : 6) || 1;
+    const failingColors = contrastIssues.value.filter((issue) => issue.type === 'graphical').length;
+    const textPenalty = contrastIssues.value.some((issue) => issue.type === 'text') ? 0.5 : 1;
+    score += Math.max(0, (totalColors - failingColors) / totalColors) * 20 * textPenalty;
   }
   
   // Keyboard Navigation - 15 points (will be checked dynamically)
@@ -1274,62 +1400,23 @@ const dataTableSortDirection = ref('asc');
 const chartFocused = ref(false);
 const currentDataPointIndex = ref(0);
 
-const generateDataTable = () => {
-  const chartType = selectedChartType.value;
-  let tableData = [];
-  
-  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
-    // Multi-dataset table
-    const labels = multiDatasetData.value[0]?.data.map(item => item.label) || [];
-    tableData = labels.map((label, labelIndex) => {
-      const row = { label };
-      multiDatasetData.value.forEach((dataset, datasetIndex) => {
-        const value = dataset.data[labelIndex]?.value || 0;
-        row[dataset.label] = value;
-      });
-      return row;
-    });
-  } else if (chartType === 'gauge') {
-    tableData = [{ label: 'Value', value: gaugeData.value.value, min: gaugeData.value.min, max: gaugeData.value.max, target: gaugeData.value.target }];
-  } else if (chartType === 'waterfall') {
-    tableData = [
-      { label: 'Base', value: waterfallData.value.base },
-      ...waterfallData.value.changes.map(c => ({ label: c.label, value: c.value })),
-      { label: 'Total', value: waterfallData.value.base + waterfallData.value.changes.reduce((sum, c) => sum + c.value, 0) }
-    ];
-  } else if (chartType === 'funnel') {
-    tableData = funnelData.value.map(item => ({ label: item.label, value: item.value }));
-  } else if (chartType === 'choropleth') {
-    // Maps moved to MapMaker.vue
-    tableData = [];
-  } else if (chartType === 'flowMap') {
-    // Maps moved to MapMaker.vue
-    tableData = [];
-  } else if (chartType === 'bulletGraph') {
-    tableData = bulletGraphData.value.map(item => ({
-      label: item.label,
-      value: item.value,
-      target: item.target,
-      max: item.max,
-      'poor range': `0-${item.ranges.fair}`,
-      'fair range': `${item.ranges.fair}-${item.ranges.good}`,
-      'good range': `${item.ranges.good}-${item.ranges.excellent}`
-    }));
-  } else if (chartType === 'chordDiagram') {
-    tableData = chordDiagramData.value.links.map(link => {
-      const sourceNode = chordDiagramData.value.nodes.find(n => n.id === link.source);
-      const targetNode = chordDiagramData.value.nodes.find(n => n.id === link.target);
-      return {
-        label: `${sourceNode?.label || link.source} ↔ ${targetNode?.label || link.target}`,
-        value: link.value
-      };
-    });
-  } else if (chartData.value && chartData.value.length > 0) {
-    tableData = chartData.value.map(item => ({ label: item.label, value: item.value }));
-  }
-  
-  return tableData;
-};
+// Rows and columns for the on-page table and the HTML/PDF/PPT/Word exports
+const dataTable = computed(() => buildDataTable(selectedChartType.value, {
+  chartData: chartData.value,
+  multiDatasetData: multiDatasetData.value,
+  pointData: pointData.value,
+  gaugeData: gaugeData.value,
+  waterfallData: waterfallData.value,
+  candlestickData: candlestickData.value,
+  heatmapData: heatmapData.value,
+  funnelData: funnelData.value,
+  treemapData: treemapData.value,
+  sankeyData: sankeyData.value,
+  bulletGraphData: bulletGraphData.value,
+  chordDiagramData: chordDiagramData.value,
+}, { unit: chartConfig.value.dataUnit }));
+
+const generateDataTable = () => dataTable.value.rows;
 
 const sortedDataTable = computed(() => {
   const data = generateDataTable();
@@ -1363,52 +1450,17 @@ const toggleDataTableSort = (column) => {
   }
 };
 
-const dataTableHeaders = computed(() => {
-  const chartType = selectedChartType.value;
-  const headers = [{ key: 'label', label: 'Label' }];
-  
-  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
-    multiDatasetData.value.forEach(dataset => {
-      headers.push({ 
-        key: dataset.label, 
-        label: `${dataset.label}${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` 
-      });
-    });
-  } else if (chartType === 'gauge') {
-    headers.push(
-      { key: 'value', label: `Value${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
-      { key: 'min', label: `Min${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
-      { key: 'max', label: `Max${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
-      { key: 'target', label: `Target${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` }
-    );
-  } else if (chartType === 'bulletGraph') {
-    headers.push(
-      { key: 'value', label: `Value${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
-      { key: 'target', label: `Target${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
-      { key: 'max', label: `Max${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` },
-      { key: 'poor range', label: 'Poor Range' },
-      { key: 'fair range', label: 'Fair Range' },
-      { key: 'good range', label: 'Good Range' }
-    );
-  } else {
-    headers.push({ 
-      key: 'value', 
-      label: `Value${chartConfig.value.dataUnit ? ` (${chartConfig.value.dataUnit})` : ''}` 
-    });
-  }
-  
-  return headers;
-});
+const dataTableHeaders = computed(() => dataTable.value.headers);
 
 // Keyboard Navigation Handler
 const handleChartKeyboard = (event) => {
   const chartType = selectedChartType.value;
   let dataLength = 0;
   
-  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
+  if (isMultiSeries(chartType)) {
     dataLength = multiDatasetData.value[0]?.data.length || 0;
   } else {
-    dataLength = chartData.value.length;
+    dataLength = dataTable.value.rows.length;
   }
   
   switch (event.key) {
@@ -1457,8 +1509,14 @@ const announceDataPoint = (index, select = false) => {
     });
     value = datasets.join(', ');
   } else {
-    label = chartData.value[index]?.label || '';
-    value = chartData.value[index]?.value || 0;
+    // Every other column of that data table row, e.g. "X: 10, Y: 20"
+    const row = dataTable.value.rows[index] || {};
+    const headers = dataTable.value.headers;
+    label = row.label ?? '';
+    const cells = headers.filter((header) => header.key !== 'label' && row[header.key] !== undefined);
+    value = cells.length === 1 && cells[0].key === 'value'
+      ? row.value
+      : cells.map((header) => `${header.label}: ${row[header.key]}`).join(', ');
   }
   
   // Create live region announcement
@@ -1616,15 +1674,6 @@ const colorSchemes = {
   orange: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7', '#fffbeb']
 };
 
-const secondaryEncodingOptions = [
-  { value: 'none', label: 'None' },
-  { value: 'shape', label: 'Shape patterns' },
-  { value: 'pattern', label: 'Pattern fills' },
-  { value: 'lineStyle', label: 'Line styles' },
-  { value: 'icon', label: 'Icon labels' },
-  { value: 'text', label: 'Text labels' }
-];
-
 const exportActions = [
   { format: 'html', label: 'Export as HTML', icon: 'file-code-2', gated: true },
   { format: 'png', label: 'Export as PNG', icon: 'download', gated: true },
@@ -1660,65 +1709,57 @@ const canvasLabel = computed(() => {
   return `${chartConfig.value.title || 'Chart'}: ${typeLabel.toLowerCase()}, ${datasets.length} series, ${points} data point${points === 1 ? '' : 's'}`;
 });
 
+// The colours in use: the custom list, or the chosen scheme
+const activeColors = computed(() => (chartConfig.value.colorScheme === 'custom'
+  ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
+  : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default)));
+
+const colorAt = (colors, index) => colors[index % colors.length];
+
 const chartDataForDisplay = computed(() => {
   // Use custom colors if custom scheme is selected, otherwise use predefined scheme
-  const colors = chartConfig.value.colorScheme === 'custom' 
-    ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
-    : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
+  const colors = activeColors.value;
   const chartType = selectedChartType.value;
+  const encoding = activeEncoding.value;
   
-  // Handle gauge chart (custom doughnut-based)
+  // Gauge: the value arc (clamped to the dial) and, on a thin outer ring, a
+  // marker at the target
   if (chartType === 'gauge') {
-    const value = gaugeData.value.value;
-    const min = gaugeData.value.min;
-    const max = gaugeData.value.max;
-    const target = gaugeData.value.target;
-    const range = max - min;
-    const valuePercent = ((value - min) / range) * 100;
-    const targetPercent = ((target - min) / range) * 100;
-    const remaining = 100 - valuePercent;
-    
+    const { valuePercent, targetPercent } = gaugeSegments(gaugeData.value);
+    const marker = 1.5;
+    const markerStart = Math.min(Math.max(targetPercent - marker / 2, 0), 100 - marker);
     return {
       labels: ['Value', 'Remaining'],
-      datasets: [{
-        data: [valuePercent, remaining],
-        backgroundColor: [colors[0], chartTheme.value.neutral],
-        borderWidth: 0
-      }]
+      // The value ring comes first: the legend takes its colours from it
+      datasets: [
+        {
+          label: 'Value',
+          data: [valuePercent, 100 - valuePercent],
+          backgroundColor: [colors[0], chartTheme.value.neutral],
+          borderWidth: 0
+        },
+        {
+          label: 'Target',
+          data: [markerStart, marker, 100 - markerStart - marker],
+          backgroundColor: ['transparent', chartTheme.value.title, 'transparent'],
+          borderWidth: 0,
+          weight: 0.35,
+          hoverOffset: 0
+        }
+      ]
     };
   }
   
-  // Handle waterfall chart
+  // Waterfall: floating bars from the running total; base and total from 0
   if (chartType === 'waterfall') {
-    const base = waterfallData.value.base;
-    const changes = waterfallData.value.changes;
-    const labels = ['Base', ...changes.map(c => c.label), 'Total'];
-    const values = [base];
-    let runningTotal = base;
-    
-    changes.forEach(change => {
-      runningTotal += change.value;
-      values.push(runningTotal);
-    });
-    
-    const data = [];
-    const backgroundColors = [];
-    data.push(base);
-    backgroundColors.push(colors[0]);
-    
-    changes.forEach((change, index) => {
-      data.push(change.value);
-      backgroundColors.push(change.value >= 0 ? colors[1] : colors[2]);
-    });
-    
-    data.push(runningTotal);
-    backgroundColors.push(colors[0]);
-    
+    const { labels, bars, kinds } = waterfallBars(waterfallData.value.base, waterfallData.value.changes);
+    const kindColor = { total: colors[0], increase: colorAt(colors, 1), decrease: colorAt(colors, 2) };
+    const backgroundColors = kinds.map((kind) => kindColor[kind]);
     return {
       labels,
       datasets: [{
         label: chartConfig.value.title || 'Waterfall',
-        data,
+        data: bars,
         backgroundColor: backgroundColors,
         borderColor: backgroundColors,
         borderWidth: 2
@@ -1783,27 +1824,22 @@ const chartDataForDisplay = computed(() => {
           const availableHeight = chartArea.bottom - chartArea.top;
           return availableHeight / numRows;
         },
-        backgroundColor: (ctx) => {
-          const value = ctx.raw.v;
-          if (allValues.length === 0) return colors[0];
-          if (max === min) return colors[0];
-          const ratio = (value - min) / (max - min);
-          return colors[Math.floor(ratio * (colors.length - 1))];
-        }
+        // Stepped: min…max split into one equal step per colour (as the legend shows)
+        backgroundColor: (ctx) => colors[heatmapStep(ctx.raw?.v ?? min, min, max, colors.length)]
       }]
     };
   }
   
   // Handle funnel chart
   if (chartType === 'funnel') {
-    const maxValue = Math.max(...funnelData.value.map(item => item.value));
+    const funnelColors = funnelData.value.map((_, index) => colorAt(colors, index));
     return {
       labels: funnelData.value.map(item => item.label),
       datasets: [{
         label: chartConfig.value.title || 'Funnel',
         data: funnelData.value.map(item => item.value),
-        backgroundColor: colors.slice(0, funnelData.value.length),
-        borderColor: colors.slice(0, funnelData.value.length),
+        backgroundColor: funnelColors,
+        borderColor: funnelColors,
         borderWidth: 2
       }]
     };
@@ -1840,93 +1876,98 @@ const chartDataForDisplay = computed(() => {
   }
   
   // Handle multi-dataset charts (stacked, grouped, combo, multi-line)
-  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
+  if (isMultiSeries(chartType)) {
     const labels = multiDatasetData.value[0]?.data.map(item => item.label) || [];
     const datasets = multiDatasetData.value.map((dataset, index) => {
       const isLine = chartType === 'combo' && index === multiDatasetData.value.length - 1;
       const isMultiLine = chartType === 'line';
+      const color = colorAt(colors, index);
+      const drawnAsLine = isLine || isMultiLine;
       return {
         label: dataset.label,
         data: dataset.data.map(item => item.value),
-        backgroundColor: isLine || isMultiLine ? 'transparent' : (colors[index % colors.length] + '80'),
-        borderColor: colors[index % colors.length],
+        backgroundColor: drawnAsLine
+          ? 'transparent'
+          : (encoding === 'pattern' ? makePattern(color + '80', patternFor(index)) : color + '80'),
+        borderColor: color,
         borderWidth: 2,
-        type: isLine ? 'line' : (isMultiLine ? 'line' : 'bar'),
+        type: drawnAsLine ? 'line' : 'bar',
         fill: isMultiLine ? false : (isLine ? false : undefined),
-        tension: isMultiLine ? 0.4 : undefined // Smooth curves for multi-line
+        tension: isMultiLine ? 0.4 : undefined, // Smooth curves for multi-line
+        // Secondary encodings: a marker shape or a dash pattern per series
+        ...(drawnAsLine && encoding === 'shape' ? { pointStyle: pointStyleFor(index), pointRadius: 5, pointHoverRadius: 7, pointBackgroundColor: color } : {}),
+        ...(drawnAsLine && encoding === 'lineStyle' ? { borderDash: dashFor(index) } : {})
       };
     });
     
     return { labels, datasets };
   }
   
-  // Handle area chart
-  if (chartType === 'area') {
+  // Per-point colours when the colour scheme is custom (one colour per data
+  // point); otherwise the series takes the scheme's first colour
+  const perPoint = chartConfig.value.colorScheme === 'custom' && customColors.value.length > 0;
+  const pointColors = chartData.value.map((_, index) => colorAt(colors, index));
+  
+  // Line, area, bar, horizontal bar and radar: one series
+  if (chartType === 'area' || chartType === 'line' || chartType === 'bar' || chartType === 'horizontalBar' || chartType === 'radar') {
+    const lineLike = chartType === 'area' || chartType === 'line' || chartType === 'radar';
     return {
       labels: chartData.value.map(item => item.label),
       datasets: [{
         label: chartConfig.value.title || 'Dataset',
         data: chartData.value.map(item => item.value),
-        backgroundColor: colors[0] + '80',
-        borderColor: colors[0],
+        backgroundColor: perPoint && !lineLike ? pointColors.map((c) => c + '80') : colors[0] + '80',
+        borderColor: perPoint && !lineLike ? pointColors : colors[0],
         borderWidth: 2,
-        fill: true
+        fill: chartType === 'area' ? true : chartType === 'line' ? false : undefined,
+        ...(perPoint && lineLike ? { pointBackgroundColor: pointColors, pointBorderColor: pointColors, pointRadius: 5 } : {})
       }]
     };
   }
   
-  // Handle single dataset charts
+  // Pie, doughnut and polar area: a colour (and, with the pattern encoding, a
+  // pattern) per slice
+  const sliceFill = pointColors.map((color, index) => (encoding === 'pattern' ? makePattern(color, patternFor(index)) : color));
   return {
     labels: chartData.value.map(item => item.label),
     datasets: [{
       label: chartConfig.value.title || 'Dataset',
       data: chartData.value.map(item => item.value),
-      backgroundColor: chartType === 'line' || chartType === 'bar' || chartType === 'radar' || chartType === 'horizontalBar'
-        ? colors[0] + '80'
-        : colors.slice(0, chartData.value.length),
-      borderColor: chartType === 'line' || chartType === 'bar' || chartType === 'radar' || chartType === 'horizontalBar'
-        ? colors[0]
-        : colors.slice(0, chartData.value.length),
-      borderWidth: 2,
-      fill: chartType === 'line' ? false : undefined
-    }]
-  };
-});
-
-const scatterDataForDisplay = computed(() => {
-  const colors = chartConfig.value.colorScheme === 'custom' 
-    ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
-    : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
-  
-  return {
-    datasets: [{
-      label: chartConfig.value.title || 'Dataset',
-      data: chartData.value.map((item, index) => ({
-        x: index,
-        y: item.value
-      })),
-      backgroundColor: colors[0] + '80',
-      borderColor: colors[0],
+      backgroundColor: sliceFill,
+      borderColor: pointColors,
       borderWidth: 2
     }]
   };
 });
 
-const bubbleDataForDisplay = computed(() => {
-  const colors = chartConfig.value.colorScheme === 'custom' 
-    ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
-    : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
-  
+const pointColorsFor = (count) => {
+  const colors = activeColors.value;
+  const perPoint = chartConfig.value.colorScheme === 'custom' && customColors.value.length > 0;
+  return Array.from({ length: count }, (_, index) => (perPoint ? colorAt(colors, index) : colors[0]));
+};
+
+const scatterDataForDisplay = computed(() => {
+  const borders = pointColorsFor(pointData.value.length);
   return {
     datasets: [{
       label: chartConfig.value.title || 'Dataset',
-      data: chartData.value.map((item, index) => ({
-        x: index,
-        y: item.value,
-        r: Math.abs(item.value) / 5 + 5
-      })),
-      backgroundColor: colors[0] + '80',
-      borderColor: colors[0],
+      data: pointData.value.map((point) => ({ x: Number(point.x) || 0, y: Number(point.y) || 0, label: point.label })),
+      backgroundColor: borders.map((c) => c + '80'),
+      borderColor: borders,
+      borderWidth: 2,
+      pointRadius: 5
+    }]
+  };
+});
+
+const bubbleDataForDisplay = computed(() => {
+  const borders = pointColorsFor(pointData.value.length);
+  return {
+    datasets: [{
+      label: chartConfig.value.title || 'Dataset',
+      data: pointData.value.map((point) => ({ x: Number(point.x) || 0, y: Number(point.y) || 0, r: Math.max(1, Number(point.r) || 1), label: point.label })),
+      backgroundColor: borders.map((c) => c + '80'),
+      borderColor: borders,
       borderWidth: 2
     }]
   };
@@ -1939,7 +1980,7 @@ const chartOptions = computed(() => {
   const chartType = selectedChartType.value;
   
   // Check for prefers-reduced-motion
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
   const shouldReduceMotion = chartConfig.value.reduceMotion || prefersReducedMotion || chartConfig.value.pauseAnimation;
   
   const baseOptions = {
@@ -1990,6 +2031,11 @@ const chartOptions = computed(() => {
         borderColor: theme.border,
         borderWidth: 1,
         animation: shouldReduceMotion ? false : undefined
+      },
+      // "Value labels" secondary encoding
+      valueLabels: {
+        display: activeEncoding.value === 'text',
+        color: theme.title
       }
     }
   };
@@ -1997,11 +2043,33 @@ const chartOptions = computed(() => {
   // Charts without scales (pie, doughnut, polar, gauge)
   if (chartType === 'pie' || chartType === 'doughnut' || chartType === 'polar' || chartType === 'gauge') {
     if (chartType === 'gauge') {
+      const { value, min, max, target } = gaugeData.value;
+      const { aboveMax, belowMin } = gaugeSegments(gaugeData.value);
+      const unit = chartConfig.value.dataUnit ? ` ${chartConfig.value.dataUnit}` : '';
       return {
         ...baseOptions,
         cutout: '75%',
         circumference: 270,
-        rotation: 225
+        rotation: 225,
+        plugins: {
+          ...baseOptions.plugins,
+          tooltip: {
+            ...baseOptions.plugins.tooltip,
+            filter: (item) => item.datasetIndex === 0 || item.dataIndex === 1,
+            callbacks: {
+              label: (item) => (item.datasetIndex === 1
+                ? `Target: ${target}${unit}`
+                : item.dataIndex === 0 ? `Value: ${value}${unit}` : `Remaining to max: ${Math.max(0, max - value)}${unit}`)
+            }
+          },
+          // The real value, also when it is off the dial
+          gaugeReadout: {
+            text: `${value}${unit}`,
+            subtext: aboveMax ? `Above max (${max})` : belowMin ? `Below min (${min})` : `Target ${target}`,
+            color: theme.title,
+            subColor: textColor
+          }
+        }
       };
     }
     return baseOptions;
@@ -2043,9 +2111,7 @@ const chartOptions = computed(() => {
     const allValues = heatmapData.value.values.flat().filter(v => v !== undefined);
     const max = allValues.length > 0 ? Math.max(...allValues) : 0;
     const min = allValues.length > 0 ? Math.min(...allValues) : 0;
-    const colors = chartConfig.value.colorScheme === 'custom' 
-      ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
-      : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
+    const colors = activeColors.value;
     
     return {
       ...baseOptions,
@@ -2061,9 +2127,7 @@ const chartOptions = computed(() => {
         },
         colorScaleLegend: {
           show: chartConfig.value.showLegend,
-          colors: colors,
-          min: min,
-          max: max,
+          steps: heatmapLegendSteps(colors, min, max),
           textColor: textColor,
           gridColor: gridColor
         }
@@ -2144,8 +2208,24 @@ const chartOptions = computed(() => {
   
   // Waterfall chart options
   if (chartType === 'waterfall') {
+    const { kinds } = waterfallBars(waterfallData.value.base, waterfallData.value.changes);
     return {
       ...baseOptions,
+      plugins: {
+        ...baseOptions.plugins,
+        tooltip: {
+          ...baseOptions.plugins.tooltip,
+          callbacks: {
+            // A floating bar's raw value is [start, end]: say the change, or the level
+            label: (item) => {
+              const [start, end] = item.raw;
+              return kinds[item.dataIndex] === 'total'
+                ? `${item.label}: ${end}`
+                : `${item.label}: ${end - start >= 0 ? '+' : ''}${end - start} (to ${end})`;
+            }
+          }
+        }
+      },
       scales: {
         x: {
           ticks: { color: textColor },
@@ -2292,34 +2372,35 @@ const removeDataset = (index) => {
   }
 };
 
-const addMultiDataItem = (datasetIndex) => {
-  const dataset = multiDatasetData.value[datasetIndex];
-  dataset.data.push({ label: `Item ${dataset.data.length + 1}`, value: 0 });
-  // Sync labels across all datasets
-  syncMultiDatasetLabels();
+// A point in a multi-series chart is a row shared by every dataset: adding,
+// removing or relabelling it applies to all of them, so values stay aligned.
+const addMultiDataItem = () => {
+  addSharedRow(multiDatasetData.value);
 };
 
-const removeMultiDataItem = (datasetIndex, itemIndex) => {
-  const dataset = multiDatasetData.value[datasetIndex];
-  if (dataset.data.length > 1) {
-    dataset.data.splice(itemIndex, 1);
-    // Sync labels across all datasets
-    syncMultiDatasetLabels();
-  }
+const removeMultiDataItem = (_datasetIndex, itemIndex) => {
+  removeSharedRow(multiDatasetData.value, itemIndex);
 };
 
-const syncMultiDatasetLabels = () => {
-  if (multiDatasetData.value.length === 0) return;
-  const firstDatasetLabels = multiDatasetData.value[0].data.map(item => item.label);
-  multiDatasetData.value.forEach((dataset, index) => {
-    if (index > 0) {
-      dataset.data.forEach((item, itemIndex) => {
-        if (firstDatasetLabels[itemIndex]) {
-          item.label = firstDatasetLabels[itemIndex];
-        }
-      });
-    }
-  });
+const setMultiRowLabel = (itemIndex, label) => {
+  setSharedRowLabel(multiDatasetData.value, itemIndex, label);
+};
+
+// Scatter and bubble points
+const addPoint = () => {
+  const last = pointData.value[pointData.value.length - 1];
+  pointData.value.push({ label: `Point ${pointData.value.length + 1}`, x: (Number(last?.x) || 0) + 10, y: 0, r: 10 });
+};
+
+const removePoint = (index) => {
+  if (pointData.value.length > 1) pointData.value.splice(index, 1);
+};
+
+// Heatmap row/column labels typed as a comma list: values follow their label,
+// so removing a row or column drops its values instead of shifting the rest
+const setHeatmapLabels = (axis, text) => {
+  const labels = String(text).split(',').map((label) => label.trim()).filter(Boolean);
+  realignHeatmap(heatmapData.value, axis, labels);
 };
 
 const loadSampleData = () => {
@@ -2438,8 +2519,61 @@ const loadSampleData = () => {
     return;
   }
   
+  // Handle bullet graph
+  if (chartType === 'bulletGraph') {
+    bulletGraphData.value = [
+      { label: 'Revenue', value: 75, target: 80, max: 100, ranges: { poor: 0, fair: 50, good: 75, excellent: 90 } },
+      { label: 'Profit', value: 60, target: 70, max: 100, ranges: { poor: 0, fair: 40, good: 60, excellent: 85 } },
+      { label: 'Growth', value: 85, target: 90, max: 100, ranges: { poor: 0, fair: 60, good: 80, excellent: 95 } }
+    ];
+    chartConfig.value.title = 'Bullet Graph Example';
+    return;
+  }
+  
+  // Handle chord diagram
+  if (chartType === 'chordDiagram') {
+    chordDiagramData.value = {
+      nodes: [
+        { id: 'A', label: 'Category A' },
+        { id: 'B', label: 'Category B' },
+        { id: 'C', label: 'Category C' },
+        { id: 'D', label: 'Category D' }
+      ],
+      links: [
+        { source: 'A', target: 'B', value: 30 },
+        { source: 'A', target: 'C', value: 20 },
+        { source: 'B', target: 'D', value: 25 },
+        { source: 'C', target: 'D', value: 15 }
+      ]
+    };
+    chartConfig.value.title = 'Chord Diagram Example';
+    return;
+  }
+  
+  // Scatter and bubble: x, y and (bubble) size per point
+  if (chartType === 'scatter' || chartType === 'bubble') {
+    pointData.value = chartType === 'bubble'
+      ? [
+        { label: 'A', x: 10, y: 30, r: 8 },
+        { label: 'B', x: 25, y: 50, r: 15 },
+        { label: 'C', x: 40, y: 40, r: 10 },
+        { label: 'D', x: 55, y: 60, r: 20 },
+        { label: 'E', x: 70, y: 45, r: 12 }
+      ]
+      : [
+        { label: 'Point 1', x: 10, y: 20, r: 10 },
+        { label: 'Point 2', x: 20, y: 35, r: 10 },
+        { label: 'Point 3', x: 30, y: 50, r: 10 },
+        { label: 'Point 4', x: 40, y: 45, r: 10 },
+        { label: 'Point 5', x: 50, y: 60, r: 10 },
+        { label: 'Point 6', x: 60, y: 70, r: 10 }
+      ];
+    chartConfig.value.title = `${chartTypes.find(t => t.value === chartType)?.label || 'Chart'} Example`;
+    return;
+  }
+  
   // Handle multi-dataset charts
-  if (chartType === 'stackedBar' || chartType === 'groupedBar' || chartType === 'combo' || chartType === 'line') {
+  if (isMultiSeries(chartType)) {
     multiDatasetData.value = [
       {
         label: chartType === 'line' ? 'Series 1' : 'Sales',
@@ -2524,27 +2658,12 @@ const loadSampleData = () => {
       { label: 'Safari', value: 10 },
       { label: 'Edge', value: 5 }
     ],
-    scatter: [
-      { label: 'Point 1', value: 20 },
-      { label: 'Point 2', value: 35 },
-      { label: 'Point 3', value: 50 },
-      { label: 'Point 4', value: 45 },
-      { label: 'Point 5', value: 60 },
-      { label: 'Point 6', value: 70 }
-    ],
     radar: [
       { label: 'Speed', value: 80 },
       { label: 'Reliability', value: 90 },
       { label: 'Comfort', value: 70 },
       { label: 'Safety', value: 85 },
       { label: 'Efficiency', value: 75 }
-    ],
-    bubble: [
-      { label: 'A', value: 30 },
-      { label: 'B', value: 50 },
-      { label: 'C', value: 40 },
-      { label: 'D', value: 60 },
-      { label: 'E', value: 45 }
     ],
     polar: [
       { label: 'Red', value: 11 },
@@ -2555,7 +2674,7 @@ const loadSampleData = () => {
     ]
   };
   
-  chartData.value = samples[chartType] || samples.line;
+  chartData.value = samples[chartType] || samples.area;
   chartConfig.value.title = `${chartTypes.find(t => t.value === chartType)?.label || 'Chart'} Example`;
 };
 
@@ -2609,7 +2728,10 @@ const captureChart = async () => {
   const html2canvas = (await import('html2canvas')).default;
   return html2canvas(chartElement, {
     backgroundColor: chartTheme.value.surface,
-    scale: 2
+    scale: 2,
+    // html2canvas draws an <svg> as a standalone image, without this page's
+    // stylesheet: copy the class-based fills and strokes on as attributes
+    onclone: (_doc, clonedElement) => inlineSvgPaint(chartElement, clonedElement)
   });
 };
 
@@ -2621,6 +2743,9 @@ const chartSourceData = () => {
     case 'groupedBar':
     case 'combo':
       return multiDatasetData.value;
+    case 'scatter':
+    case 'bubble':
+      return pointData.value;
     case 'gauge': return gaugeData.value;
     case 'waterfall': return waterfallData.value;
     case 'candlestick': return candlestickData.value;
@@ -2711,7 +2836,16 @@ const exportChart = async (format) => {
       : chartType === 'bubble'
         ? bubbleDataForDisplay.value
         : chartDataForDisplay.value;
-    const chartDataConfig = scriptSafeJson(exportData);
+    // Canvas pattern fills don't survive JSON: export the plain series colour
+    const plainFill = (dataset) => {
+      const fill = dataset.backgroundColor;
+      const isPattern = (value) => value !== null && typeof value === 'object';
+      if (Array.isArray(fill) && fill.some(isPattern)) {
+        return { ...dataset, backgroundColor: fill.map((value, i) => (isPattern(value) ? (Array.isArray(dataset.borderColor) ? dataset.borderColor[i] : dataset.borderColor) : value)) };
+      }
+      return isPattern(fill) ? { ...dataset, backgroundColor: dataset.borderColor } : dataset;
+    };
+    const chartDataConfig = scriptSafeJson({ ...exportData, datasets: (exportData.datasets || []).map(plainFill) });
     
     // Prepare chart options
     let chartOptionsConfig = {
@@ -2791,9 +2925,7 @@ const exportChart = async (format) => {
     
     const chartOptionsConfigStr = scriptSafeJson(chartOptionsConfig);
     const safeTitle = escapeHtml(chartConfig.value.title || 'Chart');
-    const heatmapColors = chartConfig.value.colorScheme === 'custom'
-      ? (customColors.value.length > 0 ? customColors.value : colorSchemes.default)
-      : (colorSchemes[chartConfig.value.colorScheme] || colorSchemes.default);
+    const heatmapColors = activeColors.value;
     
     // Construct closing tags to avoid Vue parser issues
     const closeHead = '</' + 'head>';
@@ -2889,7 +3021,7 @@ const exportChart = async (format) => {
         '        chartData.datasets[0].height = function (c) { const a = c.chart.chartArea || {}; return (a.bottom - a.top) / rowLabels.length; };',
         '        chartData.datasets[0].backgroundColor = function (c) {',
         '            if (!c.raw || vMax === vMin) return scaleColors[0];',
-        '            return scaleColors[Math.floor(((c.raw.v - vMin) / (vMax - vMin)) * (scaleColors.length - 1))];',
+        '            return scaleColors[Math.min(scaleColors.length - 1, Math.floor(((c.raw.v - vMin) / (vMax - vMin)) * scaleColors.length))];',
         '        };',
         '        chartOptions.scales.x.ticks.callback = function(value) { return columnLabels[value] || ""; };',
         '        chartOptions.scales.y.ticks.callback = function(value) { return rowLabels[value] || ""; };'
@@ -3238,15 +3370,53 @@ watch(
   }
 );
 
-// Watch for chart type changes and load appropriate sample data
-watch(selectedChartType, () => {
+// The data store last shown by a labels-and-values chart type: the data a
+// newly picked type of that shape carries over
+let lastTabularKind = dataKind(selectedChartType.value);
+// Types with data of their own the user has opened (the rest still show samples)
+const openedOwnTypes = new Set();
+
+const typeLabel = (type) => chartTypes.find((t) => t.value === type)?.label || 'chart';
+
+const storeRefs = { series: chartData, multi: multiDatasetData, funnel: funnelData, points: pointData };
+
+// A type change keeps the user's data and title: labels and values carry over
+// to any type with that shape; types that need data of another shape show
+// their own (sample data until it is edited), and the notice says so.
+watch(selectedChartType, (type, previous) => {
   chartKey.value++;
-  loadSampleData();
+  clearDataNotice();
+  const toKind = dataKind(type);
+
+  if (chartConfig.value.title === `${typeLabel(previous)} Example`) {
+    chartConfig.value.title = `${typeLabel(type)} Example`;
+  }
+  if (!encodingsFor(type).includes(chartConfig.value.secondaryEncoding)) {
+    chartConfig.value.secondaryEncoding = 'none';
+  }
+
+  if (toKind === 'own') {
+    if (dataKind(previous) !== 'own' && !openedOwnTypes.has(type)) {
+      showDataNotice(`A ${typeLabel(type).toLowerCase()} needs data of a different shape, so it starts from sample data. Your labels and values are kept for the other chart types.`, 'info');
+    }
+    openedOwnTypes.add(type);
+  } else {
+    if (lastTabularKind !== toKind) {
+      const table = tableFrom(lastTabularKind, storeRefs[lastTabularKind].value);
+      if (table && table.labels.length > 0) {
+        storeRefs[toKind].value = storeFrom(toKind, table, storeRefs[toKind].value);
+        if (table.series.length > 1 && toKind !== 'multi') {
+          showDataNotice(`A ${typeLabel(type).toLowerCase()} shows one series, so it uses "${table.series[0].label}". Your other series are kept for multi-series charts.`, 'info');
+        }
+      }
+    }
+    lastTabularKind = toKind;
+  }
   initializeCustomColors();
 });
 
 // Watch for data changes to update custom colors
-watch([chartData, multiDatasetData], () => {
+watch([chartData, multiDatasetData, pointData], () => {
   if (chartConfig.value.colorScheme === 'custom') {
     initializeCustomColors();
   }
@@ -3458,6 +3628,7 @@ const TreemapSVG = {
       window.addEventListener('resize', handleResize);
       
       // Use ResizeObserver to watch for container size changes
+      if (typeof ResizeObserver === 'undefined') return;
       resizeObserver = new ResizeObserver(updateSize);
       if (containerRef.value) {
         resizeObserver.observe(containerRef.value);
@@ -3527,24 +3698,25 @@ const SankeySVG = {
   setup(props) {
     const width = 400;
     const height = 300;
-    const nodeWidth = 80;
     const nodeHeight = 30;
-    const nodeSpacing = 20;
     
+    // Columns by depth in the link graph: sources first, then each step along
+    // the links (not by what the node ids happen to contain)
     const nodes = computed(() => {
-      const cols = 3; // Source, Process, Target
-      const nodesByCol = [[], [], []];
+      const depth = sankeyColumns(props.data.nodes, props.data.links);
+      const cols = Math.max(0, ...depth.values()) + 1;
+      const colWidth = width / Math.max(cols, 1);
+      const nodeWidth = Math.min(80, colWidth - 16);
+      const nodesByCol = Array.from({ length: cols }, () => []);
       
       props.data.nodes.forEach((node, index) => {
-        let col = 0;
-        if (node.id.includes('Process')) col = 1;
-        else if (node.id.includes('Target')) col = 2;
+        const col = depth.get(node.id) ?? 0;
         nodesByCol[col].push({ ...node, col, index });
       });
       
       const positioned = [];
       nodesByCol.forEach((colNodes, colIndex) => {
-        const colX = colIndex * (width / 3) + (width / 3 - nodeWidth) / 2;
+        const colX = colIndex * colWidth + (colWidth - nodeWidth) / 2;
         colNodes.forEach((node, nodeIndex) => {
           const nodeY = (height / (colNodes.length + 1)) * (nodeIndex + 1) - nodeHeight / 2;
           positioned.push({
@@ -3572,7 +3744,8 @@ const SankeySVG = {
           sourceY: sourceNode.y + sourceNode.height / 2,
           targetX: targetNode.x,
           targetY: targetNode.y + targetNode.height / 2,
-          color: props.colors[Math.floor(Math.random() * props.colors.length)] + '80'
+          // The source node's colour, so each flow is traceable to where it starts
+          color: props.colors[sourceNode.index % props.colors.length] + '80'
         };
       }).filter(Boolean);
     });
@@ -3603,7 +3776,7 @@ const SankeySVG = {
             y: node.y,
             width: node.width,
             height: node.height,
-            fill: props.colors[index % props.colors.length],
+            fill: props.colors[node.index % props.colors.length],
             class: 'stroke-surface-raised',
             'stroke-width': 2,
             rx: 4
@@ -3784,7 +3957,7 @@ const ChordDiagramSVG = {
           targetY: targetNode.y,
           path: `M ${sourceNode.x} ${sourceNode.y} A ${dr} ${dr} 0 0 ${sweep} ${targetNode.x} ${targetNode.y}`,
           strokeWidth: Math.max(2, link.value / 5),
-          color: props.colors[Math.floor(Math.random() * props.colors.length)] + '80'
+          color: sourceNode.color + '80'
         };
       }).filter(Boolean);
     });
