@@ -43,9 +43,9 @@
         </div>
 
         <div v-if="owned(item) && canEdit" class="flex flex-wrap items-center gap-2 mt-auto pt-2">
-          <UiButton size="sm" @click="openForm(item)">Edit</UiButton>
-          <UiButton size="sm" @click="openShare(item)">Share</UiButton>
-          <UiButton size="sm" variant="danger" data-focus-after-remove @click="confirmDelete(item)">Delete</UiButton>
+          <UiButton size="sm" @click="openForm(item)">Edit<span class="sr-only"> {{ item[spec.titleField] }}</span></UiButton>
+          <UiButton size="sm" @click="openShare(item)">Share<span class="sr-only"> {{ item[spec.titleField] }}</span></UiButton>
+          <UiButton size="sm" variant="danger" data-focus-after-remove @click="confirmDelete(item)">Delete<span class="sr-only"> {{ item[spec.titleField] }}</span></UiButton>
         </div>
         <p v-else-if="!owned(item)" class="mt-auto pt-2 text-xs text-ink-muted">From {{ workspaceName(item.workspaceId) }} · read-only</p>
       </li>

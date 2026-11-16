@@ -7,8 +7,6 @@
       spot="admin/admin"
     />
 
-    <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
-
     <PageSection title="Admin tools" description="Health, governance, people, content and performance.">
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <template v-for="tool in tools" :key="tool.title">
@@ -25,6 +23,9 @@
 
     <!-- Banner Management Modal -->
     <UiDialog v-model:open="showBannerModal" title="Site banners" size="lg">
+      <!-- The page behind is inert while this is open: results of the actions in here are shown (and announced) here -->
+      <InlineNotice :notice="bannerNotice" @dismiss="clearBannerNotice" />
+
       <div class="mb-6 flex justify-between items-center gap-4">
         <h3 class="text-lg font-semibold text-ink-strong">Active banners</h3>
         <UiButton ref="createBannerButton" variant="primary" size="sm" icon="plus" @click="openCreateBanner">Create banner</UiButton>
@@ -72,6 +73,7 @@
     <!-- Create/Edit Banner Modal -->
     <UiDialog v-model:open="showBannerForm" :title="editingBanner ? 'Edit banner' : 'Create banner'">
       <form id="admin-banner-form" class="space-y-4" @submit.prevent="saveBanner">
+        <UiCallout v-if="saveError" tone="danger" role="alert">{{ saveError }}</UiCallout>
         <UiInput v-model="bannerForm.title" label="Title" required />
         <UiTextarea v-model="bannerForm.message" label="Message" required :rows="3" />
         <UiSelect v-model="bannerForm.type" label="Type" :options="bannerTypes" />
@@ -94,7 +96,7 @@
 </template>
 
 <script setup>
-import { nextTick, ref, onMounted } from 'vue';
+import { nextTick, ref, onMounted, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
@@ -102,6 +104,7 @@ import {
   PageShell,
   UiButton,
   UiCard,
+  UiCallout,
   UiCheckbox,
   UiChip,
   UiDialog,
@@ -116,7 +119,9 @@ import apiClient from '../services/api.js';
 import { canAccessPath } from '../router/rbacGuards.js';
 import { hasPermission } from '../services/auth.js';
 
-const { notice, showNotice, clearNotice } = useNotice();
+// Messages for the actions inside the "Site banners" dialog, shown in that dialog
+const { notice: bannerNotice, showNotice: showBannerNotice, clearNotice: clearBannerNotice } = useNotice();
+const saveError = ref('');
 const showBannerModal = ref(false);
 const bannerList = ref(null);
 const createBannerButton = ref(null);
@@ -156,6 +161,11 @@ const tools = [
   { title: 'Application management', to: '/admin/applications', art: 'admin/application-management', body: 'Register applications, manage capabilities, and configure scanners for governance, visual regression, and session replay.' },
 ];
 
+// Each visit to the dialog starts without the last visit's message
+watch(showBannerModal, (open) => {
+  if (open) clearBannerNotice();
+});
+
 const fetchBanners = async () => {
   try {
     const response = await apiClient.get(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners`);
@@ -174,6 +184,7 @@ const openCreateBanner = () => {
     expiresAt: '',
     noExpiration: true
   };
+  saveError.value = '';
   showBannerForm.value = true;
 };
 
@@ -193,10 +204,12 @@ const editBanner = (banner) => {
     expiresAt: banner.expiresAt ? new Date(banner.expiresAt).toISOString().slice(0, 16) : '',
     noExpiration: !banner.expiresAt
   };
+  saveError.value = '';
   showBannerForm.value = true;
 };
 
 const saveBanner = async () => {
+  saveError.value = '';
   try {
     const payload = {
       title: bannerForm.value.title,
@@ -211,12 +224,14 @@ const saveBanner = async () => {
       await apiClient.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners`, payload);
     }
 
+    const wasEditing = Boolean(editingBanner.value);
     showBannerForm.value = false;
     await fetchBanners();
+    showBannerNotice(wasEditing ? 'Banner updated' : 'Banner created', 'success');
   } catch (error) {
     console.error('Failed to save banner:', error);
-    const errorMessage = error.response?.data?.message || error.message || 'Failed to save banner. Please try again.';
-    showNotice(errorMessage, 'error');
+    // Shown in the form's dialog: the page behind it is inert, so a message there is neither seen nor announced
+    saveError.value = error.response?.data?.message || error.message || 'Failed to save banner. Please try again.';
   }
 };
 
@@ -227,9 +242,10 @@ const toggleBannerStatus = async (banner) => {
     });
 
     await fetchBanners();
+    showBannerNotice(banner.isActive ? 'Banner deactivated' : 'Banner activated', 'success');
   } catch (error) {
     console.error('Failed to toggle banner status:', error);
-    showNotice('Failed to update banner status. Please try again.', 'error');
+    showBannerNotice('Failed to update banner status. Please try again.', 'error');
   }
 };
 
@@ -240,12 +256,13 @@ const deleteBanner = async (id) => {
   try {
     await apiClient.delete(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${id}`);
     await fetchBanners();
+    showBannerNotice('Banner deleted', 'success');
     // Its Delete button went with it: focus the banner now in its place
     await nextTick();
     focusAfterRemoval(bannerList.value, index, { fallback: createBannerButton.value });
   } catch (error) {
     console.error('Failed to delete banner:', error);
-    showNotice('Failed to delete banner. Please try again.', 'error');
+    showBannerNotice('Failed to delete banner. Please try again.', 'error');
   }
 };
 

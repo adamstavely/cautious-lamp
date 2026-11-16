@@ -44,7 +44,13 @@ const settle = async () => {
   await flush();
   await new Promise((resolve) => setTimeout(resolve, 2));
 };
-const button = (label) => [...document.querySelectorAll('button')].find((el) => el.textContent.trim() === label);
+// Matched by the text shown: row buttons add the item's name for screen readers in a .sr-only span
+const visibleText = (el) => {
+  const copy = el.cloneNode(true);
+  copy.querySelectorAll('.sr-only').forEach((hidden) => hidden.remove());
+  return copy.textContent.trim();
+};
+const button = (label) => [...document.querySelectorAll('button')].find((el) => visibleText(el) === label);
 
 describe('API keys', () => {
   const KEYS = [
@@ -113,7 +119,7 @@ describe('Accessibility reports: inline Delete → Confirm delete', () => {
     page.state.activeTab = 'reports';
     await settle();
   };
-  const deleteButtons = () => [...document.querySelectorAll('button')].filter((el) => el.textContent.trim() === 'Delete');
+  const deleteButtons = () => [...document.querySelectorAll('button')].filter((el) => visibleText(el) === 'Delete');
 
   it('keeps focus on the Confirm delete button that replaces Delete', async () => {
     await openHistory();

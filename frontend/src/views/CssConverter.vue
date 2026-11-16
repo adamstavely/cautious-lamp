@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
 import { PageHero, PageSection, PageShell, UiButton, UiCode, UiCodeBlock, UiPanel, UiSegmented, UiTextarea } from '../components/ui';
@@ -645,11 +645,25 @@ const convertFromScss = (scss) => compilePreprocessor(parseBraces(scss, { lineCo
 const convertFromSass = (sass) =>
   compilePreprocessor(parseBraces(sassToBraces(sass), { lineComments: true }), 'scss');
 
+// The output follows every keystroke, but a warning or error waits until
+// typing pauses: otherwise the notice is re-announced on each key
+const NOTICE_DELAY_MS = 500;
+let noticeTimer;
+const showNoticeSoon = (message, type) => {
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => showNotice(message, type), NOTICE_DELAY_MS);
+};
+const clearNoticeNow = () => {
+  clearTimeout(noticeTimer);
+  clearNotice();
+};
+onBeforeUnmount(() => clearTimeout(noticeTimer));
+
 // Main conversion function
 const convertCss = () => {
   if (!cssInput.value.trim()) {
     convertedOutput.value = '';
-    clearNotice();
+    clearNoticeNow();
     return;
   }
 
@@ -682,13 +696,13 @@ const convertCss = () => {
     convertedOutput.value = output;
     if (warnings.length) {
       const shown = warnings.slice(0, 3).join('; ');
-      showNotice(`${shown}${warnings.length > 3 ? ` (+${warnings.length - 3} more)` : ''}.`, 'warning');
+      showNoticeSoon(`${shown}${warnings.length > 3 ? ` (+${warnings.length - 3} more)` : ''}.`, 'warning');
     } else {
-      clearNotice();
+      clearNoticeNow();
     }
   } catch (error) {
     // Keep the last good output; explain what's wrong with the input
-    showNotice(`Could not convert: ${error.message}.`, 'error');
+    showNoticeSoon(`Could not convert: ${error.message}.`, 'error');
   }
 };
 
@@ -732,6 +746,7 @@ const swapInputs = () => {
 
 const copyToClipboard = async (text) => {
   if (!text) return;
+  clearTimeout(noticeTimer); // the copy result replaces a pending warning
   try {
     await navigator.clipboard.writeText(text);
     showNotice('Copied to clipboard.', 'success');

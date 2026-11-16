@@ -195,6 +195,25 @@ const isFoundationPage = computed(() => {
 });
 
 const hero = computed(() => (isFoundationPage.value ? foundationHeroCards[props.docPath] : null));
+/** A hero is shown above the document: this viewer's own, or the page's when embedded */
+const hasOwnHero = computed(() => !!hero.value || props.embedded);
+
+/** Drops a leading h1 (the hero repeats it) and demotes any other h1 to h2 */
+const withoutOwnTitle = (html) =>
+  html
+    .replace(/^\s*<h1\b[^>]*>[\s\S]*?<\/h1>\s*/i, '')
+    .replace(/<h1\b/gi, '<h2')
+    .replace(/<\/h1>/gi, '</h2>');
+
+/**
+ * Wide tables scroll on their own instead of the page: a focusable, named
+ * region so keyboard users can scroll it too (WCAG 1.4.10, 2.1.1)
+ */
+const wrapTables = (html) =>
+  html.replace(/<table\b[\s\S]*?<\/table>/gi, (table) => {
+    const caption = table.match(/<caption\b[^>]*>([\s\S]*?)<\/caption>/i)?.[1].replace(/<[^>]*>/g, '').replace(/"/g, '&quot;').trim();
+    return `<div class="md-table-scroll" role="region" tabindex="0" aria-label="${caption || 'Table'}">${table}</div>`;
+  });
 
 // Cache for loaded SVG content (synchronous cache for processed SVGs)
 // Use a ref with a counter to trigger reactivity when cache updates
@@ -263,6 +282,9 @@ const processSvgImages = (htmlContent) => {
       
       // Extract classes from img tag
       const classMatch = (beforeAttrs + ' ' + afterAttrs).match(/class="([^"]+)"/);
+      // The img's alt text goes with it: a described picture, or decoration when empty
+      const altMatch = (beforeAttrs + ' ' + afterAttrs).match(/\balt="([^"]*)"/);
+      const alt = altMatch ? altMatch[1].trim() : '';
       const classes = classMatch ? classMatch[1] : 'w-full h-full';
       
       // Update SVG class if needed - preserve existing class or add new one
@@ -299,6 +321,9 @@ const processSvgImages = (htmlContent) => {
           updatedAttrs += ` class="${classes}"`;
         }
         
+        updatedAttrs = updatedAttrs.replace(/\s(role|aria-label|aria-hidden|focusable)\s*=\s*"[^"]*"/gi, '');
+        updatedAttrs += alt ? ` role="img" aria-label="${alt}"` : ' aria-hidden="true" focusable="false"';
+
         // Ensure there's a space before attributes
         if (updatedAttrs && !updatedAttrs.startsWith(' ')) {
           updatedAttrs = ' ' + updatedAttrs;
@@ -382,8 +407,12 @@ const renderedMarkdown = computed(() => {
   
   // Process SVG img tags - embed cached SVGs directly, keep img tags for uncached ones
   parsedMarkdown = processSvgImages(parsedMarkdown);
-  
-  return parsedMarkdown;
+
+  // With a hero above it the hero's title is the page's h1, so the document's
+  // own leading title is dropped and any other h1 becomes an h2
+  if (hasOwnHero.value) parsedMarkdown = withoutOwnTitle(parsedMarkdown);
+
+  return wrapTables(parsedMarkdown);
 });
 
 // Watch for markdown content changes to load SVG files
@@ -404,7 +433,10 @@ watch(svgCacheVersion, () => {
 // Watch for rendered markdown to update TOC
 watch(renderedMarkdown, async () => {
   await nextTick();
-  toc.value = [...headings];
+  // The title isn't a section: the TOC lists h2 and below
+  toc.value = headings
+    .map((item) => (item.level === 1 && hasOwnHero.value ? { ...item, level: 2 } : item))
+    .filter((item) => item.level > 1 && document.getElementById(item.id));
   updateActiveHeading();
   setupScrollSpy();
 }, { immediate: false });
@@ -668,18 +700,25 @@ const loadMarkdown = async () => {
   }
 };
 
+const prefersReducedMotion = () => typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 const scrollToHeading = (id) => {
   const element = document.getElementById(id);
+  if (!element) return;
   const container = scrollRef.value && scroller();
-  if (element && container) {
+  if (container?.scrollTo) {
     const viewTop = container === document.scrollingElement ? 0 : container.getBoundingClientRect().top;
     const top = element.getBoundingClientRect().top - viewTop + container.scrollTop - 24;
-    container.scrollTo({ top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-
-    // Update URL hash without scrolling again
-    history.pushState(null, null, `#${id}`);
-    activeHeading.value = id;
+    container.scrollTo({ top, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   }
+
+  // Update URL hash without scrolling again
+  history.pushState(null, null, `#${id}`);
+  activeHeading.value = id;
+
+  // Keyboard and screen reader users continue from the section, not the TOC (WCAG 2.4.3)
+  if (!element.hasAttribute('tabindex')) element.setAttribute('tabindex', '-1');
+  element.focus({ preventScroll: true });
 };
 
 const updateActiveHeading = () => {
@@ -858,8 +897,11 @@ onBeforeUnmount(() => {
 .md-prose :deep(hr) {
   @apply my-10 border-line;
 }
+.md-prose :deep(.md-table-scroll) {
+  @apply my-6 overflow-x-auto rounded-control focus-visible:outline focus-visible:outline-2 outline-focus;
+}
 .md-prose :deep(table) {
-  @apply my-6 w-full border-collapse text-sm;
+  @apply w-full border-collapse text-sm;
 }
 .md-prose :deep(thead th) {
   @apply border-b border-line px-3 py-2 text-left font-semibold text-ink;

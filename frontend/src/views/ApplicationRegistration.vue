@@ -8,7 +8,8 @@
       size="tool"
     />
 
-    <form class="flex flex-col gap-6" @submit.prevent="registerApplication">
+    <!-- novalidate: the page checks the required fields itself, shows each problem by its field and focuses the first -->
+    <form ref="formEl" class="flex flex-col gap-6" novalidate @submit.prevent="registerApplication">
       <InlineNotice :notice="notice" @dismiss="clearNotice" />
 
       <UiCallout v-if="!loadingWorkspaces && !canRegister" tone="info">
@@ -27,9 +28,10 @@
           :options="workspaceOptions"
           :placeholder="isGovernance ? '' : 'Choose a workspace'"
           hint="Admins of the workspace can edit the application later."
+          :error="errors.workspaceId"
         />
 
-        <ApplicationDetailsForm v-model="details" show-design-system-version />
+        <ApplicationDetailsForm v-model="details" show-design-system-version :errors="errors" />
       </UiPanel>
 
       <UiPanel title="Capabilities">
@@ -38,7 +40,8 @@
 
       <div class="flex justify-end gap-3">
         <UiButton to="/admin/applications">Cancel</UiButton>
-        <UiButton variant="primary" type="submit" :disabled="!canSubmit" :loading="isSubmitting">
+        <!-- Always enabled: submitting explains what is missing rather than the button staying silently disabled -->
+        <UiButton variant="primary" type="submit" :loading="isSubmitting">
           {{ isSubmitting ? 'Registering…' : 'Register application' }}
         </UiButton>
       </div>
@@ -47,7 +50,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
 import { PageHero, PageShell, UiButton, UiCallout, UiPanel, UiSelect, UiSpinner } from '../components/ui';
@@ -87,7 +90,25 @@ const workspaceOptions = computed(() => [
   ...adminWorkspaces.value.map((ws) => ({ value: ws.id, label: ws.name })),
 ]);
 const canRegister = computed(() => isGovernance.value || adminWorkspaces.value.length > 0);
-const canSubmit = computed(() => !isSubmitting.value && canRegister.value && !!details.value.name.trim() && (isGovernance.value || !!workspaceId.value));
+const formEl = ref(null);
+const errors = reactive({ name: '', workspaceId: '' });
+
+const validate = () => {
+  errors.name = details.value.name.trim() ? '' : 'Enter a name for the application.';
+  errors.workspaceId = '';
+  if (!isGovernance.value && !workspaceId.value) {
+    errors.workspaceId = canRegister.value
+      ? 'Choose a workspace.'
+      : "You need to be an admin of a workspace to register an application there.";
+  }
+  return !errors.name && !errors.workspaceId;
+};
+
+/** Moves focus to the first field with an error, so keyboard and screen reader users land on it */
+const focusFirstInvalid = async () => {
+  await nextTick();
+  formEl.value?.querySelector('[aria-invalid="true"]')?.focus();
+};
 
 const loadWorkspaces = async () => {
   loadingWorkspaces.value = true;
@@ -107,7 +128,14 @@ const loadWorkspaces = async () => {
 };
 
 const registerApplication = async () => {
-  if (!canSubmit.value) return;
+  if (isSubmitting.value) return;
+  if (!validate()) return focusFirstInvalid();
+  // The format checks (URLs, team ID, version) are the browser's: show its message on the first field that fails one
+  const badFormat = [...(formEl.value?.elements ?? [])].find((el) => el.validity && !el.validity.valid && !el.validity.valueMissing);
+  if (badFormat) {
+    badFormat.reportValidity();
+    return;
+  }
   isSubmitting.value = true;
   clearNotice();
   try {

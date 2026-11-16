@@ -65,7 +65,7 @@
                   </div>
                   <p class="text-xs text-ink-muted">Status: {{ component.status }}</p>
                   <div v-if="component.workspaceId === workspace.id && canEdit">
-                    <UiButton size="sm" icon="share-2" @click="openComponentShare(component)">Share</UiButton>
+                    <UiButton size="sm" icon="share-2" @click="openComponentShare(component)">Share<span class="sr-only"> {{ component.name }}</span></UiButton>
                   </div>
                 </li>
               </ul>

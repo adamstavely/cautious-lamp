@@ -480,7 +480,10 @@ const loadFlags = async () => {
 
 const toggleFlag = async (id) => {
   try {
+    const wasEnabled = flags.value.find((flag) => flag.id === id)?.enabled;
     await apiClient.put(`${API_BASE_URL}/api/v1/feature-flags/${id}/toggle`);
+    // Before reloading, so a failed reload's message replaces it
+    showNotice(wasEnabled ? 'Flag disabled' : 'Flag enabled', 'success');
     await loadFlags();
     // Refresh feature flag cache and notify all components
     if (window.OpenFeature) {
@@ -527,6 +530,7 @@ const confirmDeleteFlag = async () => {
   const index = flags.value.findIndex((flag) => flag.id === id);
   try {
     await apiClient.delete(`${API_BASE_URL}/api/v1/feature-flags/${id}`);
+    showNotice('Flag deleted', 'success');
     await loadFlags();
     // The deleted card's button is gone: focus the card now in its place
     await nextTick();
