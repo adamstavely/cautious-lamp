@@ -140,16 +140,15 @@
               </li>
             </ul>
             <form v-if="canManageRoles" class="flex flex-wrap items-end gap-3" @submit.prevent="assignToLookup">
-              <div class="w-64">
-                <UiSelect
-                  id="lookup-assign"
-                  v-model="lookup.roleToAdd"
-                  label="Add a role"
-                  :placeholder="lookupAssignable.length ? 'Select a role' : 'Every role is assigned'"
-                  :options="lookupAssignable.map((role) => ({ value: role.id, label: role.name }))"
-                  :disabled="!lookupAssignable.length"
-                />
-              </div>
+              <UiSelect
+                width="md"
+                id="lookup-assign"
+                v-model="lookup.roleToAdd"
+                label="Add a role"
+                :placeholder="lookupAssignable.length ? 'Select a role' : 'Every role is assigned'"
+                :options="lookupAssignable.map((role) => ({ value: role.id, label: role.name }))"
+                :disabled="!lookupAssignable.length"
+              />
               <UiButton type="submit" variant="primary" :loading="lookup.assigning" :disabled="!lookup.roleToAdd">
                 {{ lookup.assigning ? 'Adding…' : 'Add role' }}
               </UiButton>

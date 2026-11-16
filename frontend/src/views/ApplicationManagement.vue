@@ -26,9 +26,7 @@
           <UiSelect v-model="filterEnvironment" label="Environment" :options="environmentOptions" />
         </div>
         <!-- Workspace admins without admin:governance can only change their workspaces' applications -->
-        <div v-if="!isGovernance" class="w-full sm:w-64">
-          <UiSelect v-model="scope" label="Show applications from" :options="scopeOptions" />
-        </div>
+        <UiSelect v-model="scope" label="Show applications from" :options="scopeOptions" width="md" />
       </div>
 
       <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />

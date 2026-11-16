@@ -17,23 +17,39 @@ body {
 
 /* WCAG 2.1 AA Compliance Styles */
 
-/* Skip Links - Hidden until focused */
+/* Skip links: visually hidden until focused, then a full-size accent button */
 .skip-link {
   position: absolute;
-  top: -40px;
   left: 0;
-  background: #4f46e5;
-  color: white;
-  padding: 8px 16px;
-  text-decoration: none;
+  top: 0;
   z-index: 100;
-  border-radius: 0 0 4px 0;
+  padding: 0.75rem 1rem;
+  background: var(--tc-accent);
+  color: var(--app-text-on-accent);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 var(--tc-radius-lg) 0;
+}
+.skip-link:not(:focus) {
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0;
+}
+.skip-link:focus {
+  outline: var(--tc-focus-outline);
+  outline-offset: 2px;
 }
 
-.skip-link:focus {
-  top: 0;
-  outline: 3px solid #818cf8;
-  outline-offset: 2px;
+/* Reflow: a grid's items may shrink below their content's width, so a wide
+   child (a range input, a long code line, a swatch) wraps or scrolls inside
+   its own box instead of widening the column past the screen. Without it, a
+   grid with no column count on phones sizes its single column to its widest
+   content. :where() keeps this at zero specificity, so min-w-* utilities win. */
+:where(.grid) > * {
+  min-width: 0;
 }
 
 /* Focus indicator: the design system's focus ring (the accent, 2px), in both

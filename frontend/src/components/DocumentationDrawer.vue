@@ -6,19 +6,27 @@
     class="drawer-rail"
   >
     <button
+      ref="railButton"
+      type="button"
       @click="toggle"
       class="drawer-icon-btn"
-      title="Open drawer"
-      aria-label="Open drawer"
+      aria-label="Open section guide"
+      aria-controls="section-guide"
+      aria-expanded="false"
     >
-      <AppIcon name="menu" />
+      <AppIcon name="panel-left-open" />
     </button>
   </div>
   
-  <!-- Drawer - when open -->
+  <!-- Drawer - when open. Phones: a sheet under the top bar over the page (PageShell makes the page inert) -->
   <div 
     v-if="isOpen"
+    id="section-guide"
+    ref="panel"
     class="drawer-panel"
+    role="region"
+    aria-label="Section guide"
+    tabindex="-1"
   >
     <!-- Drawer Content -->
     <div class="p-6">
@@ -29,8 +37,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -55,8 +64,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -147,8 +157,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -212,8 +223,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -327,8 +339,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -447,8 +460,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -526,8 +540,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -571,8 +586,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -650,8 +666,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -734,8 +751,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -815,8 +833,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -842,8 +861,9 @@
           <button
             @click="toggle"
             class="drawer-icon-btn"
-            title="Close drawer"
-            aria-label="Close drawer"
+            aria-label="Close section guide"
+            aria-controls="section-guide"
+            aria-expanded="true"
           >
             <AppIcon name="panel-left-close" />
           </button>
@@ -920,7 +940,7 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, computed } from 'vue';
+import { onMounted, onBeforeUnmount, computed, nextTick, ref, watch } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { Pipette, ScanEye, Captions, Tag, TextInitial, SwatchBook, FolderKanban } from 'lucide-vue-next';
 import { getFeatureFlagForRoute } from '../router/featureFlagGuards';
@@ -933,7 +953,27 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'toggle', 'navigate-doc']);
+const emit = defineEmits(['close', 'toggle', 'navigate-doc', 'restore-focus']);
+
+const panel = ref(null);
+const railButton = ref(null);
+
+// Opening moves focus into the guide; closing puts it back on the rail button,
+// or (phones, where there is no rail) asks the page to focus its guide button.
+watch(
+  () => props.isOpen,
+  async (open, wasOpen) => {
+    if (open === wasOpen) return;
+    const hadFocus = !open && (document.activeElement === document.body || !document.activeElement || !document.contains(document.activeElement));
+    await nextTick();
+    if (open) {
+      panel.value?.focus({ preventScroll: true });
+    } else if (hadFocus || document.activeElement === document.body) {
+      if (railButton.value?.offsetParent) railButton.value.focus();
+      else emit('restore-focus');
+    }
+  },
+);
 
 const route = useRoute();
 const router = useRouter();
@@ -1574,10 +1614,11 @@ let flagUpdateHandler = null;
 
 onMounted(async () => {
   // Escape key handler
+  // Escape closes the guide, unless something else (a dialog, a menu) handled it
   escapeHandler = (e) => {
-    if (e.key === 'Escape' && props.isOpen) {
-      close();
-    }
+    if (e.key !== 'Escape' || !props.isOpen || e.defaultPrevented) return;
+    if (e.target instanceof Element && e.target.closest('dialog, [role="menu"], [role="listbox"]')) return;
+    close();
   };
   window.addEventListener('keydown', escapeHandler);
   
@@ -1604,10 +1645,13 @@ onBeforeUnmount(() => {
 <style scoped>
 /* The closed rail and the open panel sit beside the side nav, under the top bar */
 .drawer-rail {
-  @apply fixed left-16 sm:left-24 top-16 bottom-0 z-30 flex items-start justify-center w-drawer-closed pt-4 border-r border-line bg-surface transition-all duration-300;
+  @apply hidden sm:flex fixed left-sidenav top-topbar bottom-0 z-30 items-start justify-center w-drawer-closed pt-4 border-r border-line bg-surface transition-all duration-300;
 }
+/* Phones: the whole width under the top bar. From sm: a panel beside the side nav */
 .drawer-panel {
-  @apply fixed left-16 sm:left-24 top-16 bottom-0 z-30 w-drawer-open overflow-y-auto border-r border-line bg-surface transition-transform duration-300 ease-in-out;
+  @apply fixed inset-x-0 top-topbar bottom-0 z-40 w-full overflow-y-auto bg-surface transition-transform duration-300 ease-in-out;
+  @apply sm:right-auto sm:left-sidenav sm:z-30 sm:w-drawer-open sm:border-r sm:border-line;
+  @apply focus-visible:outline-none;
 }
 .drawer-heading {
   @apply text-sm font-semibold uppercase tracking-wider text-ink-muted;

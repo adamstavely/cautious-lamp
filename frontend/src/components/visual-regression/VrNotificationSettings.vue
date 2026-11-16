@@ -52,7 +52,7 @@
               hint="Email addresses, separated by commas."
               placeholder="qa@example.com, design@example.com"
               autocomplete="off"
-              class="flex-1 min-w-64"
+              width="grow"
             />
             <UiInput
               v-else
@@ -63,7 +63,7 @@
               :label="`${channel.label} URL`"
               :placeholder="view(channel.value).configured ? 'Saved. Enter a new URL to replace it.' : channel.placeholder"
               autocomplete="off"
-              class="flex-1 min-w-64"
+              width="grow"
             />
             <UiButton type="submit" size="sm" variant="primary" :loading="busy === channel.value" :disabled="!drafts[channel.value].trim()">
               Save

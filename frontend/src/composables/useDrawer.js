@@ -1,5 +1,7 @@
 import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { mediaMatches } from './useMediaQuery.js';
+import { PHONE_QUERY } from '../navigation.js';
 
 // Shared drawer state across all views
 const globalDrawerOpen = ref(false);
@@ -11,8 +13,9 @@ export function useDrawer() {
   // Auto-open drawer when navigating from sidebar
   watch(() => route.path, (newPath) => {
     // Check if we should auto-open (set by sidebar click)
+    // On phones the drawer covers the page, so it never opens by itself there
     if (shouldAutoOpen.value) {
-      globalDrawerOpen.value = true;
+      if (!mediaMatches(PHONE_QUERY)) globalDrawerOpen.value = true;
       shouldAutoOpen.value = false; // Reset after opening
     }
   }, { immediate: true });

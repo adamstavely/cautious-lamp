@@ -1,6 +1,14 @@
 <template>
-  <div class="ui-table-wrap" :class="{ 'ui-table-bordered': bordered }">
-    <table class="ui-table" :class="{ 'ui-table-compact': compact }">
+  <!-- While the table is wider than its box, the box is a named, focusable region so keyboard users can scroll it -->
+  <div
+    ref="wrap"
+    class="ui-table-wrap"
+    :class="{ 'ui-table-bordered': bordered }"
+    :tabindex="scrollable ? 0 : undefined"
+    :role="scrollable ? 'region' : undefined"
+    :aria-label="scrollable ? caption : undefined"
+  >
+    <table ref="table" class="ui-table" :class="{ 'ui-table-compact': compact }">
       <caption v-if="caption" class="sr-only">{{ caption }}</caption>
       <slot />
     </table>
@@ -8,6 +16,8 @@
 </template>
 
 <script setup>
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+
 /**
  * Styles a native table: write <thead>/<tbody>/<tr>/<th scope>/<td> inside.
  * `caption` names it for assistive technology. Put it in a flush UiPanel, or
@@ -18,6 +28,22 @@ defineProps({
   bordered: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
 });
+
+const wrap = ref(null);
+const table = ref(null);
+const scrollable = ref(false);
+let observer = null;
+const measure = () => {
+  if (wrap.value) scrollable.value = wrap.value.scrollWidth > wrap.value.clientWidth + 1;
+};
+onMounted(() => {
+  measure();
+  if (typeof ResizeObserver === 'undefined') return;
+  observer = new ResizeObserver(measure);
+  observer.observe(wrap.value);
+  if (table.value) observer.observe(table.value);
+});
+onBeforeUnmount(() => observer?.disconnect());
 </script>
 
 <style scoped>

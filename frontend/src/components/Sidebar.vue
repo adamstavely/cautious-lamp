@@ -1,160 +1,73 @@
 <template>
-  <aside 
-    id="navigation" 
+  <!-- From the sm breakpoint; on phones the top bar's menu button opens the same links (PhoneNav) -->
+  <nav
+    id="navigation"
     data-ds-component="sidebar"
     data-ds-path="@design-system/components/sidebar"
-    class="side sticky top-0 h-screen flex flex-col flex-shrink-0 w-16 sm:w-24 transition-colors z-50" 
+    class="side"
     aria-label="Main navigation"
   >
-    <!-- Navigation Items -->
-    <nav class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4 px-1 sm:px-2" role="navigation" aria-label="Main navigation">
-      <template v-for="(item, index) in menuItems" :key="item.path">
+    <div class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4 px-2">
+      <template v-for="item in MAIN_NAV" :key="item.path">
         <router-link
           :to="item.path"
-          @click="handleSidebarClick"
-          :class="['side-item mb-1', { on: isActive(item.path) }]"
+          :class="['side-item mb-1', { on: active(item.path) }]"
+          :aria-current="active(item.path) ? 'page' : undefined"
+          @click="openDrawerOnArrival"
         >
           <AppIcon :name="item.icon" class="side-ic" />
           <span class="side-label">{{ item.label }}</span>
         </router-link>
-        <!-- Divider after HCD and Design Assets -->
-        <div 
-          v-if="item.path === '/research' || item.path === '/design-assets'"
-          class="side-divider"
-          aria-hidden="true"
-        ></div>
+        <div v-if="NAV_DIVIDERS_AFTER.includes(item.path)" class="side-divider" aria-hidden="true"></div>
       </template>
-    </nav>
+    </div>
 
     <!-- Admin Section (only for people who can open it) -->
-    <div v-if="canAccessPath('/admin')" class="px-2 pb-2">
+    <div v-if="canAccessPath(ADMIN_NAV.path)" class="px-2 pb-2">
       <router-link
-        to="/admin"
-        @click="handleSidebarClick"
-        :class="['side-item', { on: isActive('/admin') }]"
+        :to="ADMIN_NAV.path"
+        :class="['side-item', { on: active(ADMIN_NAV.path) }]"
+        :aria-current="active(ADMIN_NAV.path) ? 'page' : undefined"
+        @click="openDrawerOnArrival"
       >
-        <AppIcon name="shield-user" class="side-ic" />
-        <span class="side-label">Admin</span>
+        <AppIcon :name="ADMIN_NAV.icon" class="side-ic" />
+        <span class="side-label">{{ ADMIN_NAV.label }}</span>
       </router-link>
     </div>
 
     <!-- Dark Mode Toggle -->
     <div class="px-2 pb-4">
       <button
-        @click="toggleDarkMode"
+        type="button"
         class="side-item w-full"
-        :title="darkTheme ? 'Light Mode' : 'Dark Mode'"
         :aria-label="darkTheme ? 'Switch to light mode' : 'Switch to dark mode'"
+        @click="toggleDarkMode"
       >
         <AppIcon :name="darkTheme ? 'sun' : 'moon'" class="side-ic flex-shrink-0" />
       </button>
     </div>
-  </aside>
+  </nav>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useTheme } from '../composables/useTheme.js';
+import { ADMIN_NAV, MAIN_NAV, NAV_DIVIDERS_AFTER, isSectionActive } from '../navigation.js';
 import { canAccessPath } from '../router/rbacGuards.js';
 
 const route = useRoute();
+const { darkTheme, toggleDarkMode } = useTheme();
+const active = (path) => isSectionActive(path, route.path);
 
-// Handle sidebar click - set flag to auto-open drawer
-const handleSidebarClick = () => {
-  // Set flag in sessionStorage to indicate sidebar navigation
+// Arriving from the side nav opens the section's docs drawer (PageShell reads this)
+const openDrawerOnArrival = () => {
   sessionStorage.setItem('openDrawerOnLoad', 'true');
-};
-
-// Initialize dark mode synchronously based on current state
-const getInitialDarkMode = () => {
-  // Check if dark class is already on html (set by main.js)
-  if (document.documentElement.classList.contains('dark')) {
-    return true;
-  }
-  // Check localStorage
-  const saved = localStorage.getItem('darkMode');
-  if (saved !== null) {
-    return saved === 'true';
-  }
-  // Check system preference
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-};
-
-const darkTheme = ref(getInitialDarkMode());
-
-// Apply the saved theme, and follow the system while nothing is saved
-onMounted(() => {
-  applyDarkMode();
-  
-  // Listen for system preference changes
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  mediaQuery.addEventListener('change', (e) => {
-    // Only apply if user hasn't manually set a preference
-    if (localStorage.getItem('darkMode') === null) {
-      darkTheme.value = e.matches;
-      applyDarkMode();
-    }
-  });
-});
-
-// Watch for dark mode changes and apply
-watch(darkTheme, (newValue) => {
-  applyDarkMode();
-  localStorage.setItem('darkMode', newValue.toString());
-});
-
-const applyDarkMode = () => {
-  // Update Tailwind dark class first
-  if (darkTheme.value) {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-  }
-};
-
-const toggleDarkMode = () => {
-  darkTheme.value = !darkTheme.value;
-};
-
-const menuItems = [
-  { path: '/getting-started', label: 'Getting Started', icon: 'rocket' },
-  { path: '/guidelines', label: 'Guidelines', icon: 'book-open' },
-  { path: '/research', label: 'HCD', icon: 'notebook-tabs' },
-  { path: '/components', label: 'Components', icon: 'blocks' },
-  { path: '/tokens', label: 'Tokens', icon: 'swatch-book' },
-  { path: '/patterns', label: 'Patterns', icon: 'layout-template' },
-  { path: '/design-assets', label: 'Design Assets', icon: 'images' },
-  { path: '/review', label: 'Review', icon: 'message-square-text' },
-  { path: '/data-viz', label: 'Data Viz', icon: 'chart-column' },
-  { path: '/tools', label: 'Tools', icon: 'wrench' },
-];
-
-const isActive = (path) => {
-  if (path === '/tokens') {
-    return route.path === '/tokens' || route.path.startsWith('/palette-builder');
-  }
-  if (path === '/tools') {
-    return route.path === '/tools' || route.path.startsWith('/tools/');
-  }
-  if (path === '/admin') {
-    return route.path === '/admin' || route.path.startsWith('/admin/');
-  }
-  if (path === '/getting-started') {
-    return route.path === '/getting-started' || route.path.startsWith('/getting-started/');
-  }
-  if (path === '/research') {
-    return route.path === '/research' || route.path.startsWith('/research/') || route.path.startsWith('/hcd/');
-  }
-  if (path === '/data-viz') {
-    return route.path === '/data-viz' || route.path.startsWith('/data-viz/');
-  }
-  return route.path === path || route.path.startsWith(path + '/');
 };
 </script>
 
 <style scoped>
 .side {
-  @apply bg-surface border-r border-line text-ink-secondary;
+  @apply hidden sm:flex sticky top-0 h-screen flex-col flex-shrink-0 w-sidenav z-50 bg-surface border-r border-line text-ink-secondary transition-colors;
 }
 .side-item {
   @apply flex flex-col items-center gap-1.5 px-1 py-2.5 rounded-tile transition-colors hover:bg-fill-hover hover:text-ink-strong;
@@ -170,9 +83,8 @@ const isActive = (path) => {
 .side-item.on .side-ic {
   @apply text-accent-text;
 }
-/* Icons only on phones; the label stays for assistive technology */
 .side-label {
-  @apply sr-only sm:not-sr-only text-xs font-medium text-center leading-tight;
+  @apply text-xs font-medium text-center leading-tight;
 }
 .side-item.on .side-label {
   @apply font-semibold;

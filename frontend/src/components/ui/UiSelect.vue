@@ -1,5 +1,5 @@
 <template>
-  <UiField :label="label" :hint="hint" :error="error" :required="required" :id="id" :hide-label="hideLabel" v-slot="{ id: controlId, describedBy, invalid }">
+  <UiField :label="label" :hint="hint" :error="error" :required="required" :id="id" :hide-label="hideLabel" :width="width" v-slot="{ id: controlId, describedBy, invalid }">
     <div class="ui-select-wrap">
       <select
         :id="controlId"
@@ -46,6 +46,8 @@ const props = defineProps({
   id: { type: String, default: '' },
   size: { type: String, default: 'md', validator: (v) => ['sm', 'md'].includes(v) },
   hideLabel: { type: Boolean, default: false },
+  /** sm, md or grow: see UiField */
+  width: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:modelValue']);

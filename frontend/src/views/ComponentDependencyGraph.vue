@@ -29,14 +29,13 @@
 
         <template v-else>
           <div class="flex flex-wrap items-end gap-4 mb-4">
-            <div class="w-64">
-              <UiSelect
-                id="focus-component"
-                v-model="focusId"
-                label="Focus on"
-                :options="[{ value: '', label: 'All components' }, ...components.map((c) => ({ value: c.id, label: c.name }))]"
-              />
-            </div>
+            <UiSelect
+              width="md"
+              id="focus-component"
+              v-model="focusId"
+              label="Focus on"
+              :options="[{ value: '', label: 'All components' }, ...components.map((c) => ({ value: c.id, label: c.name }))]"
+            />
             <UiCheckbox v-if="focusId" v-model="showDependents" label="Include components that use it" />
           </div>
 

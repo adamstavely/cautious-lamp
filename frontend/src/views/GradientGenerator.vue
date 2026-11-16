@@ -62,14 +62,13 @@
             <InlineNotice :notice="paletteNotice" @dismiss="clearPaletteNotice" />
 
             <div v-if="availablePalettes.length > 0" class="flex flex-wrap items-end gap-3">
-              <div class="flex-1 min-w-48">
-                <UiSelect
-                  v-model="selectedPaletteId"
-                  label="Palette"
-                  placeholder="Select a palette…"
-                  :options="availablePalettes.map((palette) => ({ value: palette.id, label: palette.name }))"
-                />
-              </div>
+              <UiSelect
+                width="grow"
+                v-model="selectedPaletteId"
+                label="Palette"
+                placeholder="Select a palette…"
+                :options="availablePalettes.map((palette) => ({ value: palette.id, label: palette.name }))"
+              />
               <UiButton variant="primary" :disabled="!selectedPaletteId" @click="importPaletteColors">Import colors</UiButton>
             </div>
 
@@ -94,7 +93,7 @@
                     <UiInput :model-value="stop.color" label="Color" :placeholder="textColorPlaceholder" mono @update:model-value="setStopValue(stop, 'color', $event)" />
                   </div>
 
-                  <div class="flex-1 min-w-56 grid grid-cols-content-aside items-end gap-x-3 gap-y-3">
+                  <div class="flex-1 basis-field-md min-w-0 grid grid-cols-content-aside items-end gap-x-3 gap-y-3">
                     <UiRange
                       :model-value="Number(stop.position) || 0"
                       label="Position"

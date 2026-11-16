@@ -56,6 +56,14 @@
   /* Heights: a tool's working area, and an embedded page */
   --app-workspace-height: 37.5rem;
   --app-embed-height: 50rem;
+  /* App shell: the side nav's width (from the sm breakpoint; phones open it as a menu) and the top bar's height */
+  --app-sidenav: 6rem;
+  --app-topbar: 4rem;
+  /* Room kept clear at the end of every page so the Ask Eero launcher never covers the last content */
+  --app-launcher-clearance: 5rem;
+  /* Widths for fields that don't fill their row, from the sm breakpoint (full width on phones) */
+  --app-field-sm: 10rem;
+  --app-field-md: 16rem;
 }
 
 /*
