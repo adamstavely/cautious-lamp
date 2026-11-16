@@ -214,6 +214,30 @@ export interface ComponentRequestLinker {
   componentCreated(principal: AuthPrincipal, componentId: string, componentName: string, linkedRequestId?: string): void;
 }
 
+/**
+ * Heuristic evaluation overall score, 0-10: average severity (0-4) mapped so
+ * 0 -> 10 and 4 -> 0, rounded to one decimal.
+ */
+export function heuristicOverallScore(severities: number[]): number {
+  if (severities.length === 0) return 10;
+  const avgSeverity = severities.reduce((a, b) => a + b, 0) / severities.length;
+  const score = Math.max(0, Math.min(10, 10 - avgSeverity * 2.5));
+  return Math.round(score * 10) / 10;
+}
+
+/** Raw (unweighted) NASA-TLX: the mean of the six 0-100 ratings, rounded to one decimal */
+export function rawTlxScore(r: {
+  mentalDemand: number;
+  physicalDemand: number;
+  temporalDemand: number;
+  performance: number;
+  effort: number;
+  frustration: number;
+}): number {
+  const sum = r.mentalDemand + r.physicalDemand + r.temporalDemand + r.performance + r.effort + r.frustration;
+  return Math.round((sum / 6) * 10) / 10;
+}
+
 @Injectable()
 export class DesignSystemService implements OnModuleInit {
   private readonly logger = new Logger(DesignSystemService.name);
@@ -1484,6 +1508,8 @@ export class DesignSystemService implements OnModuleInit {
       performance: data.performance,
       effort: data.effort,
       frustration: data.frustration,
+      // Raw (unweighted) TLX: the mean of the six ratings, 0-100
+      rawTlx: rawTlxScore(data),
       user: data.user,
       timestamp: new Date().toISOString(),
       createdAt: new Date().toISOString(),
@@ -1563,9 +1589,7 @@ export class DesignSystemService implements OnModuleInit {
     // Calculate scores
     const totalIssues = data.heuristics.filter(h => h.issues.trim().length > 0).length;
     const criticalIssues = data.heuristics.filter(h => h.severity === 4).length;
-    const severities = data.heuristics.map(h => h.severity);
-    const avgSeverity = severities.reduce((a, b) => a + b, 0) / severities.length;
-    const overallScore = Math.max(0, Math.min(10, 10 - avgSeverity));
+    const overallScore = heuristicOverallScore(data.heuristics.map(h => h.severity));
 
     const document = {
       systemName: data.systemName,
@@ -1574,7 +1598,7 @@ export class DesignSystemService implements OnModuleInit {
       overallAssessment: data.overallAssessment,
       totalIssues,
       criticalIssues,
-      overallScore: Math.round(overallScore * 10) / 10,
+      overallScore,
       timestamp: data.timestamp || new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };
