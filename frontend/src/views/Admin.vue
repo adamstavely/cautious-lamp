@@ -27,7 +27,7 @@
     <UiDialog v-model:open="showBannerModal" title="Site banners" size="lg">
       <div class="mb-6 flex justify-between items-center gap-4">
         <h3 class="text-lg font-semibold text-ink-strong">Active banners</h3>
-        <UiButton variant="primary" size="sm" icon="plus" @click="openCreateBanner">Create banner</UiButton>
+        <UiButton ref="createBannerButton" variant="primary" size="sm" icon="plus" @click="openCreateBanner">Create banner</UiButton>
       </div>
 
       <UiEmptyState
@@ -37,7 +37,7 @@
         spot="patterns/pattern-notifications-overview"
       />
 
-      <ul v-else class="space-y-4">
+      <ul v-else ref="bannerList" class="space-y-4">
         <li v-for="banner in banners" :key="banner.id" class="p-4 rounded-tile border border-line-faint bg-surface-sunken">
           <div class="flex items-start justify-between gap-4">
             <div class="flex-1 min-w-0">
@@ -62,7 +62,7 @@
                 :label="banner.isActive ? `Deactivate ${banner.title}` : `Activate ${banner.title}`"
                 @click="toggleBannerStatus(banner)"
               />
-              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${banner.title}`" @click="deleteBanner(banner.id)" />
+              <UiButton variant="ghost" size="sm" icon="trash-2" icon-only :label="`Delete ${banner.title}`" data-focus-after-remove @click="deleteBanner(banner.id)" />
             </div>
           </div>
         </li>
@@ -94,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { nextTick, ref, onMounted } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
@@ -111,12 +111,15 @@ import {
   UiTextarea,
 } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval.js';
 import apiClient from '../services/api.js';
 import { canAccessPath } from '../router/rbacGuards.js';
 import { hasPermission } from '../services/auth.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const showBannerModal = ref(false);
+const bannerList = ref(null);
+const createBannerButton = ref(null);
 const showBannerForm = ref(false);
 const banners = ref([]);
 const editingBanner = ref(null);
@@ -232,10 +235,14 @@ const toggleBannerStatus = async (banner) => {
 
 const deleteBanner = async (id) => {
   if (!confirm('Are you sure you want to delete this banner?')) return;
-  
+  const index = banners.value.findIndex((banner) => banner.id === id);
+
   try {
     await apiClient.delete(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1/banners/${id}`);
     await fetchBanners();
+    // Its Delete button went with it: focus the banner now in its place
+    await nextTick();
+    focusAfterRemoval(bannerList.value, index, { fallback: createBannerButton.value });
   } catch (error) {
     console.error('Failed to delete banner:', error);
     showNotice('Failed to delete banner. Please try again.', 'error');

@@ -72,7 +72,7 @@
             <span class="text-sm text-ink-secondary">{{ selectedIcons.length }} selected</span>
             <UiButton size="sm" icon="copy" label="Copy selected" @click="copySelectedIcons" />
             <UiButton size="sm" icon="download" label="Download selected" @click="downloadSelectedIcons" />
-            <UiButton size="sm" variant="ghost" label="Clear selection" @click="selectedIcons = []" />
+            <UiButton size="sm" variant="ghost" label="Clear selection" @click="clearSelection" />
           </div>
 
           <div v-if="currentSet.builtIn && loadingLucide" class="flex justify-center py-12">
@@ -86,7 +86,7 @@
             :bordered="false"
           />
 
-          <ul v-else-if="viewMode === 'grid'" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8 gap-3">
+          <ul v-else-if="viewMode === 'grid'" ref="iconList" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8 gap-3">
             <li v-for="icon in filteredIcons" :key="icon.id" class="group relative">
               <button
                 type="button"
@@ -108,7 +108,7 @@
             </li>
           </ul>
 
-          <ul v-else class="divide-y divide-line-faint">
+          <ul v-else ref="iconList" class="divide-y divide-line-faint">
             <li v-for="icon in filteredIcons" :key="icon.id" class="flex items-center gap-3 py-2">
               <button
                 type="button"
@@ -276,6 +276,7 @@ import { useChartTheme } from '../composables/useChartTheme.js';
 import { useNotice } from '../composables/useNotice.js';
 import { useResourceLibrary } from '../composables/useResourceLibrary.js';
 import { readSvgFiles } from '../utils/svgIconFiles.js';
+import { focusSoon } from '../utils/focusAfterRemoval';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const theme = useChartTheme();
@@ -300,6 +301,7 @@ const iconSize = ref(24);
 const absoluteStrokeWidth = ref(false);
 const selectedCategory = ref(null);
 const selectedIcons = ref([]);
+const iconList = ref(null);
 const showColorPicker = ref(false);
 const pickerColor = ref('#000000');
 const pickerPosition = ref({ left: 0, top: 0 });
@@ -473,6 +475,11 @@ const toggleIconSelection = (icon) => {
   else selectedIcons.value.push(icon);
 };
 const isIconSelected = (iconId) => selectedIcons.value.some((i) => i.id === iconId);
+// The selection bar (and this button) goes away: focus moves to the first icon
+const clearSelection = () => {
+  selectedIcons.value = [];
+  focusSoon(iconList.value?.querySelector('button'));
+};
 
 // Copy and download
 const copyIcon = async (icon) => {

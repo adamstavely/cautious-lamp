@@ -57,17 +57,17 @@
             <div class="mt-6 pt-6 border-t border-line">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-semibold text-ink-strong">Columns ({{ columns.length }})</h3>
-                <UiButton variant="primary" size="sm" icon="plus" @click="addColumn">Add column</UiButton>
+                <UiButton ref="addColumnButton" variant="primary" size="sm" icon="plus" @click="addColumn">Add column</UiButton>
               </div>
 
               <InlineNotice :notice="columnNotice" class="mb-3" @dismiss="clearColumnNotice" />
 
-              <div class="flex flex-col gap-3 max-h-64 overflow-y-auto">
+              <div ref="columnList" class="flex flex-col gap-3 max-h-64 overflow-y-auto">
                 <fieldset v-for="(column, index) in columns" :key="column.id" class="flex flex-col gap-2 p-3 rounded-tile border border-line bg-surface-sunken">
                   <legend class="sr-only">Column {{ index + 1 }}</legend>
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-medium text-ink-muted" aria-hidden="true">Column {{ index + 1 }}</span>
-                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove column ${index + 1}`" :disabled="columns.length <= 1" @click="removeColumn(index)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove column ${index + 1}`" :disabled="columns.length <= 1" :data-focus-after-remove="columns.length > 1 || undefined" @click="removeColumn(index); focusAfterRemoval(columnList, index, { fallback: addColumnButton })" />
                   </div>
                   <UiInput :model-value="column.name" placeholder="Column name" :aria-label="`Column ${index + 1} name`" @change="renameColumn(index, $event)" />
                   <UiSelect v-model="column.type" :options="columnTypeOptions" :aria-label="`Column ${index + 1} type`" />
@@ -82,15 +82,15 @@
             <div class="mt-6 pt-6 border-t border-line">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-semibold text-ink-strong">Rows ({{ rows.length }})</h3>
-                <UiButton variant="primary" size="sm" icon="plus" @click="addRow">Add row</UiButton>
+                <UiButton ref="addRowButton" variant="primary" size="sm" icon="plus" @click="addRow">Add row</UiButton>
               </div>
 
-              <div class="flex flex-col gap-2 max-h-64 overflow-y-auto">
+              <div ref="rowList" class="flex flex-col gap-2 max-h-64 overflow-y-auto">
                 <fieldset v-for="(row, rowIndex) in rows" :key="rowIndex" class="flex flex-col gap-2 p-3 rounded-tile border border-line bg-surface-sunken">
                   <legend class="sr-only">Row {{ rowIndex + 1 }}</legend>
                   <div class="flex items-center justify-between">
                     <span class="text-xs font-medium text-ink-muted" aria-hidden="true">Row {{ rowIndex + 1 }}</span>
-                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove row ${rowIndex + 1}`" :disabled="rows.length <= 1" @click="removeRow(rowIndex)" />
+                    <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove row ${rowIndex + 1}`" :disabled="rows.length <= 1" :data-focus-after-remove="rows.length > 1 || undefined" @click="removeRow(rowIndex); focusAfterRemoval(rowList, rowIndex, { fallback: addRowButton })" />
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <UiInput
@@ -259,6 +259,7 @@ import { useNotice } from '../composables/useNotice.js';
 import axe from 'axe-core';
 import { AXE_SCAN_OPTIONS, axeCategoryState } from '../utils/axeScan.js';
 import { generateTableCode } from '../utils/tableExport.js';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const {
@@ -267,6 +268,10 @@ const {
   clearNotice: clearColumnNotice
 } = useNotice();
 const previewSection = ref(null);
+const columnList = ref(null);
+const addColumnButton = ref(null);
+const rowList = ref(null);
+const addRowButton = ref(null);
 
 const selectionModeOptions = [
   { value: 'none', label: 'None' },

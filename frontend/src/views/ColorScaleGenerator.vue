@@ -15,7 +15,7 @@
             <UiSegmented :model-value="scaleType" :options="scaleTypes" label="Scale type" @update:model-value="scaleType = $event; generateScale()" />
 
             <!-- Base colors -->
-            <div class="flex flex-col gap-4 pt-5 border-t border-line">
+            <div ref="baseColorList" class="flex flex-col gap-4 pt-5 border-t border-line">
               <h3 class="text-sm font-semibold text-ink-strong">Base colors</h3>
 
               <template v-if="scaleType === 'sequential' || scaleType === 'diverging'">
@@ -48,11 +48,12 @@
                     icon="trash-2"
                     variant="ghost"
                     :label="`Remove color ${index + 1}`"
-                    @click="scaleType === 'sequential' ? removeSequentialColor(index) : removeDivergingColor(index)"
+                    data-focus-after-remove
+                    @click="scaleType === 'sequential' ? removeSequentialColor(index) : removeDivergingColor(index); focusAfterRemoval(baseColorList, index, { rows: ':scope > .items-end', fallback: addColorButton })"
                   />
                 </div>
                 <div>
-                  <UiButton icon="plus" @click="scaleType === 'sequential' ? addSequentialColor() : addDivergingColor()">Add color</UiButton>
+                  <UiButton ref="addColorButton" icon="plus" @click="scaleType === 'sequential' ? addSequentialColor() : addDivergingColor()">Add color</UiButton>
                 </div>
               </template>
 
@@ -370,10 +371,13 @@ import {
   PageHero, PageSection, PageShell, UiButton, UiChip, UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwatch, UiTable, UiTextarea,
 } from '../components/ui';
 import UiMeter from '../components/ui/UiMeter.vue';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval';
 
 const { notice, showNotice, clearNotice } = useNotice();
 const previewDarkMode = ref(false);
 const scaleType = ref('sequential');
+const baseColorList = ref(null);
+const addColorButton = ref(null);
 const generatedScale = ref([]);
 
 const scaleTypes = [

@@ -27,13 +27,15 @@
         <p class="ui-drop-prompt">{{ prompt }}</p>
       </template>
 
-      <UiButton size="sm" icon="file-up" :label="file ? 'Choose another file' : buttonLabel" @click="open" />
+      <UiButton ref="chooseButton" size="sm" icon="file-up" :label="file ? 'Choose another file' : buttonLabel" @click="open" />
+      <!-- Always present, so a chosen or removed file is announced -->
+      <p class="sr-only" aria-live="polite">{{ announcement }}</p>
     </div>
   </UiField>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import UiButton from './UiButton.vue';
 import UiField from './UiField.vue';
 
@@ -92,10 +94,24 @@ const onLeave = (event) => {
   if (!event.currentTarget.contains(event.relatedTarget)) dragging.value = false;
 };
 
-const remove = () => {
+// Removing unmounts the Remove button, so focus goes to the choose button
+const chooseButton = ref(null);
+const remove = async () => {
+  const name = props.file?.name;
   reset();
   emit('remove');
+  announcement.value = name ? `${name} removed` : 'File removed';
+  await nextTick();
+  chooseButton.value?.$el?.focus();
 };
+
+const announcement = ref('');
+watch(
+  () => props.file?.name,
+  (name) => {
+    if (name) announcement.value = `${name} selected`;
+  },
+);
 
 const formatSize = (bytes) => {
   if (!bytes) return '0 bytes';

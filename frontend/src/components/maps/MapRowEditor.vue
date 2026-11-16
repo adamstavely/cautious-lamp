@@ -8,7 +8,7 @@
           <th scope="col"><span class="sr-only">Remove</span></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody ref="rowList">
         <tr v-for="(row, index) in visibleRows" :key="index">
           <td v-for="column in columns" :key="column.key">
             <UiInput
@@ -22,7 +22,7 @@
             />
           </td>
           <td>
-            <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove ${itemLabel.toLowerCase()} ${index + 1}`" @click="remove(index)" />
+            <UiButton icon-only icon="trash-2" variant="ghost" size="sm" :label="`Remove ${itemLabel.toLowerCase()} ${index + 1}`" data-focus-after-remove @click="remove(index); focusAfterRemoval(rowList, index, { fallback: addButton })" />
           </td>
         </tr>
       </tbody>
@@ -30,13 +30,14 @@
     <p v-if="rows.length > limit" class="text-sm text-ink-muted">
       Showing the first {{ limit }} of {{ rows.length.toLocaleString() }} rows. Edit larger tables in a spreadsheet and import them.
     </p>
-    <UiButton icon="plus" size="sm" class="self-start" @click="add">Add {{ itemLabel.toLowerCase() }}</UiButton>
+    <UiButton ref="addButton" icon="plus" size="sm" class="self-start" @click="add">Add {{ itemLabel.toLowerCase() }}</UiButton>
   </fieldset>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { UiButton, UiInput, UiTable } from '../ui';
+import { focusAfterRemoval } from '../../utils/focusAfterRemoval';
 
 /**
  * A small editable table for Map Maker's data, for quick fixes after an
@@ -55,6 +56,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:modelValue']);
+
+const rowList = ref(null);
+const addButton = ref(null);
 
 const rows = computed(() => props.modelValue);
 const visibleRows = computed(() => props.modelValue.slice(0, props.limit));

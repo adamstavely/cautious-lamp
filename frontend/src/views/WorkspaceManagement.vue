@@ -7,7 +7,7 @@
       spot="admin/workspace-management"
     >
       <template v-if="isUser" #actions>
-        <UiButton variant="primary" icon="plus" @click="openCreate">Create workspace</UiButton>
+        <UiButton ref="createWorkspaceButton" variant="primary" icon="plus" @click="openCreate">Create workspace</UiButton>
       </template>
     </PageHero>
 
@@ -37,7 +37,7 @@
         </template>
       </UiEmptyState>
 
-      <ul v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <ul v-else ref="workspaceList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         <li v-for="workspace in workspaces" :key="workspace.id" class="workspace-card">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1">
@@ -95,6 +95,7 @@
               icon="trash-2"
               icon-only
               :label="`Delete ${workspace.name}`"
+              data-focus-after-remove
               @click="deleteWorkspace(workspace)"
             />
           </div>
@@ -136,7 +137,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch, computed } from 'vue';
+import { nextTick, onMounted, reactive, ref, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
@@ -162,6 +163,7 @@ import { useAuth } from '../composables/useAuth.js';
 import { useNotice } from '../composables/useNotice.js';
 import { useConfirmDialog } from '../composables/useConfirmDialog.js';
 import apiClient, { apiErrorMessage } from '../services/api.js';
+import { focusAfterRemoval } from '../utils/focusAfterRemoval.js';
 
 /**
  * Team workspaces (docs/WORKSPACES.md). The list shows the caller's
@@ -180,6 +182,8 @@ const onlyMine = ref(false);
 const workspaces = ref([]);
 const loading = ref(false);
 const loadError = ref(null);
+const workspaceList = ref(null);
+const createWorkspaceButton = ref(null);
 
 const healthText = { neutral: 'text-ink-strong', success: 'text-success', warning: 'text-warning', danger: 'text-danger' };
 const memberCount = (workspace) => workspace.summary?.memberCount ?? workspace.members.length;
@@ -259,10 +263,14 @@ const deleteWorkspace = async (workspace) => {
     danger: true,
   });
   if (!ok) return;
+  const index = workspaces.value.findIndex((w) => w.id === workspace.id);
   try {
     await apiClient.delete(`/api/v1/workspaces/${encodeURIComponent(workspace.id)}`);
     showNotice(`Workspace "${workspace.name}" deleted.`, 'success');
     await loadWorkspaces();
+    // Its Delete button went with the card: focus the card now in its place
+    await nextTick();
+    focusAfterRemoval(workspaceList.value, index, { fallback: createWorkspaceButton.value });
   } catch (error) {
     // 409 explains what still belongs to it (applications or components)
     showNotice(apiErrorMessage(error, 'The workspace could not be deleted.'), 'error');

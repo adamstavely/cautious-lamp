@@ -1,14 +1,14 @@
 <template>
   <UiPanel title="Workspace members" heading-tag="h3" flush>
     <template v-if="isAdmin" #actions>
-      <UiButton variant="primary" size="sm" icon="user-plus" @click="openAdd">Add member</UiButton>
+      <UiButton ref="addButton" variant="primary" size="sm" icon="user-plus" @click="openAdd">Add member</UiButton>
     </template>
 
     <div v-if="notice" class="px-6 pt-4">
       <InlineNotice :notice="notice" @dismiss="clearNotice" />
     </div>
 
-    <ul class="divide-y divide-line-faint">
+    <ul ref="memberList" class="divide-y divide-line-faint">
       <li v-for="member in workspace.members" :key="member.userId" class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
         <div class="flex items-center gap-3 min-w-0">
           <span class="flex items-center justify-center w-10 h-10 shrink-0 rounded-pill bg-fill text-ink-muted">
@@ -51,6 +51,7 @@
             :icon="member.userId === currentUserId ? 'log-out' : 'trash-2'"
             icon-only
             :label="member.userId === currentUserId ? 'Leave workspace' : `Remove ${member.email}`"
+            data-focus-after-remove
             @click="remove(member)"
           />
         </div>
@@ -83,12 +84,13 @@
 </template>
 
 <script setup>
-import { computed, reactive, useId } from 'vue';
+import { computed, reactive, ref, useId } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
 import { UiButton, UiChip, UiInput, UiPanel, UiSelect } from '../ui';
 import apiClient, { apiErrorMessage } from '../../services/api.js';
 import { useConfirmDialog } from '../../composables/useConfirmDialog.js';
 import { useNotice } from '../../composables/useNotice.js';
+import { focusAfterRemoval } from '../../utils/focusAfterRemoval.js';
 import ConfirmDialog from './ConfirmDialog.vue';
 import WorkspaceModal from './WorkspaceModal.vue';
 import { atLeast, formatDate, roleTone } from './ui.js';
@@ -107,6 +109,8 @@ const emit = defineEmits(['updated', 'left']);
 const addFormId = `add-member-${useId()}`;
 const { notice, showNotice, clearNotice } = useNotice();
 const { confirmState, askConfirm } = useConfirmDialog();
+const memberList = ref(null);
+const addButton = ref(null);
 
 const isAdmin = computed(() => atLeast(props.workspace.effectiveRole, 'admin'));
 const isOwner = computed(() => atLeast(props.workspace.effectiveRole, 'owner'));
@@ -153,7 +157,11 @@ const remove = async (member) => {
     confirmText: leaving ? 'Leave' : 'Remove',
     danger: true,
   });
-  if (ok) run(() => apiClient.delete(`${base()}/members/${encodeURIComponent(member.userId)}`), leaving ? null : `${member.email} removed.`);
+  if (!ok) return;
+  const index = props.workspace.members.findIndex((m) => m.userId === member.userId);
+  const removed = await run(() => apiClient.delete(`${base()}/members/${encodeURIComponent(member.userId)}`), leaving ? null : `${member.email} removed.`);
+  // Its Remove button went with the row: focus the member now in its place
+  if (removed && !leaving) focusAfterRemoval(memberList.value, index, { fallback: addButton.value });
 };
 
 const transfer = async (member) => {

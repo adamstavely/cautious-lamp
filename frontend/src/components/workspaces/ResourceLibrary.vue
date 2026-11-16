@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-6">
     <div class="library-toolbar">
-      <UiInput v-model="query" class="library-search" type="search" icon="search" :label="`Search ${noun}`" :placeholder="`Search by name, description or tag`" />
+      <UiInput ref="searchInput" v-model="query" class="library-search" type="search" icon="search" :label="`Search ${noun}`" :placeholder="`Search by name, description or tag`" />
       <UiSelect v-if="filter && filterOptions.length" v-model="filterValue" :label="filter.label" :options="[{ value: '', label: 'All' }, ...filterOptions]" />
       <UiSelect v-if="sourceOptions.length > 1" v-model="sourceValue" label="Source" :options="[{ value: '', label: 'All sources' }, ...sourceOptions]" />
       <UiButton v-if="canAdd" variant="primary" icon="plus" class="library-add" @click="openForm()">Add {{ singular }}</UiButton>
@@ -32,7 +32,7 @@
           <UiButton @click="clearFilters">Clear filters</UiButton>
         </template>
       </UiEmptyState>
-      <ul v-else class="library-grid">
+      <ul v-else ref="cardList" class="library-grid">
         <li v-for="item in visible" :key="item.id" class="library-card">
           <div v-if="spec.image || spec.svg" class="library-media">
             <img v-if="previewOf(item)" :src="previewOf(item)" alt="" class="library-image" loading="lazy" referrerpolicy="no-referrer" />
@@ -114,7 +114,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
 import { AppIcon, UiButton, UiCallout, UiChip, UiDialog, UiEmptyState, UiInput, UiLink, UiSelect, UiSpinner } from '../ui';
 import { useConfirmDialog } from '../../composables/useConfirmDialog.js';
@@ -125,6 +125,7 @@ import ResourceFormDialog from './ResourceFormDialog.vue';
 import { resourceKind } from './resourceKinds.js';
 import { renderMarkdown, safeHttpUrl, svgDataUri } from './safeContent.js';
 import { formatDate } from './ui.js';
+import { focusAfterRemoval } from '../../utils/focusAfterRemoval';
 
 /**
  * A browsable library of one workspace item kind across every workspace the
@@ -185,6 +186,8 @@ const detailFields = (item) =>
 
 // ---------- Search and filters ----------
 const query = ref('');
+const searchInput = ref(null);
+const cardList = ref(null);
 const filterValue = ref('');
 const sourceValue = ref('');
 
@@ -267,10 +270,15 @@ const confirmDelete = async (item) => {
     danger: true,
   });
   if (!ok) return;
+  const index = visible.value.findIndex((i) => i.id === item.id);
   try {
     await library.remove(item);
     detail.value = null;
     showNotice(`${spec.value.singular} deleted.`, 'success');
+    // The dialog would hand focus back to the deleted card: move it to the card
+    // now in its place (or the one before), else the search field
+    await nextTick();
+    focusAfterRemoval(cardList.value, index, { fallback: searchInput.value?.$el.querySelector('input') });
   } catch (err) {
     showNotice(err.message, 'error');
   }

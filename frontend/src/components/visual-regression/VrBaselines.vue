@@ -40,8 +40,8 @@
             <th scope="col"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
-        <tbody>
-          <tr v-for="baseline in baselines" :key="baseline.id">
+        <tbody ref="baselineList">
+          <tr v-for="baseline in baselines" :key="baseline.id" :data-baseline="baseline.id">
             <td>
               <span class="font-medium text-ink">{{ baseline.name }}</span>
               <UiChip v-if="baseline.current" tone="success" class="ml-2">Current</UiChip>
@@ -72,12 +72,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
 import { UiButton, UiChip, UiEmptyState, UiInput, UiPanel, UiSelect, UiSpinner, UiTable, UiTextarea } from '../ui';
 import { useNotice } from '../../composables/useNotice.js';
 import apiClient from '../../services/api.js';
 import { formatDateTime, vrErrorMessage } from './vrApi.js';
+import { focusSoon } from '../../utils/focusAfterRemoval';
 
 const props = defineProps({
   projectPath: { type: String, required: true },
@@ -88,6 +89,7 @@ const emit = defineEmits(['changed']);
 
 const { notice, showNotice, clearNotice } = useNotice();
 const baselines = ref([]);
+const baselineList = ref(null);
 const history = ref([]);
 const loading = ref(false);
 const busy = ref(false);
@@ -157,6 +159,9 @@ const rollback = async (baseline) => {
     showNotice(`“${baseline.name}” is the current baseline again.`, 'success');
     await load();
     emit('changed');
+    // Its Roll back button has gone: focus moves to the row's name and Current chip
+    await nextTick();
+    focusSoon([...(baselineList.value?.rows ?? [])].find((row) => row.dataset.baseline === baseline.id)?.cells[0]);
   } catch (error) {
     showNotice(vrErrorMessage(error, 'The rollback failed.'), 'error');
   } finally {

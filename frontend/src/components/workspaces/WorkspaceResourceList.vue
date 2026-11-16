@@ -1,7 +1,7 @@
 <template>
   <UiPanel :title="spec.label">
     <template v-if="canEdit" #actions>
-      <UiButton variant="primary" size="sm" icon="plus" @click="openForm()">Add {{ spec.singular }}</UiButton>
+      <UiButton ref="addButton" variant="primary" size="sm" icon="plus" @click="openForm()">Add {{ spec.singular }}</UiButton>
     </template>
 
     <InlineNotice :notice="notice" @dismiss="clearNotice" />
@@ -15,7 +15,7 @@
     </UiCallout>
     <p v-else-if="resource.items.value.length === 0" class="py-6 text-center text-sm text-ink-muted">No {{ spec.label.toLowerCase() }} yet</p>
 
-    <ul v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <ul v-else ref="itemList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
       <li v-for="item in resource.items.value" :key="item.id" class="flex flex-col gap-2 rounded-tile border border-line bg-surface-sunken p-4">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
@@ -45,7 +45,7 @@
         <div v-if="owned(item) && canEdit" class="flex flex-wrap items-center gap-2 mt-auto pt-2">
           <UiButton size="sm" @click="openForm(item)">Edit</UiButton>
           <UiButton size="sm" @click="openShare(item)">Share</UiButton>
-          <UiButton size="sm" variant="danger" @click="confirmDelete(item)">Delete</UiButton>
+          <UiButton size="sm" variant="danger" data-focus-after-remove @click="confirmDelete(item)">Delete</UiButton>
         </div>
         <p v-else-if="!owned(item)" class="mt-auto pt-2 text-xs text-ink-muted">From {{ workspaceName(item.workspaceId) }} · read-only</p>
       </li>
@@ -73,12 +73,13 @@
 </template>
 
 <script setup>
-import { computed, reactive, toRef, watch } from 'vue';
+import { computed, nextTick, reactive, ref, toRef, watch } from 'vue';
 import InlineNotice from '../InlineNotice.vue';
 import { UiButton, UiCallout, UiChip, UiLink, UiPanel, UiSpinner } from '../ui';
 import { useConfirmDialog } from '../../composables/useConfirmDialog.js';
 import { useNotice } from '../../composables/useNotice.js';
 import { useWorkspaceResource } from '../../composables/useWorkspaceResource.js';
+import { focusAfterRemoval } from '../../utils/focusAfterRemoval.js';
 import ConfirmDialog from './ConfirmDialog.vue';
 import ResourceFormDialog from './ResourceFormDialog.vue';
 import ShareDialog from './ShareDialog.vue';
@@ -103,6 +104,8 @@ const spec = computed(() => resourceKind(props.kind));
 const resource = useWorkspaceResource(computed(() => props.workspace.id), toRef(props, 'kind'));
 const { notice, showNotice, clearNotice } = useNotice();
 const { confirmState, askConfirm } = useConfirmDialog();
+const itemList = ref(null);
+const addButton = ref(null);
 
 watch(
   () => [props.workspace.id, props.kind],
@@ -150,9 +153,13 @@ const confirmDelete = async (item) => {
     danger: true,
   });
   if (!ok) return;
+  const index = resource.items.value.findIndex((i) => i.id === item.id);
   try {
     await resource.remove(item.id);
     showNotice(`${spec.value.singular} deleted.`, 'success');
+    // Its Delete button went with it: focus the item now in its place
+    await nextTick();
+    focusAfterRemoval(itemList.value, index, { fallback: addButton.value });
   } catch (err) {
     showNotice(err.message, 'error');
   }

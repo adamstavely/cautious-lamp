@@ -66,7 +66,7 @@
 
       <template #manage>
         <div class="space-y-6">
-          <UiPanel title="Components" flush>
+          <UiPanel ref="componentsPanel" title="Components" flush>
             <UiSpinner v-if="loadingComponents && !components.length" label="Loading components…" class="p-6" />
             <UiCallout v-else-if="componentsError" tone="danger" title="Components couldn't be loaded" role="alert" class="m-6">
               {{ apiErrorMessage(componentsError) }}
@@ -94,7 +94,7 @@
             </UiTable>
           </UiPanel>
 
-          <UiPanel title="Patterns" flush>
+          <UiPanel ref="patternsPanel" title="Patterns" flush>
             <UiSpinner v-if="loadingPatterns && !patterns.length" label="Loading patterns…" class="p-6" />
             <UiCallout v-else-if="patternsError" tone="danger" title="Patterns couldn't be loaded" role="alert" class="m-6">
               {{ apiErrorMessage(patternsError) }}
@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useAuth } from '../composables/useAuth.js';
 import {
@@ -158,6 +158,7 @@ import {
 } from '../composables/useComponentPatternStatus.js';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient, { apiErrorMessage } from '../services/api.js';
+import { focusSoon } from '../utils/focusAfterRemoval.js';
 import {
   PageHero,
   PageShell,
@@ -203,6 +204,8 @@ const canEditComponents = computed(() => hasPermission('component:edit'));
 const canEditPatterns = computed(() => hasPermission('pattern:edit'));
 
 const activeTab = ref('create');
+const componentsPanel = ref(null);
+const patternsPanel = ref(null);
 const tabs = [
   { value: 'create', label: 'Add new', icon: 'circle-plus' },
   { value: 'manage', label: 'Manage existing', icon: 'list' },
@@ -275,6 +278,9 @@ const handleCreateSubmit = async () => {
     }
     resetForm();
     activeTab.value = 'manage';
+    // The form (and its Submit button) is hidden now: focus the list the new item joined
+    await nextTick();
+    focusSoon((item.type === 'component' ? componentsPanel : patternsPanel).value?.$el?.querySelector('h2'));
   } catch (error) {
     showNotice(apiErrorMessage(error, `The ${item.type} couldn't be added.`), 'error');
   } finally {
