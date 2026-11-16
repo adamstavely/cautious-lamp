@@ -9,7 +9,9 @@ export default defineConfig({
       name: 'LoupeTool',
       // ESM gets .mjs so Node treats it as a module (the package is CommonJS by default)
       fileName: (format) => (format === 'es' ? 'loupe-tool.es.mjs' : 'loupe-tool.umd.js'),
-      formats: ['es', 'umd']
+      formats: ['es', 'umd'],
+      // Vite 6 names the CSS after the package; the ./style.css export expects style.css
+      cssFileName: 'style'
     },
     rollupOptions: {
       external: ['vue'],
