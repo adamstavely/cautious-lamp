@@ -2,7 +2,8 @@
   <div class="app-root">
     <!-- Skip Links for Keyboard Navigation - WCAG 2.1 AA -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    <a v-if="!bare" href="#navigation" class="skip-link">Skip to navigation</a>
+    <!-- The side nav is a menu on phones, opened from the top bar -->
+    <a v-if="!bare" href="#navigation" class="skip-link hidden sm:block">Skip to navigation</a>
 
     <!-- Sign-in screens: no app chrome, and nothing that calls the API -->
     <main v-if="bare" id="main-content" class="min-h-screen bg-surface" role="main">
@@ -14,6 +15,7 @@
         <Sidebar />
         <div class="flex-1 min-w-0 flex flex-col">
           <TopNav />
+          <PhoneNav />
           <InfoBanner />
           <main id="main-content" class="flex-1 min-w-0 overflow-auto bg-surface" role="main">
             <router-view :key="$route.path" />
@@ -36,6 +38,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import PhoneNav from './components/PhoneNav.vue';
 import Sidebar from './components/Sidebar.vue';
 import TopNav from './components/TopNav.vue';
 import InfoBanner from './components/InfoBanner.vue';

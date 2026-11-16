@@ -76,11 +76,25 @@ describe('TopNav on a phone', () => {
 
   it('lays the bar out for 320px and up', () => {
     const css = readSource('src/components/TopNav.vue');
-    // Search hidden until opened below sm; phone menus span the screen; the side nav narrows
+    // Search hidden until opened below sm; phone menus span the screen; the side nav is a menu on phones
     expect(css).toMatch(/\.search-area \{\s*@apply hidden sm:flex/);
     expect(css).toMatch(/\.popover-end \{\s*@apply fixed left-2 right-2 top-16 sm:absolute/);
     expect(css).toMatch(/\.account-menu \{\s*@apply fixed left-2 right-2 top-16 sm:absolute/);
-    expect(readSource('src/components/Sidebar.vue')).toMatch(/w-16 sm:w-24/);
+    expect(readSource('src/components/Sidebar.vue')).toMatch(/\.side \{\s*@apply hidden sm:flex[^}]*w-sidenav/);
+  });
+
+  it('opens the main navigation from a menu button on phones', async () => {
+    const button = el().querySelector('button[aria-label="Open menu"]');
+    expect(button.classList.contains('phone-only')).toBe(true);
+    expect(button.getAttribute('aria-controls')).toBe('phone-nav');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    button.click();
+    await nextTick();
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('names the logo link even when its text is hidden on phones', () => {
+    expect(el().querySelector('a.brand').getAttribute('aria-label')).toBe('DESIGN.COM home');
   });
 });
 

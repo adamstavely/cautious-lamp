@@ -50,20 +50,20 @@
                 <UiInput v-model.number="keyframe.offset" type="number" min="0" max="1" step="0.01" label="Offset (0 to 1)" />
               </div>
               <div class="space-y-2">
-                <div v-for="property in animatableProperties" :key="property.name" class="grid grid-cols-content-aside items-center gap-2 min-h-11">
+                <div v-for="property in animatableProperties" :key="property.name" class="grid grid-cols-1 sm:grid-cols-content-aside items-center gap-2 min-h-11">
                   <UiCheckbox
                     :model-value="keyframe.properties[property.name] !== undefined"
                     :label="property.label"
                     @update:model-value="toggleProperty(keyframe, property.name, $event)"
                   />
-                  <div v-if="keyframe.properties[property.name] !== undefined" class="w-40">
-                    <UiInput
-                      v-model="keyframe.properties[property.name]"
-                      :type="property.type"
-                      :placeholder="property.placeholder"
-                      :aria-label="`${property.label} value`"
-                    />
-                  </div>
+                  <UiInput
+                    v-if="keyframe.properties[property.name] !== undefined"
+                    width="sm"
+                    v-model="keyframe.properties[property.name]"
+                    :type="property.type"
+                    :placeholder="property.placeholder"
+                    :aria-label="`${property.label} value`"
+                  />
                 </div>
               </div>
             </div>

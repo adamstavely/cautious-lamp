@@ -612,8 +612,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Phones: the actions go under the flag instead of squeezing its text into a narrow column */
 .flag-card {
-  @apply flex items-start justify-between gap-4 rounded-card border border-line bg-surface-raised p-5 transition-colors hover:border-accent-border;
+  @apply flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 rounded-card border border-line bg-surface-raised p-5 transition-colors hover:border-accent-border;
 }
 .route-select {
   @apply w-full h-11 pl-3.5 pr-10 appearance-none rounded-field border border-solid border-line-control bg-surface-control text-sm text-ink;

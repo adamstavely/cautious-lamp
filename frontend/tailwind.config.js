@@ -103,12 +103,18 @@ export default {
       },
       gridTemplateColumns: {
         // Text beside an illustration or a side column that sizes to its content
-        'content-aside': '1fr auto',
-        'aside-content': 'auto 1fr',
+        // minmax(0, …) lets the flexible column shrink below its content, so it never pushes past the screen
+        'content-aside': 'minmax(0, 1fr) auto',
+        'aside-content': 'auto minmax(0, 1fr)',
       },
       spacing: {
         'drawer-closed': app('drawer-closed'),
         'drawer-open': app('drawer-open'),
+        sidenav: app('sidenav'),
+        topbar: app('topbar'),
+        'launcher-clearance': app('launcher-clearance'),
+        'field-sm': app('field-sm'),
+        'field-md': app('field-md'),
         // A tool's working area (a map, a chart canvas) and an embedded page (a replay, a heatmap)
         workspace: app('workspace-height'),
         embed: app('embed-height'),

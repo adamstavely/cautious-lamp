@@ -1,5 +1,5 @@
 <template>
-  <div class="ui-field">
+  <div class="ui-field" :class="width && `ui-field-width-${width}`">
     <div v-if="label" class="ui-field-label-row">
       <component :is="labelTag" :for="labelTag === 'label' ? controlId : undefined" :id="labelId" class="ui-field-label" :class="{ 'sr-only': hideLabel }">
         {{ label }}<span v-if="required" class="ui-field-required" aria-hidden="true">*</span>
@@ -32,6 +32,12 @@ const props = defineProps({
   /** Keep the label for assistive technology but don't show it (dense rows, table cells) */
   hideLabel: { type: Boolean, default: false },
   id: { type: String, default: '' },
+  /**
+   * How wide the field is when it doesn't fill its row. sm / md: the field-sm /
+   * field-md tokens from the sm breakpoint, full width on phones. grow: fills a
+   * wrapping row from field-md, moving to its own line rather than overflowing.
+   */
+  width: { type: String, default: '', validator: (v) => ['', 'sm', 'md', 'grow'].includes(v) },
 });
 
 const generated = useId();
@@ -46,6 +52,15 @@ const labelTag = computed(() => (props.group ? 'span' : 'label'));
 <style scoped>
 .ui-field {
   @apply flex flex-col gap-1.5;
+}
+.ui-field-width-sm {
+  @apply w-full sm:w-field-sm;
+}
+.ui-field-width-md {
+  @apply w-full sm:w-field-md;
+}
+.ui-field-width-grow {
+  @apply flex-1 basis-field-md min-w-0;
 }
 .ui-field-label-row {
   @apply flex items-baseline justify-between gap-3;

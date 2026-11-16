@@ -49,25 +49,27 @@ const linkAttrs = computed(() => {
 </script>
 
 <style scoped>
+/* Buttons keep their natural width in a row (no shrinking), but a label wider
+   than the whole container wraps inside the button instead of pushing past it */
 .ui-button {
-  @apply inline-flex items-center justify-center gap-2 rounded-pill border border-solid font-medium whitespace-nowrap transition-colors;
+  @apply inline-flex flex-shrink-0 items-center justify-center gap-2 max-w-full rounded-pill border border-solid font-medium text-center transition-colors;
   @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
 }
 .ui-button-md {
-  @apply h-11 px-5 text-sm;
+  @apply min-h-11 py-2 px-5 text-sm;
 }
 .ui-button-sm {
-  @apply h-8 px-3.5 text-sm;
+  @apply min-h-8 py-1 px-3.5 text-sm;
 }
 .ui-button-icon-only.ui-button-md {
-  @apply w-11 px-0;
+  @apply h-11 w-11 p-0;
 }
 .ui-button-icon-only.ui-button-sm {
-  @apply w-8 px-0;
+  @apply h-8 w-8 p-0;
 }
 .ui-button-icon {
-  @apply text-lg leading-none;
+  @apply flex-shrink-0 text-lg leading-none;
 }
 .ui-button-primary {
   @apply border-transparent bg-accent text-ink-on-accent enabled:hover:bg-accent-hover;

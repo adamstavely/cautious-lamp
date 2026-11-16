@@ -6,9 +6,20 @@
     role="navigation"
     aria-label="Top navigation"
   >
-    <div class="flex items-center h-16">
+    <div class="flex items-center h-topbar">
+      <!-- Phones: the side nav opens as a menu -->
+      <button
+        type="button"
+        class="icon-btn phone-only ml-2"
+        aria-label="Open menu"
+        aria-controls="phone-nav"
+        :aria-expanded="phoneNavOpen ? 'true' : 'false'"
+        @click="phoneNavOpen = true"
+      >
+        <AppIcon name="menu" class="text-xl" />
+      </button>
       <!-- Site title -->
-      <router-link to="/" class="brand group">
+      <router-link to="/" class="brand group" aria-label="DESIGN.COM home">
         <!-- Two carets, the right one overlapping the left by 25% -->
         <svg
           width="24"
@@ -335,6 +346,7 @@
 </template>
 
 <script setup>
+import { usePhoneNav } from '../composables/usePhoneNav.js';
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth.js';
@@ -634,6 +646,7 @@ const goToChangePassword = () => goTo('/change-password');
 
 // Phones: the search box opens over the bar from a button
 const mobileSearchOpen = ref(false);
+const phoneNavOpen = usePhoneNav();
 const searchInput = ref(null);
 const mobileSearchButton = ref(null);
 

@@ -1,9 +1,9 @@
 <template>
   <div class="page-shell">
-    <DocumentationDrawer :is-open="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="openDoc" />
+    <DocumentationDrawer :is-open="drawerOpen" @close="closeDrawer" @toggle="toggleDrawer" @navigate-doc="openDoc" @restore-focus="guideButton?.focus()" />
 
-    <!-- On phones the open drawer covers the page instead of pushing it off screen -->
-    <div class="page-main" :class="drawerOpen ? 'ml-drawer-closed sm:ml-drawer-open' : 'ml-drawer-closed'">
+    <!-- From sm the drawer sits beside the page; on phones it covers the page, which is inert meanwhile -->
+    <div class="page-main" :class="drawerOpen ? 'sm:ml-drawer-open' : 'sm:ml-drawer-closed'" :inert="isPhone && drawerOpen">
       <!-- A reference document opened from the drawer replaces the page -->
       <div v-if="activeDoc" class="flex flex-col h-full">
         <Breadcrumbs :custom-path="docTrail || activeDoc" :on-navigate="leaveDoc" />
@@ -14,7 +14,20 @@
 
       <div v-else class="h-full overflow-y-auto">
         <div class="page-body" :class="[widthClass, breadcrumbs ? 'page-body-crumbs' : 'page-body-plain']">
-          <Breadcrumbs v-if="breadcrumbs" inline class="page-crumbs" />
+          <div class="page-top" :class="breadcrumbs ? 'page-top-crumbs' : 'page-top-plain'">
+            <Breadcrumbs v-if="breadcrumbs" inline class="min-w-0" />
+            <!-- Phones have no drawer rail: the section guide opens from here -->
+            <UiButton
+              ref="guideButtonComponent"
+              class="page-guide-button"
+              variant="ghost"
+              size="sm"
+              icon="panel-left-open"
+              aria-controls="section-guide"
+              :aria-expanded="drawerOpen ? 'true' : 'false'"
+              @click="toggleDrawer"
+            >Section guide</UiButton>
+          </div>
           <slot />
         </div>
       </div>
@@ -29,6 +42,9 @@ import Breadcrumbs from '../Breadcrumbs.vue';
 import DocumentationDrawer from '../DocumentationDrawer.vue';
 import MarkdownViewer from '../MarkdownViewer.vue';
 import { useDrawer } from '../../composables/useDrawer.js';
+import { useMediaQuery } from '../../composables/useMediaQuery.js';
+import { PHONE_QUERY } from '../../navigation.js';
+import UiButton from './UiButton.vue';
 
 /**
  * Every page's frame: the docs drawer, breadcrumbs and a scrolling body on the
@@ -50,6 +66,9 @@ const emit = defineEmits(['update:docLink']);
 const route = useRoute();
 const router = useRouter();
 const { drawerOpen, closeDrawer, toggleDrawer } = useDrawer();
+const isPhone = useMediaQuery(PHONE_QUERY);
+const guideButtonComponent = ref(null);
+const guideButton = computed(() => guideButtonComponent.value?.$el ?? null);
 const ownDoc = ref(null);
 const activeDoc = computed(() => (props.docLink !== undefined ? props.docLink : ownDoc.value));
 
@@ -74,9 +93,9 @@ watch(
 );
 
 onMounted(() => {
-  // The side nav asks for the drawer to open on arrival
+  // The side nav asks for the drawer to open on arrival; on phones it would cover the page, so it stays shut
   if (sessionStorage.getItem('openDrawerOnLoad') === 'true') {
-    drawerOpen.value = true;
+    if (!isPhone.value) drawerOpen.value = true;
     sessionStorage.removeItem('openDrawerOnLoad');
   }
 });
@@ -98,8 +117,9 @@ const widthClass = computed(
 .page-main {
   @apply relative flex-1 h-full overflow-hidden transition-all duration-300;
 }
+/* The bottom padding keeps the last content clear of the Ask Eero launcher */
 .page-body {
-  @apply mx-auto pb-12 md:pb-16;
+  @apply mx-auto pb-launcher-clearance;
 }
 /* Breadcrumbs sit at the top of the page column, lined up with its content */
 .page-body-crumbs {
@@ -108,7 +128,17 @@ const widthClass = computed(
 .page-body-plain {
   @apply pt-12 md:pt-16;
 }
-.page-crumbs {
+.page-top {
+  @apply flex flex-wrap items-center justify-between gap-x-4 gap-y-2;
+}
+.page-top-crumbs {
   @apply mb-10 md:mb-12;
+}
+/* Without breadcrumbs the row only holds the phones' guide button */
+.page-top-plain {
+  @apply sm:hidden mb-6;
+}
+.page-guide-button {
+  @apply sm:hidden;
 }
 </style>

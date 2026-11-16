@@ -1,5 +1,5 @@
 <template>
-  <UiField :label="label" :hint="hint" :error="error" :required="required" :id="id" :hide-label="hideLabel" v-slot="{ id: controlId, describedBy, invalid }">
+  <UiField :label="label" :hint="hint" :error="error" :required="required" :id="id" :hide-label="hideLabel" :width="width" v-slot="{ id: controlId, describedBy, invalid }">
     <div class="ui-input-wrap">
       <AppIcon :name="icon" v-if="icon" class="ui-input-icon" />
       <input
@@ -12,7 +12,7 @@
         :aria-describedby="describedBy"
         :aria-invalid="invalid || undefined"
         class="ui-control ui-input"
-        :class="[`ui-input-${size}`, { 'pl-10': icon, 'pr-12': $slots.trailing, 'font-code': mono }]"
+        :class="[`ui-input-${size}`, { 'ui-input-has-icon': icon, 'ui-input-has-trailing': $slots.trailing, 'font-code': mono }]"
         @input="onInput"
       />
       <span v-if="suffix" class="ui-input-suffix">{{ suffix }}</span>
@@ -46,6 +46,8 @@ const props = defineProps({
   size: { type: String, default: 'md', validator: (v) => ['sm', 'md'].includes(v) },
   /** Label read by assistive technology but not shown (keep `label` set) */
   hideLabel: { type: Boolean, default: false },
+  /** sm, md or grow: see UiField */
+  width: { type: String, default: '' },
 });
 
 const input = ref(null);
@@ -72,6 +74,13 @@ const onInput = (event) => {
 }
 .ui-input-sm {
   @apply h-8 px-2.5;
+}
+/* Room for the leading icon and a trailing control; compound selectors so the padding above can't undo it */
+.ui-input.ui-input-has-icon {
+  @apply pl-10;
+}
+.ui-input.ui-input-has-trailing {
+  @apply pr-12;
 }
 .ui-input-trailing {
   @apply absolute right-1.5 flex items-center;
