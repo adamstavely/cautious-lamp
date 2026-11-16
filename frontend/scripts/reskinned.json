@@ -76,6 +76,7 @@
     "src/components/review-ui/VersionSelector.vue",
     "src/components/review-ui/VersionUploadModal.vue",
     "src/components/review-ui/WorkflowCard.vue",
+    "src/components/timeline/TimelineRender.vue",
     "src/components/tokens/SaveDictionaryDialog.vue",
     "src/components/tokens/TokenList.vue",
     "src/components/tokens/TokenPreviewCard.vue",
