@@ -9,6 +9,9 @@
   >
     <div class="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-4 px-2">
       <template v-for="item in MAIN_NAV" :key="item.path">
+        <div v-if="NAV_DIVIDERS_BEFORE[item.path]" class="side-divider" aria-hidden="true">
+          <span class="side-divider-label">{{ NAV_DIVIDERS_BEFORE[item.path] }}</span>
+        </div>
         <router-link
           :to="item.path"
           :class="['side-item mb-1', { on: active(item.path) }]"
@@ -18,7 +21,6 @@
           <AppIcon :name="item.icon" class="side-ic" />
           <span class="side-label">{{ item.label }}</span>
         </router-link>
-        <div v-if="NAV_DIVIDERS_AFTER.includes(item.path)" class="side-divider" aria-hidden="true"></div>
       </template>
     </div>
 
@@ -52,7 +54,7 @@
 <script setup>
 import { useRoute } from 'vue-router';
 import { useTheme } from '../composables/useTheme.js';
-import { ADMIN_NAV, MAIN_NAV, NAV_DIVIDERS_AFTER, isSectionActive } from '../navigation.js';
+import { ADMIN_NAV, MAIN_NAV, NAV_DIVIDERS_BEFORE, isSectionActive } from '../navigation.js';
 import { canAccessPath } from '../router/rbacGuards.js';
 
 const route = useRoute();
@@ -90,6 +92,14 @@ const openDrawerOnArrival = () => {
   @apply font-semibold;
 }
 .side-divider {
-  @apply h-px mx-3 my-2 bg-line;
+  @apply flex items-center gap-1.5 mx-1 my-2;
+}
+.side-divider::before,
+.side-divider::after {
+  content: '';
+  @apply flex-1 h-px bg-line;
+}
+.side-divider-label {
+  @apply text-xs leading-none text-ink-muted select-none;
 }
 </style>

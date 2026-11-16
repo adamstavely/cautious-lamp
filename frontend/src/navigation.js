@@ -14,8 +14,12 @@ export const MAIN_NAV = [
 
 export const ADMIN_NAV = { path: '/admin', label: 'Admin', icon: 'shield-user' };
 
-/** Sections whose items come before a divider in the nav */
-export const NAV_DIVIDERS_AFTER = ['/research', '/design-assets'];
+/** The nav's divisions: a labelled divider before each of these sections. Decorative only, hidden from screen readers. */
+export const NAV_DIVIDERS_BEFORE = {
+  '/guidelines': 'Learn',
+  '/components': 'Build',
+  '/review': 'Use',
+};
 
 /** Whether the section at `path` contains the page at `routePath` */
 export function isSectionActive(path, routePath) {
