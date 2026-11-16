@@ -96,6 +96,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../composables/useConfirm.js';
 import { nextTick, ref, onMounted, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
@@ -250,7 +251,7 @@ const toggleBannerStatus = async (banner) => {
 };
 
 const deleteBanner = async (id) => {
-  if (!confirm('Are you sure you want to delete this banner?')) return;
+  if (!(await confirmDialog({ title: 'Delete this banner?', message: 'It will stop showing to everyone.', confirmLabel: 'Delete banner', danger: true }))) return;
   const index = banners.value.findIndex((banner) => banner.id === id);
 
   try {

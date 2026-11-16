@@ -32,6 +32,9 @@
       <!-- Toast Notifications -->
       <Toast />
 
+      <!-- Confirmations asked with confirmDialog() -->
+      <ConfirmHost />
+
       <!-- Two minutes before the sign-in session ends (WCAG 2.2.1) -->
       <SessionExpiryWarning />
     </div>
@@ -41,6 +44,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import ConfirmHost from './components/ConfirmHost.vue';
 import PhoneNav from './components/PhoneNav.vue';
 import Sidebar from './components/Sidebar.vue';
 import TopNav from './components/TopNav.vue';

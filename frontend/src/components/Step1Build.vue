@@ -244,6 +244,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../composables/useConfirm.js';
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
 import apiClient from '../services/api.js';
 import AdvancedPaletteTools from './AdvancedPaletteTools.vue';
@@ -406,8 +407,8 @@ const removeColor = (index) => {
   fetchSuggestions();
 };
 
-const clearPalette = () => {
-  if (confirm('Are you sure you want to clear all colors?')) {
+const clearPalette = async () => {
+  if (await confirmDialog({ title: 'Clear all colors?', message: 'Every color in this palette will be removed.', confirmLabel: 'Clear colors', danger: true })) {
     const newPalette = {
       ...props.palette,
       colors: [],

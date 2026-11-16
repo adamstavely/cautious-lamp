@@ -276,6 +276,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../composables/useConfirm.js';
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
@@ -493,7 +494,7 @@ const webhookUrl = computed(() => {
 
 const generateWebhookSecret = async () => {
   if (!project.value) return;
-  if (project.value.hasWebhookSecret && !window.confirm('Replace the secret? CI must be updated with the new one, or its notifications will be refused.')) return;
+  if (project.value.hasWebhookSecret && !(await confirmDialog({ title: 'Replace the webhook secret?', message: 'CI must be updated with the new one, or its notifications will be refused.', confirmLabel: 'Replace secret', danger: true }))) return;
   webhookBusy.value = true;
   clearWebhookNotice();
   secretCopied.value = false;
@@ -510,7 +511,7 @@ const generateWebhookSecret = async () => {
 };
 
 const removeWebhookSecret = async () => {
-  if (!project.value || !window.confirm('Remove the secret? Build notifications from CI will be refused.')) return;
+  if (!project.value || !(await confirmDialog({ title: 'Remove the webhook secret?', message: 'Build notifications from CI will be refused.', confirmLabel: 'Remove secret', danger: true }))) return;
   webhookBusy.value = true;
   clearWebhookNotice();
   try {
