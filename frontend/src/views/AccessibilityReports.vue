@@ -212,8 +212,17 @@
               class="list-row"
               :class="{ 'list-row-on': currentReport?.id === report.id }"
             >
-              <button type="button" class="list-row-select" @click="openReport(report.id)">
-                <span class="block font-semibold mb-1 text-ink-strong">{{ report.applicationName }}</span>
+              <button
+                type="button"
+                class="list-row-select"
+                :aria-current="currentReport?.id === report.id ? 'true' : undefined"
+                @click="openReport(report.id)"
+              >
+                <!-- The open report is marked in words and an icon too, not only by the row's background -->
+                <span class="flex flex-wrap items-center gap-2 font-semibold mb-1 text-ink-strong">
+                  {{ report.applicationName }}
+                  <UiChip v-if="currentReport?.id === report.id" tone="accent" icon="eye">Viewing</UiChip>
+                </span>
                 <span class="block text-sm text-ink-secondary">
                   {{ formatDate(report.generatedAt) }} · {{ report.source === 'url' ? 'URL' : 'HTML' }}{{ report.scheduled ? ' · scheduled' : '' }}
                 </span>
@@ -234,7 +243,7 @@
       <!-- Multi-application -->
       <template #multi-app>
         <div v-if="complianceSummary" class="space-y-6">
-          <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <UiStat label="Applications" :value="complianceSummary.totalApplications" :hint="`${complianceSummary.reportedApplications} with a report`" />
             <UiStat label="Meeting SLA" tone="success" :value="complianceSummary.compliantApplications" />
             <UiStat label="At risk" tone="warning" :value="complianceSummary.atRiskApplications" />

@@ -39,9 +39,15 @@
             <UiCheckbox v-if="focusId" v-model="showDependents" label="Include components that use it" />
           </div>
 
+          <p :id="graphHelpId" class="mb-4 text-sm text-ink-secondary">
+            Select a component to focus on it. The ring around each one shows its status, as in the key below.
+            <UiLink href="#dependencies-list">The same relationships as a list</UiLink>
+          </p>
+
           <UiPanel flush>
             <div class="graph-well">
-              <svg class="w-full" :viewBox="`0 0 ${layout.width} ${layout.height}`" role="img" :aria-label="graphSummary">
+              <!-- A group, not an image: the nodes inside are buttons and keep their own names -->
+              <svg class="w-full" :viewBox="`0 0 ${layout.width} ${layout.height}`" role="group" :aria-label="graphSummary" :aria-describedby="graphHelpId">
                 <defs>
                   <marker id="graph-arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
                     <polygon points="0 0, 10 3, 0 6" class="fill-chart-neutral" />
@@ -64,18 +70,35 @@
                   class="graph-node"
                   role="button"
                   tabindex="0"
-                  :aria-label="`Focus on ${node.name}`"
+                  :aria-label="`Focus on ${node.name}, ${statusLabel(node.status)}`"
                   :aria-pressed="focusId === node.id"
                   @click="focusId = node.id"
                   @keydown.enter.prevent="focusId = node.id"
                   @keydown.space.prevent="focusId = node.id"
                 >
+                  <!-- Status without colour: a solid, dashed or dotted ring, or a strike for deprecated -->
+                  <circle
+                    v-if="node.status !== 'deprecated'"
+                    :cx="layout.positions.get(node.id).x"
+                    :cy="layout.positions.get(node.id).y"
+                    :r="NODE_RADIUS + 5"
+                    class="status-ring"
+                    :class="statusRing(node.status)"
+                  />
                   <circle
                     :cx="layout.positions.get(node.id).x"
                     :cy="layout.positions.get(node.id).y"
                     :r="NODE_RADIUS"
                     :class="[statusFill(node.status), focusId === node.id ? 'stroke-accent' : 'stroke-line']"
                     :stroke-width="focusId === node.id ? 4 : 2"
+                  />
+                  <line
+                    v-if="node.status === 'deprecated'"
+                    :x1="layout.positions.get(node.id).x - NODE_RADIUS - 4"
+                    :y1="layout.positions.get(node.id).y + NODE_RADIUS + 4"
+                    :x2="layout.positions.get(node.id).x + NODE_RADIUS + 4"
+                    :y2="layout.positions.get(node.id).y - NODE_RADIUS - 4"
+                    class="status-strike"
                   />
                   <text
                     :x="layout.positions.get(node.id).x"
@@ -88,9 +111,13 @@
                 </g>
               </svg>
 
-              <ul class="graph-legend" aria-label="Status legend">
+              <ul class="graph-legend" aria-label="Status key">
                 <li v-for="stage in STATUSES" :key="stage.value" class="flex items-center gap-2">
-                  <span class="w-3 h-3 rounded-pill" :class="statusBg(stage.value)" aria-hidden="true"></span>
+                  <svg class="w-5 h-5" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <circle v-if="stage.value !== 'deprecated'" cx="10" cy="10" r="8.5" class="status-ring" :class="statusRing(stage.value)" />
+                    <circle cx="10" cy="10" r="6" :class="statusFill(stage.value)" />
+                    <line v-if="stage.value === 'deprecated'" x1="2" y1="18" x2="18" y2="2" class="status-strike" />
+                  </svg>
                   <span class="text-xs text-ink-secondary">{{ stage.label }}</span>
                 </li>
               </ul>
@@ -99,7 +126,7 @@
         </template>
       </PageSection>
 
-      <PageSection title="Dependencies by component" description="The same relationships as a list." divided>
+      <PageSection id="dependencies-list" title="Dependencies by component" description="The same relationships as a list." divided>
         <UiTable caption="Component dependencies" bordered>
           <thead>
             <tr>
@@ -148,9 +175,9 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, useId } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChip, UiDialog, UiEmptyState, UiPanel, UiSelect, UiSpinner, UiTable } from '../components/ui';
+import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChip, UiDialog, UiEmptyState, UiLink, UiPanel, UiSelect, UiSpinner, UiTable } from '../components/ui';
 import { useAuth } from '../composables/useAuth.js';
 import { STATUSES, statusLabel, statusTone, useComponentPatternStatus } from '../composables/useComponentPatternStatus.js';
 import { useNotice } from '../composables/useNotice.js';
@@ -173,14 +200,16 @@ const LABEL_SPACE = 26;
 const COLUMN = 150;
 const ROW = 120;
 
+/** Fill colour plus a ring style, so status doesn't rely on colour alone (deprecated gets a strike instead of a ring) */
 const STATUS_CLASSES = {
-  production: { fill: 'fill-success-solid', bg: 'bg-success-solid' },
-  'in-progress': { fill: 'fill-warning-solid', bg: 'bg-warning-solid' },
-  planned: { fill: 'fill-info-solid', bg: 'bg-info-solid' },
-  deprecated: { fill: 'fill-danger-solid', bg: 'bg-danger-solid' },
+  production: { fill: 'fill-success-solid', ring: 'status-ring-solid' },
+  'in-progress': { fill: 'fill-warning-solid', ring: 'status-ring-dashed' },
+  planned: { fill: 'fill-info-solid', ring: 'status-ring-dotted' },
+  deprecated: { fill: 'fill-danger-solid', ring: '' },
 };
 const statusFill = (status) => STATUS_CLASSES[status]?.fill ?? 'fill-chart-neutral';
-const statusBg = (status) => STATUS_CLASSES[status]?.bg ?? 'bg-chart-neutral';
+const statusRing = (status) => STATUS_CLASSES[status]?.ring ?? 'status-ring-solid';
+const graphHelpId = useId();
 
 const byId = computed(() => new Map(components.value.map((c) => [c.id, c])));
 
@@ -278,6 +307,23 @@ loadComponents();
 }
 .graph-node:hover circle {
   @apply opacity-80;
+}
+.status-ring {
+  @apply fill-none stroke-ink-strong;
+  stroke-width: 2;
+}
+.status-ring-dashed {
+  stroke-dasharray: 6 4;
+}
+.status-ring-dotted {
+  stroke-dasharray: 0 5;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+.status-strike {
+  @apply stroke-ink-strong pointer-events-none;
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 .graph-legend {
   @apply mt-4 flex flex-wrap gap-4;

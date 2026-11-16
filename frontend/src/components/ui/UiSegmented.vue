@@ -1,6 +1,6 @@
 <template>
-  <UiField :label="label" :hint="hint" group v-slot="{ labelId, describedBy }">
-    <div class="ui-segmented" role="radiogroup" :aria-labelledby="label ? labelId : undefined" :aria-label="label ? undefined : ariaLabel" :aria-describedby="describedBy">
+  <UiField :label="label" :hint="hint" :error="error" group v-slot="{ labelId, describedBy, invalid }">
+    <div class="ui-segmented" :class="{ 'ui-segmented-invalid': invalid }" role="radiogroup" :aria-labelledby="label ? labelId : undefined" :aria-label="label ? undefined : ariaLabel" :aria-describedby="describedBy" :aria-invalid="invalid || undefined">
       <button
         v-for="(option, index) in normalized"
         :key="String(option.value)"
@@ -38,6 +38,8 @@ const props = defineProps({
   options: { type: Array, required: true },
   label: { type: String, default: '' },
   hint: { type: String, default: '' },
+  /** An error shown under the group (replacing the hint); marks the radiogroup aria-invalid */
+  error: { type: String, default: '' },
   /** Accessible name when there's no visible label */
   ariaLabel: { type: String, default: '' },
 });
@@ -73,6 +75,10 @@ const onKey = async (event, index) => {
 <style scoped>
 .ui-segmented {
   @apply inline-flex flex-wrap gap-1 p-1 rounded-segmented bg-fill;
+}
+/* An unanswered required group: a danger ring as well as the error text, so it isn't colour alone */
+.ui-segmented-invalid {
+  @apply ring-2 ring-inset ring-danger-solid;
 }
 .ui-segment {
   @apply inline-flex items-center gap-1.5 h-8 px-3.5 rounded-pill text-sm font-medium text-ink-secondary transition-colors hover:text-ink;

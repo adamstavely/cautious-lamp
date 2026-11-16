@@ -4,9 +4,8 @@
       <UiButton ref="addButton" variant="primary" size="sm" icon="user-plus" @click="openAdd">Add member</UiButton>
     </template>
 
-    <div v-if="notice" class="px-6 pt-4">
-      <InlineNotice :notice="notice" @dismiss="clearNotice" />
-    </div>
+    <!-- Always mounted, so its live region announces each result (a saved role, a removal) -->
+    <InlineNotice :notice="notice" class="mx-6 mt-4" @dismiss="clearNotice" />
 
     <ul ref="memberList" class="divide-y divide-line-faint">
       <li v-for="member in workspace.members" :key="member.userId" class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
@@ -26,15 +25,29 @@
             </p>
           </div>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <div v-if="canChangeRole(member)" class="w-36">
-            <UiSelect
-              :model-value="member.role"
-              :options="roleOptions"
-              :aria-label="`Role for ${member.email}`"
-              @update:model-value="changeRole(member, $event)"
-            />
-          </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Choosing a role only stages it: arrow keys fire change on every option on Windows -->
+          <template v-if="canChangeRole(member)">
+            <div class="w-36">
+              <UiSelect
+                :id="roleSelectId(member)"
+                :model-value="pendingRoles[member.userId] ?? member.role"
+                :options="roleOptions"
+                :aria-label="`Role for ${member.email}`"
+                @update:model-value="stageRole(member, $event)"
+              />
+            </div>
+            <UiButton
+              v-if="roleChanged(member)"
+              variant="primary"
+              size="sm"
+              icon="save"
+              :loading="savingRole === member.userId"
+              @click="changeRole(member)"
+            >
+              Save role<span class="sr-only"> for {{ member.email }}</span>
+            </UiButton>
+          </template>
           <UiButton
             v-if="isOwner && member.role !== 'owner'"
             variant="ghost"
@@ -90,7 +103,7 @@ import { UiButton, UiChip, UiInput, UiPanel, UiSelect } from '../ui';
 import apiClient, { apiErrorMessage } from '../../services/api.js';
 import { useConfirmDialog } from '../../composables/useConfirmDialog.js';
 import { useNotice } from '../../composables/useNotice.js';
-import { focusAfterRemoval } from '../../utils/focusAfterRemoval.js';
+import { focusAfterRemoval, focusSoon } from '../../utils/focusAfterRemoval.js';
 import ConfirmDialog from './ConfirmDialog.vue';
 import WorkspaceModal from './WorkspaceModal.vue';
 import { atLeast, formatDate, roleTone } from './ui.js';
@@ -142,9 +155,30 @@ const run = async (request, success) => {
   }
 };
 
-const changeRole = (member, role) => {
-  if (role === member.role) return;
-  run(() => apiClient.patch(`${base()}/members/${encodeURIComponent(member.userId)}`, { role }), `${member.email} is now ${role === 'admin' ? 'an' : 'a'} ${role}.`);
+/** Roles chosen but not saved yet, by user id */
+const pendingRoles = reactive({});
+const savingRole = ref(null);
+const selectIdBase = `member-role-${useId()}`;
+const roleSelectId = (member) => `${selectIdBase}-${member.userId}`;
+const roleChanged = (member) => pendingRoles[member.userId] !== undefined && pendingRoles[member.userId] !== member.role;
+
+const stageRole = (member, role) => {
+  if (role === member.role) delete pendingRoles[member.userId];
+  else pendingRoles[member.userId] = role;
+};
+
+/** Saves the staged role ("Save role"); the result is announced, and focus goes back to the role select */
+const changeRole = async (member) => {
+  const role = pendingRoles[member.userId];
+  if (!role || role === member.role) return;
+  savingRole.value = member.userId;
+  const saved = await run(
+    () => apiClient.patch(`${base()}/members/${encodeURIComponent(member.userId)}`, { role }),
+    `${member.email} is now ${role === 'admin' ? 'an' : 'a'} ${role}.`,
+  );
+  savingRole.value = null;
+  if (saved) delete pendingRoles[member.userId];
+  focusSoon(document.getElementById(roleSelectId(member)));
 };
 
 const remove = async (member) => {

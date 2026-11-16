@@ -481,7 +481,7 @@
                 class="chart-figure"
                 role="img"
                 :aria-label="chartConfig.title || 'Chart'"
-                :aria-describedby="`chart-summary-${chartKey} chart-data-table-${chartKey}`"
+                :aria-describedby="`chart-summary-${chartKey} chart-keys-hint-${chartKey} chart-data-table-${chartKey}`"
                 tabindex="0"
                 @keydown="handleChartKeyboard"
                 @focus="chartFocused = true"
@@ -493,60 +493,70 @@
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <BarChart
                     v-else-if="selectedChartType === 'bar' || selectedChartType === 'horizontalBar' || selectedChartType === 'stackedBar' || selectedChartType === 'groupedBar' || selectedChartType === 'combo'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <PieChart
                     v-else-if="selectedChartType === 'pie'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <DoughnutChart
                     v-else-if="selectedChartType === 'doughnut'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <ScatterChart
                     v-else-if="selectedChartType === 'scatter'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="scatterDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <RadarChart
                     v-else-if="selectedChartType === 'radar'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <BubbleChart
                     v-else-if="selectedChartType === 'bubble'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="bubbleDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <PolarAreaChart
                     v-else-if="selectedChartType === 'polar'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <DoughnutChart
                     v-else-if="selectedChartType === 'gauge'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <BarChart
                     v-else-if="selectedChartType === 'waterfall' || selectedChartType === 'funnel'"
                     :key="`chart-${selectedChartType}-${chartKey}`"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <Chart
                     v-else-if="selectedChartType === 'candlestick'"
@@ -554,6 +564,7 @@
                     type="candlestick"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <Chart
                     v-else-if="selectedChartType === 'heatmap'"
@@ -561,6 +572,7 @@
                     type="matrix"
                     :data="chartDataForDisplay"
                     :options="chartOptions"
+                    :aria-label="canvasLabel"
                   />
                   <div v-else-if="selectedChartType === 'treemap'" :key="`chart-${selectedChartType}-${chartKey}`" class="w-full h-full">
                     <TreemapSVG :data="treemapData" :colors="colorSchemes[chartConfig.colorScheme] || colorSchemes.default" />
@@ -580,6 +592,9 @@
                 </figcaption>
               </figure>
             </div>
+            <p :id="`chart-keys-hint-${chartKey}`" class="mt-2 text-sm text-ink-muted" data-chart-keys-hint>
+              Focus the chart and use the arrow keys to read the data points.
+            </p>
 
             <div class="mt-6">
               <div class="flex items-center justify-between mb-3">
@@ -1633,6 +1648,17 @@ const colorSchemeOptions = [
   { value: 'orange', label: 'Orange' },
   { value: 'custom', label: 'Custom Colors' }
 ];
+
+// The Chart.js canvas is its own role="img": name it with the title and a
+// one-line summary (axe role-img-alt)
+const canvasLabel = computed(() => {
+  const type = selectedChartType.value;
+  const typeLabel = chartTypes.find((t) => t.value === type)?.label || 'Chart';
+  const data = type === 'scatter' ? scatterDataForDisplay.value : type === 'bubble' ? bubbleDataForDisplay.value : chartDataForDisplay.value;
+  const datasets = data?.datasets ?? [];
+  const points = Math.max(data?.labels?.length ?? 0, ...datasets.map((d) => d.data?.length ?? 0), 0);
+  return `${chartConfig.value.title || 'Chart'}: ${typeLabel.toLowerCase()}, ${datasets.length} series, ${points} data point${points === 1 ? '' : 's'}`;
+});
 
 const chartDataForDisplay = computed(() => {
   // Use custom colors if custom scheme is selected, otherwise use predefined scheme
@@ -3791,11 +3817,10 @@ const ChordDiagramSVG = {
             cy: node.y,
             r: 20,
             fill: node.color,
-            class: 'stroke-surface-raised cursor-pointer focus-visible:outline focus-visible:outline-2 outline-focus',
-            'stroke-width': 2,
-            'aria-label': `Entity: ${node.label}`,
-            tabindex: 0,
-            role: 'button'
+            class: 'stroke-surface-raised',
+            'stroke-width': 2
+            // Not a control: the nodes did nothing and sat inside an image, so they
+            // are no longer focusable buttons (the svg's label describes the diagram)
           }),
           h('text', {
             x: node.x + (node.x > centerX ? 30 : -30),

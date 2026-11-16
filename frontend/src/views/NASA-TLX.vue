@@ -9,11 +9,27 @@
     />
 
     <PageSection>
-      <form class="space-y-6" @submit.prevent="submitForm">
+      <form class="space-y-6" novalidate @submit.prevent="submitForm">
         <UiPanel title="The task" description="What you assessed.">
           <div class="space-y-6">
-            <UiSelect v-model="form.systemName" label="System / application" :options="systemOptions" placeholder="Select a system or application" required />
-            <UiTextarea v-model="form.task" label="Task description" required rows="3" placeholder="Describe the task you are evaluating..." />
+            <UiSelect
+              id="tlx-system"
+              v-model="form.systemName"
+              label="System / application"
+              :options="systemOptions"
+              placeholder="Select a system or application"
+              required
+              :error="errors.systemName"
+            />
+            <UiTextarea
+              id="tlx-task"
+              v-model="form.task"
+              label="Task description"
+              required
+              rows="3"
+              placeholder="Describe the task you are evaluating..."
+              :error="errors.task"
+            />
           </div>
         </UiPanel>
 
@@ -25,6 +41,7 @@
               v-model="form[dimension.key]"
               :label="RATING_FIELDS[dimension.key]"
               :hint="`0 = ${dimension.low}, 100 = ${dimension.high}`"
+              :valuetext="`${form[dimension.key]} of 100 (0 ${dimension.low}, 100 ${dimension.high})`"
               :min="0"
               :max="100"
               :step="1"
@@ -47,10 +64,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { PageHero, PageSection, PageShell, UiButton, UiPanel, UiRange, UiSelect, UiTextarea } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
+import { focusSoon } from '../utils/focusAfterRemoval.js';
 import apiClient from '../services/api.js';
 import { authState } from '../services/auth.js';
 
@@ -108,6 +126,16 @@ const systemOptions = ref([
   { value: 'Other', label: 'Other' },
 ]);
 
+// Errors show next to each field once the person has tried to submit
+const attempted = ref(false);
+const errors = computed(() => {
+  if (!attempted.value) return {};
+  return {
+    systemName: form.value.systemName ? '' : 'Choose the system or application you are assessing.',
+    task: form.value.task.trim() ? '' : 'Describe the task you are evaluating.',
+  };
+});
+
 const validate = () => {
   if (!form.value.systemName) return 'Choose the system or application you are assessing.';
   if (!form.value.task.trim()) return 'Describe the task you are evaluating.';
@@ -121,9 +149,12 @@ const validate = () => {
 };
 
 const submitForm = async () => {
+  attempted.value = true;
   const problem = validate();
   if (problem) {
     showNotice(problem, 'error');
+    if (errors.value.systemName) focusSoon('#tlx-system');
+    else if (errors.value.task) focusSoon('#tlx-task');
     return;
   }
 
@@ -142,6 +173,7 @@ const submitForm = async () => {
     await apiClient.post('/api/v1/nasa-tlx', payload);
 
     showNotice('Assessment submitted and saved.', 'success');
+    attempted.value = false;
     
     // Reset form
     form.value = {

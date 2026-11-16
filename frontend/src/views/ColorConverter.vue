@@ -21,7 +21,7 @@
               :placeholder="colorPlaceholder"
               mono
             />
-            <button type="button" class="picker-button" aria-label="Open color picker" title="Pick color" @click="openColorPicker($event)">
+            <button type="button" class="picker-button" :aria-label="`Pick color, current ${currentColor}`" title="Pick color" @click="openColorPicker($event)">
               <span class="color-preview" role="img" :aria-label="`Color preview: ${currentColor}`"></span>
               <span class="picker-button-label">
                 <AppIcon name="pipette" class="text-base" />

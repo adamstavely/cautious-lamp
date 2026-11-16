@@ -31,7 +31,7 @@
             <UiCheckbox :model-value="selected.has(permission.value)" @update:model-value="toggle(permission.value)">
               {{ permission.label }}
             </UiCheckbox>
-            <UiCode class="ml-auto">{{ permission.value }}</UiCode>
+            <UiCode class="ml-auto min-w-0 break-all">{{ permission.value }}</UiCode>
             <UiChip v-if="changeOf(permission.value)" :tone="changeOf(permission.value) === 'added' ? 'success' : 'danger'">
               {{ changeOf(permission.value) === 'added' ? '+ added' : '− removed' }}
             </UiChip>
@@ -208,8 +208,9 @@ const save = async () => {
 .perm-group-legend {
   @apply px-1 font-semibold text-ink-strong;
 }
+/* Wraps in a narrow dialog: the code and change chip move under the label rather than overflowing */
 .perm-option {
-  @apply flex items-center gap-2 rounded-control p-2 hover:bg-fill-hover;
+  @apply flex flex-wrap items-center gap-2 rounded-control p-2 hover:bg-fill-hover;
 }
 .perm-diff {
   @apply rounded-control border border-solid px-2 py-1;

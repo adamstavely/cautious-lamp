@@ -238,11 +238,12 @@
 
     <!-- Edit Application Modal -->
     <WorkspaceModal :open="!!edit.app" :title="edit.app ? `Edit ${edit.app.name}` : 'Edit application'" :busy="edit.saving" size="lg" @close="edit.app = null">
-      <form v-if="edit.app" :id="editFormId" class="flex flex-col gap-5" @submit.prevent="saveEdit">
+      <!-- novalidate: a field on the hidden tab can't show the browser's own message, so saveEdit checks both tabs -->
+      <form v-if="edit.app" :id="editFormId" ref="editFormEl" class="flex flex-col gap-5" novalidate @submit.prevent="saveEdit">
         <InlineNotice :notice="edit.error ? { type: 'error', message: edit.error } : null" @dismiss="edit.error = null" />
         <UiTabs v-model="edit.tab" :tabs="editTabs" label="Application settings">
-          <div v-show="edit.tab === 'details'" class="flex flex-col gap-5">
-            <ApplicationDetailsForm v-model="edit.details" />
+          <div v-show="edit.tab === 'details'" data-tab="details" class="flex flex-col gap-5">
+            <ApplicationDetailsForm v-model="edit.details" :errors="edit.errors" />
             <UiSelect
               v-model="edit.workspaceId"
               label="Workspace"
@@ -250,8 +251,8 @@
               hint="Moving needs the admin role in both workspaces (or admin:governance). Schedules and SLAs move with it; past scans and reports stay with the workspace they were made in."
             />
           </div>
-          <div v-show="edit.tab === 'capabilities'">
-            <ApplicationCapabilitiesForm v-model="edit.capabilities" />
+          <div v-show="edit.tab === 'capabilities'" data-tab="capabilities">
+            <ApplicationCapabilitiesForm v-model="edit.capabilities" :errors="edit.errors" />
           </div>
         </UiTabs>
       </form>
@@ -536,7 +537,49 @@ const editTabs = [
   { value: 'details', label: 'Details' },
   { value: 'capabilities', label: 'Capabilities' },
 ];
-const edit = reactive({ app: null, tab: 'details', details: detailsForm(), capabilities: capabilitiesForm(), workspaceId: '', saving: false, error: null });
+const edit = reactive({ app: null, tab: 'details', details: detailsForm(), capabilities: capabilitiesForm(), workspaceId: '', saving: false, error: null, errors: {} });
+const editFormEl = ref(null);
+
+/** What each checked field asks for, by its name attribute */
+const FIELD_RULES = {
+  name: { label: 'an application name' },
+  teamId: { label: 'a team ID', pattern: 'Use only letters, digits, _ or - in the team ID.' },
+  repository: { label: 'a repository URL', url: 'Enter the repository as a full URL, like https://github.com/company/app.' },
+  applicationUrl: { label: 'an application URL', url: 'Enter the application address as a full URL, like https://app.example.com.' },
+  argosProjectId: { label: 'the Argos project, as owner/project' },
+  argosBranch: { label: 'a branch', pattern: 'Use only letters, digits, and . _ / - in the branch name.' },
+  argosBaseUrl: { label: 'the Argos API URL', url: 'Enter the Argos API as a full URL, like https://api.argos-ci.com/v2.' },
+  openreplayProjectKey: { label: 'the OpenReplay project key' },
+  openreplayProjectId: { label: 'the OpenReplay project ID', pattern: 'The OpenReplay project ID is a number, like 42.' },
+  openreplayBaseUrl: { label: 'the OpenReplay base URL', url: 'Enter the OpenReplay base URL as a full URL, like https://api.openreplay.com.' },
+};
+
+const fieldMessage = (el) => {
+  const rule = FIELD_RULES[el.name] ?? { label: 'a valid value' };
+  const { validity } = el;
+  if (validity.valueMissing) return `Enter ${rule.label}.`;
+  if (validity.typeMismatch && rule.url) return rule.url;
+  if (validity.patternMismatch && rule.pattern) return rule.pattern;
+  if (validity.tooLong) return `That's too long: shorten ${rule.label}.`;
+  return el.validationMessage || `Check ${rule.label}.`;
+};
+
+/**
+ * Checks the fields on both tabs (the hidden one included). On the first
+ * problem it switches to that tab, shows the message on the field and moves
+ * focus to it. Returns true when everything is valid.
+ */
+const validateEdit = async () => {
+  const form = editFormEl.value;
+  if (!form) return true;
+  const invalid = [...form.elements].filter((el) => el.name && el.willValidate && !el.validity.valid);
+  edit.errors = Object.fromEntries(invalid.map((el) => [el.name, fieldMessage(el)]));
+  if (!invalid.length) return true;
+  const first = invalid[0];
+  edit.tab = first.closest('[data-tab]')?.dataset.tab ?? edit.tab;
+  await focusSoon(first);
+  return false;
+};
 
 const moveOptions = computed(() => {
   const options = adminWorkspaces.value.map((ws) => ({ value: ws.id, label: ws.name }));
@@ -570,10 +613,12 @@ const openEdit = (app) => {
     workspaceId: app.workspaceId ?? '',
     saving: false,
     error: null,
+    errors: {},
   });
 };
 
 const saveEdit = async () => {
+  if (!(await validateEdit())) return;
   const app = edit.app;
   const base = `/api/v1/applications/${encodeURIComponent(app.id)}`;
   const fields = updateFields(edit.details, app);
