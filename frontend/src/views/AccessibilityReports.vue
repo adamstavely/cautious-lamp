@@ -223,8 +223,8 @@
                 <div class="text-xs text-ink-muted">{{ report.totalIssues }} issues</div>
               </div>
               <template v-if="canAdmin">
-                <UiButton v-if="confirmingDelete === `report:${report.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteReport(report.id)">Confirm delete</UiButton>
-                <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`report:${report.id}`" data-focus-after-remove @click="askDelete(`report:${report.id}`)">Delete</UiButton>
+                <UiButton v-if="confirmingDelete === `report:${report.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteReport(report.id)">Confirm delete<span class="sr-only"> report for {{ report.applicationName }}, {{ formatDate(report.generatedAt) }}</span></UiButton>
+                <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`report:${report.id}`" data-focus-after-remove @click="askDelete(`report:${report.id}`)">Delete<span class="sr-only"> report for {{ report.applicationName }}, {{ formatDate(report.generatedAt) }}</span></UiButton>
               </template>
             </li>
           </ul>
@@ -320,10 +320,10 @@
               <div class="flex flex-wrap items-center gap-2">
                 <UiChip :tone="schedule.enabled ? 'success' : 'neutral'">{{ schedule.enabled ? 'Enabled' : 'Disabled' }}</UiChip>
                 <template v-if="canAdmin">
-                  <UiButton size="sm" @click="toggleSchedule(schedule)">{{ schedule.enabled ? 'Disable' : 'Enable' }}</UiButton>
-                  <UiButton size="sm" icon="pencil" @click="openScheduleModal(schedule)">Edit</UiButton>
-                  <UiButton v-if="confirmingDelete === `schedule:${schedule.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteSchedule(schedule.id)">Confirm delete</UiButton>
-                  <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`schedule:${schedule.id}`" data-focus-after-remove @click="askDelete(`schedule:${schedule.id}`)">Delete</UiButton>
+                  <UiButton size="sm" @click="toggleSchedule(schedule)">{{ schedule.enabled ? 'Disable' : 'Enable' }}<span class="sr-only"> schedule for {{ getApplicationName(schedule.applicationId) }}</span></UiButton>
+                  <UiButton size="sm" icon="pencil" @click="openScheduleModal(schedule)">Edit<span class="sr-only"> schedule for {{ getApplicationName(schedule.applicationId) }}</span></UiButton>
+                  <UiButton v-if="confirmingDelete === `schedule:${schedule.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteSchedule(schedule.id)">Confirm delete<span class="sr-only"> schedule for {{ getApplicationName(schedule.applicationId) }}</span></UiButton>
+                  <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`schedule:${schedule.id}`" data-focus-after-remove @click="askDelete(`schedule:${schedule.id}`)">Delete<span class="sr-only"> schedule for {{ getApplicationName(schedule.applicationId) }}</span></UiButton>
                 </template>
               </div>
             </li>
@@ -353,9 +353,9 @@
                 </dl>
               </div>
               <div v-if="canAdmin" class="flex items-center gap-2">
-                <UiButton size="sm" icon="pencil" @click="openSLAModal(sla)">Edit</UiButton>
-                <UiButton v-if="confirmingDelete === `sla:${sla.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteSLA(sla.id)">Confirm delete</UiButton>
-                <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`sla:${sla.id}`" data-focus-after-remove @click="askDelete(`sla:${sla.id}`)">Delete</UiButton>
+                <UiButton size="sm" icon="pencil" @click="openSLAModal(sla)">Edit<span class="sr-only"> SLA for {{ getApplicationName(sla.applicationId) }}</span></UiButton>
+                <UiButton v-if="confirmingDelete === `sla:${sla.id}`" size="sm" variant="danger" data-confirm-delete @click="deleteSLA(sla.id)">Confirm delete<span class="sr-only"> SLA for {{ getApplicationName(sla.applicationId) }}</span></UiButton>
+                <UiButton v-else size="sm" variant="ghost" icon="trash-2" :data-delete-for="`sla:${sla.id}`" data-focus-after-remove @click="askDelete(`sla:${sla.id}`)">Delete<span class="sr-only"> SLA for {{ getApplicationName(sla.applicationId) }}</span></UiButton>
               </div>
             </li>
           </ul>
@@ -371,6 +371,7 @@
       @update:open="(open) => { if (!open) closeScheduleModal(); }"
     >
       <form id="a11y-schedule-form" class="space-y-4" @submit.prevent="saveSchedule">
+        <UiCallout v-if="scheduleError" tone="danger" role="alert">{{ scheduleError }}</UiCallout>
         <UiSelect
           id="schedule-app"
           v-model="scheduleForm.applicationId"
@@ -429,6 +430,7 @@
       @update:open="(open) => { if (!open) closeSLAModal(); }"
     >
       <form id="a11y-sla-form" class="space-y-4" @submit.prevent="saveSLA">
+        <UiCallout v-if="slaError" tone="danger" role="alert">{{ slaError }}</UiCallout>
         <UiSelect
           id="sla-app"
           v-model="slaForm.applicationId"
@@ -570,6 +572,9 @@ const blankSchedule = () => ({ applicationId: selectedApplicationId.value || '',
 const scheduleForm = ref(blankSchedule());
 
 const showSLAModal = ref(false);
+// Save errors are shown in their dialog: the page behind it is inert, so a message there is neither seen nor announced
+const scheduleError = ref('');
+const slaError = ref('');
 const editingSLA = ref(null);
 const blankSLA = () => ({ applicationId: '', targetScore: 90, targetLevel: 'AA', criticalIssuesThreshold: 0, highIssuesThreshold: 5 });
 const slaForm = ref(blankSLA());
@@ -799,6 +804,7 @@ const openScheduleModal = (schedule = null) => {
         enabled: schedule.enabled,
       }
     : blankSchedule();
+  scheduleError.value = '';
   showScheduleModal.value = true;
 };
 
@@ -818,6 +824,7 @@ const schedulePayload = () => {
 
 const saveSchedule = async () => {
   savingForm.value = true;
+  scheduleError.value = '';
   try {
     if (editingSchedule.value) {
       // An empty URL clears a custom URL so the application's URL is used
@@ -830,7 +837,7 @@ const saveSchedule = async () => {
     closeScheduleModal();
     await loadSchedules();
   } catch (error) {
-    fail(error, 'Could not save the schedule.');
+    scheduleError.value = apiErrorMessage(error, 'Could not save the schedule.');
   } finally {
     savingForm.value = false;
   }
@@ -839,6 +846,7 @@ const saveSchedule = async () => {
 const toggleSchedule = async (schedule) => {
   try {
     await apiClient.put(`/api/v1/accessibility-reports/schedules/${encodeURIComponent(schedule.id)}`, { enabled: !schedule.enabled });
+    showNotice(schedule.enabled ? 'Schedule disabled.' : 'Schedule enabled.', 'success');
     await loadSchedules();
   } catch (error) {
     fail(error, 'Could not change the schedule.');
@@ -873,6 +881,7 @@ const openSLAModal = (sla = null) => {
         highIssuesThreshold: sla.highIssuesThreshold,
       }
     : blankSLA();
+  slaError.value = '';
   showSLAModal.value = true;
 };
 
@@ -883,6 +892,7 @@ const closeSLAModal = () => {
 
 const saveSLA = async () => {
   savingForm.value = true;
+  slaError.value = '';
   try {
     const { applicationId, ...targets } = slaForm.value;
     if (editingSLA.value) {
@@ -895,7 +905,7 @@ const saveSLA = async () => {
     complianceSummary.value = null;
     await loadSLAs();
   } catch (error) {
-    fail(error, 'Could not save the SLA.');
+    slaError.value = apiErrorMessage(error, 'Could not save the SLA.');
   } finally {
     savingForm.value = false;
   }

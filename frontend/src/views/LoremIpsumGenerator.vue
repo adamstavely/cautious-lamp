@@ -14,7 +14,7 @@
           <UiSelect v-model="variant" label="Variant" :options="variantOptions" />
           <UiSelect v-model="type" label="Type" :options="typeOptions" />
           <UiInput v-model="count" type="number" label="Count" min="1" :max="MAX_COUNT" />
-          <UiButton variant="primary" icon="refresh-cw" class="w-full" @click="generate">Generate</UiButton>
+          <UiButton variant="primary" icon="refresh-cw" class="w-full" @click="generateAndAnnounce">Generate</UiButton>
         </div>
 
         <fieldset class="mt-6">
@@ -31,6 +31,7 @@
         <UiButton variant="secondary" icon="copy" :disabled="!output" @click="copyToClipboard">Copy</UiButton>
       </template>
       <InlineNotice :notice="notice" class="mb-4" @dismiss="clearNotice" />
+      <UiAnnounce :text="generatedAnnouncement" />
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <UiTextarea v-model="output" label="HTML code" readonly mono rows="10" class="resize-none" />
         <div>
@@ -48,7 +49,7 @@
 <script setup>
 import { ref, computed, onMounted, useId } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
-import { PageHero, PageSection, PageShell, UiButton, UiCheckbox, UiInput, UiPanel, UiSelect, UiTextarea } from '../components/ui';
+import { PageHero, PageSection, PageShell, UiAnnounce, UiButton, UiCheckbox, UiInput, UiPanel, UiSelect, UiTextarea } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
@@ -340,12 +341,28 @@ const generate = () => {
   outputIsHtml.value = hasHtmlOptions() && /</.test(result);
 };
 
+// The output is replaced without a word, so say what was made
+const UNIT_NAMES = {
+  paragraphs: ['paragraph', 'paragraphs'],
+  words: ['word', 'words'],
+  sentences: ['sentence', 'sentences'],
+  lists: ['list item', 'list items'],
+};
+const generatedAnnouncement = ref('');
+const generateAndAnnounce = () => {
+  generate();
+  const [one, many] = UNIT_NAMES[type.value] ?? ['item', 'items'];
+  generatedAnnouncement.value = `Generated ${count.value} ${count.value === 1 ? one : many}`;
+};
+
 // Output that is plain text (no HTML options, or a plain numbered list) is
 // escaped and its line breaks kept; HTML output was escaped while it was built.
 const previewHtml = computed(() => {
   const text = output.value;
   if (!text) return '';
-  if (outputIsHtml.value) return text;
+  // Sample links point nowhere: keep them out of the tab order in the preview
+  // (the HTML code keeps them as generated)
+  if (outputIsHtml.value) return text.replace(/<a href="#">/g, '<a href="#" tabindex="-1">');
   return text
     .split(/\n{2,}/)
     .map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`)

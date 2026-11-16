@@ -18,6 +18,8 @@
       </template>
 
       <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+      <UiAnnounce :text="searchAnnouncement" />
+      <UiAnnounce :text="selectionAnnouncement" />
 
       <UiCallout v-if="library.error.value" tone="danger" role="alert" class="mb-6" title="Uploaded icon sets couldn't be loaded">
         {{ library.error.value }}
@@ -68,7 +70,7 @@
 
       <div class="grid lg:grid-cols-content-aside gap-6 items-start">
         <UiPanel>
-          <div v-if="selectedIcons.length > 0" class="flex flex-wrap items-center gap-2 mb-4" role="status">
+          <div v-if="selectedIcons.length > 0" class="flex flex-wrap items-center gap-2 mb-4">
             <span class="text-sm text-ink-secondary">{{ selectedIcons.length }} selected</span>
             <UiButton size="sm" icon="copy" label="Copy selected" @click="copySelectedIcons" />
             <UiButton size="sm" icon="download" label="Download selected" @click="downloadSelectedIcons" />
@@ -248,7 +250,7 @@
 </template>
 
 <script setup>
-import { computed, createApp, h, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, createApp, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as LucideIcons from 'lucide-vue-next';
 import ColorPicker from '../components/ColorPicker.vue';
 import InlineNotice from '../components/InlineNotice.vue';
@@ -270,6 +272,7 @@ import {
   UiSpinner,
   UiSwatch,
   UiSwitch,
+  UiAnnounce,
 } from '../components/ui';
 import { svgDataUri } from '../components/workspaces/safeContent.js';
 import { useChartTheme } from '../composables/useChartTheme.js';
@@ -427,6 +430,27 @@ const filteredIcons = computed(() => {
   return icons;
 });
 
+// Said once typing pauses, not on every keystroke
+const searchAnnouncement = ref('');
+let searchAnnounceTimer;
+watch(searchQuery, () => {
+  clearTimeout(searchAnnounceTimer);
+  searchAnnounceTimer = setTimeout(() => {
+    const total = currentSet.value?.icons.length ?? 0;
+    searchAnnouncement.value = `${filteredIcons.value.length} of ${total} icons`;
+  }, 400);
+});
+onBeforeUnmount(() => clearTimeout(searchAnnounceTimer));
+
+const selectionAnnouncement = ref('');
+watch(
+  () => selectedIcons.value.length,
+  (count, previous) => {
+    if (count > 0) selectionAnnouncement.value = `${count} selected`;
+    else if (previous > 0) selectionAnnouncement.value = 'Selection cleared';
+  },
+);
+
 const categoriesWithCounts = computed(() => {
   const counts = {};
   for (const icon of currentSet.value?.icons || []) counts[icon.category] = (counts[icon.category] || 0) + 1;
@@ -491,7 +515,7 @@ const copyIcon = async (icon) => {
   }
 };
 
-const downloadIcon = (icon) => {
+const saveIconFile = (icon) => {
   const blob = new Blob([customizeSvg(icon)], { type: 'image/svg+xml' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -501,6 +525,11 @@ const downloadIcon = (icon) => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+};
+
+const downloadIcon = (icon) => {
+  saveIconFile(icon);
+  showNotice(`Downloaded ${icon.name}.svg.`, 'success');
 };
 
 const copySelectedIcons = async () => {
@@ -514,9 +543,12 @@ const copySelectedIcons = async () => {
 };
 
 const downloadSelectedIcons = () => {
-  selectedIcons.value.forEach((icon, index) => {
-    setTimeout(() => downloadIcon(icon), index * 100); // browsers drop downloads started together
+  const icons = [...selectedIcons.value];
+  if (icons.length === 0) return;
+  icons.forEach((icon, index) => {
+    setTimeout(() => saveIconFile(icon), index * 100); // browsers drop downloads started together
   });
+  showNotice(`Downloaded ${icons.length} ${icons.length === 1 ? 'icon' : 'icons'}.`, 'success');
 };
 
 const resetCustomizer = () => {

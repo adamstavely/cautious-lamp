@@ -163,6 +163,8 @@ const copyAltText = async () => {
   try {
     await navigator.clipboard.writeText(altText.value);
     copied.value = true;
+    // The button's "Copied!" is not announced on its own
+    showNotice('Alt text copied to the clipboard.', 'success');
     setTimeout(() => {
       copied.value = false;
     }, 2000);

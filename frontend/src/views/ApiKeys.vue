@@ -83,10 +83,11 @@
     </PageSection>
 
     <AdminDialog
-      v-model="createOpen"
+      :model-value="createOpen"
       :title="created ? (created.rotated ? 'Key rotated' : 'Key created') : 'Create API key'"
       :persistent="saving"
       :max-width="620"
+      @update:model-value="requestCreateOpen"
     >
       <!-- After creating: the one time the key is shown -->
       <div v-if="created" class="flex flex-col gap-4">
@@ -104,6 +105,16 @@
         <p class="text-ink-secondary">
           Send it as <UiCode>Authorization: Bearer &lt;key&gt;</UiCode>.
         </p>
+        <!-- Escape, the close button or Done before copying: ask first, as the key can't be shown again -->
+        <UiCallout v-if="confirmingClose" tone="danger" role="alert" title="The key hasn't been copied">
+          Once this closes, the key can't be shown again. Closing again also closes it without copying.
+          <template #actions>
+            <div class="flex flex-wrap items-start gap-2">
+              <UiButton ref="keepOpenButton" size="sm" @click="keepOpen">Keep open</UiButton>
+              <UiButton size="sm" variant="danger" @click="closeWithoutCopying">Close without copying</UiButton>
+            </div>
+          </template>
+        </UiCallout>
       </div>
 
       <form v-else :id="formId" class="flex flex-col gap-5" novalidate @submit.prevent="submit">
@@ -135,7 +146,7 @@
       </form>
 
       <template #actions>
-        <UiButton v-if="created" variant="primary" @click="createOpen = false">Done</UiButton>
+        <UiButton v-if="created" variant="primary" @click="requestCreateOpen(false)">Done</UiButton>
         <template v-else>
           <UiButton :disabled="saving" @click="createOpen = false">Cancel</UiButton>
           <UiButton type="submit" :form="formId" variant="primary" :loading="saving">
@@ -271,6 +282,37 @@ const scopesError = ref('');
 const formError = ref('');
 const created = ref(null);
 const copyStatus = ref('');
+// Whether the one-time key was copied, and whether closing is waiting on "Close without copying"
+const copied = ref(false);
+const confirmingClose = ref(false);
+const keepOpenButton = ref(null);
+
+/** The dialog asks to open or close (Escape, its close button, Done) */
+const requestCreateOpen = (open) => {
+  if (open) {
+    createOpen.value = true;
+    return;
+  }
+  // Asked once; asking to close again while it waits is the answer (and a
+  // browser closes a modal dialog on a second Escape whatever the page says)
+  if (created.value && !copied.value && !confirmingClose.value) {
+    confirmingClose.value = true;
+    // The question has just been rendered: the safe answer gets focus
+    nextTick(() => focusSoon(keepOpenButton.value));
+    return;
+  }
+  createOpen.value = false;
+};
+
+const keepOpen = () => {
+  confirmingClose.value = false;
+  focusSoon('#api-key-value');
+};
+
+const closeWithoutCopying = () => {
+  confirmingClose.value = false;
+  createOpen.value = false;
+};
 
 const openCreate = () => {
   Object.assign(form, { name: '', expiresInDays: '90', access: 'default', scopes: [] });
@@ -279,6 +321,8 @@ const openCreate = () => {
   formError.value = '';
   created.value = null;
   copyStatus.value = '';
+  copied.value = false;
+  confirmingClose.value = false;
   createOpen.value = true;
 };
 
@@ -287,6 +331,8 @@ watch(createOpen, (open) => {
   if (!open) {
     created.value = null;
     copyStatus.value = '';
+    copied.value = false;
+    confirmingClose.value = false;
   }
 });
 
@@ -314,9 +360,12 @@ const submit = async () => {
 };
 
 const copyKey = async () => {
-  copyStatus.value = (await copyText(created.value?.apiKey ?? ''))
-    ? 'Key copied to the clipboard.'
-    : "Couldn't copy. Select the key and copy it yourself.";
+  const ok = await copyText(created.value?.apiKey ?? '');
+  copyStatus.value = ok ? 'Key copied to the clipboard.' : "Couldn't copy. Select the key and copy it yourself.";
+  if (ok) {
+    copied.value = true;
+    confirmingClose.value = false;
+  }
 };
 
 // ---------- Rotate ----------
@@ -344,6 +393,8 @@ const rotate = async () => {
     showNotice(`Rotated ${key.name}.`, 'success');
     await loadKeys();
     copyStatus.value = '';
+    copied.value = false;
+    confirmingClose.value = false;
     created.value = { apiKey: result.newApiKey, rotated: true };
     createOpen.value = true;
     focusSoon('#api-key-value');

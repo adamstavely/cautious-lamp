@@ -3,6 +3,7 @@ export { default as PageHero } from './PageHero.vue';
 export { default as PageSection } from './PageSection.vue';
 export { default as PageShell } from './PageShell.vue';
 export { default as SpotArt } from './SpotArt.vue';
+export { default as UiAnnounce } from './UiAnnounce.vue';
 export { default as UiButton } from './UiButton.vue';
 export { default as UiCallout } from './UiCallout.vue';
 export { default as UiCard } from './UiCard.vue';

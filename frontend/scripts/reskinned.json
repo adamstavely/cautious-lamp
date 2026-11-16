@@ -82,6 +82,7 @@
     "src/components/tokens/TokenList.vue",
     "src/components/tokens/TokenPreviewCard.vue",
     "src/components/tokens/TokenSpacingBar.vue",
+    "src/components/ui/UiAnnounce.vue",
     "src/components/visual-regression/VrNotificationSettings.vue",
     "src/components/workspaces/ConfirmDialog.vue",
     "src/components/workspaces/ResourceFormDialog.vue",

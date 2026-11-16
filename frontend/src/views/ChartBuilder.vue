@@ -426,7 +426,8 @@
               {{ axeScanRunning ? 'Scanning...' : 'Run accessibility check' }}
             </UiButton>
 
-            <div v-if="axeScanResults" class="mt-4 flex flex-col gap-2" role="status">
+            <UiAnnounce :text="axeScanAnnouncement" />
+            <div v-if="axeScanResults" class="mt-4 flex flex-col gap-2">
               <UiCallout v-if="axeScanResults.error" tone="warning" title="Scan error">{{ axeScanResults.error }}</UiCallout>
               <UiCallout
                 v-for="(violation, index) in axeScanResults.violations"
@@ -635,7 +636,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick, h } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
-  PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiChip, UiInput, UiPanel, UiSelect, UiTable, UiTextarea,
+  PageHero, PageSection, PageShell, UiAnnounce, UiButton, UiCallout, UiCheckbox, UiChip, UiInput, UiPanel, UiSelect, UiTable, UiTextarea,
 } from '../components/ui';
 import UiChoiceCards from '../components/ui/UiChoiceCards.vue';
 import { useChartTheme, rgbToHex } from '../composables/useChartTheme.js';
@@ -1481,6 +1482,14 @@ const canExport = computed(() => {
 // axe-core Integration
 const axeScanRunning = ref(false);
 const axeScanResults = ref(null);
+// The results list appears silently: say the outcome in one line
+const axeScanAnnouncement = computed(() => {
+  const results = axeScanResults.value;
+  if (!results) return '';
+  if (results.error) return `Accessibility check could not run: ${results.error}`;
+  const count = results.violations?.length ?? 0;
+  return count ? `Accessibility check found ${count} ${count === 1 ? 'violation' : 'violations'}` : 'Accessibility check found no violations';
+});
 
 // Generate data table HTML for export
 const generateDataTableHTMLHeaders = () => {

@@ -33,7 +33,7 @@
               type="checkbox"
               :checked="rule.enabled"
               :disabled="!canAdmin || togglingId === rule.id"
-              :aria-label="`${rule.enabled ? 'Disable' : 'Enable'} ${rule.name}`"
+              :aria-label="`Enabled: ${rule.name}`"
               class="mt-1 accent-accent"
               @change="toggleRule(rule, $event.target.checked)"
             />
@@ -255,7 +255,7 @@
                   {{ testing ? 'Testing…' : 'Test' }}
                 </UiButton>
                 <p v-if="!canAdmin" class="text-xs text-ink-muted">Testing rules needs admin:governance.</p>
-                <div v-if="testResult" class="space-y-2" role="status">
+                <div v-if="testResult" class="space-y-2">
                   <p class="text-sm text-ink-strong">
                     Result: <strong>{{ OUTCOME_LABELS[testResult.outcome] }}</strong>
                     <span v-if="testResult.reason" class="text-ink-secondary"> — {{ testResult.reason }}</span>
@@ -269,6 +269,8 @@
                 </div>
               </div>
             </details>
+            <!-- Outside the details (and always there) so the result is announced when it arrives -->
+            <UiAnnounce :text="testSummary" />
 
             <div class="flex flex-wrap items-center gap-2">
               <UiButton v-if="canAdmin" type="submit" variant="primary" :loading="saving">
@@ -333,6 +335,7 @@ import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
   PageShell,
+  UiAnnounce,
   UiButton,
   UiCallout,
   UiCheckbox,
@@ -433,6 +436,13 @@ const ruleList = ref(null);
 const addRuleButton = ref(null);
 const testing = ref(false);
 const testResult = ref(null);
+// What a test found, for screen readers: the outcome, its reason and how many findings
+const testSummary = computed(() => {
+  if (!testResult.value) return '';
+  const { outcome, reason, checks = [] } = testResult.value;
+  const findings = `${checks.length} finding${checks.length === 1 ? '' : 's'}`;
+  return `Test result: ${OUTCOME_LABELS[outcome] ?? outcome}${reason ? ` — ${reason}` : ''}. ${findings}.`;
+});
 const testSample = ref({ html: '', css: '', javascript: '' });
 
 const importInput = ref(null);

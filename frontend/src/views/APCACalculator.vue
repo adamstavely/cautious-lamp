@@ -73,6 +73,7 @@
             <div class="flex flex-col gap-3 w-full py-2">
               <div><UiButton variant="primary" icon="calculator" @click="calculateColor">Calculate color</UiButton></div>
               <InlineNotice :notice="notice" @dismiss="clearNotice" />
+              <UiAnnounce :text="resultAnnouncement" />
             </div>
           </template>
         </UiPanel>
@@ -127,7 +128,7 @@
 import { ref, computed, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import { useNotice } from '../composables/useNotice.js';
-import { PageHero, PageSection, PageShell, UiButton, UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwatch, UiSwitch } from '../components/ui';
+import { PageHero, PageSection, PageShell, UiAnnounce, UiButton, UiInput, UiPanel, UiRange, UiSegmented, UiSelect, UiSwatch, UiSwitch } from '../components/ui';
 import { apcach, crToBg, crToFg, maxChroma, apcachToCss, setContrast, setChroma, setHue } from 'apcach';
 
 const { notice, showNotice, clearNotice } = useNotice();
@@ -214,6 +215,14 @@ const syncInputs = (color) => {
   if (typeof color.hue === 'number') hue.value = Math.round(color.hue * 10) / 10;
 };
 
+// The result section appears (or changes) without a word, so say what was found
+const resultAnnouncement = ref('');
+const announceResult = (verb) => {
+  const cr = Number(calculatedColor.value?.contrastConfig?.cr ?? contrastRatio.value);
+  const contrast = contrastModel.value === 'apca' ? `Lc ${Math.round(Math.abs(cr) * 10) / 10}` : `contrast ${Math.round(cr * 10) / 10}:1`;
+  resultAnnouncement.value = `${verb}: ${calculatedColorHex.value}, ${contrast}`;
+};
+
 const calculateColor = () => {
   const cr = Number(contrastRatio.value);
   const c = Number(chroma.value);
@@ -259,6 +268,7 @@ const calculateColor = () => {
     calculatedColor.value = result;
     syncInputs(result);
     clearNotice();
+    announceResult('Calculated');
   } catch (error) {
     console.error('Error calculating color:', error);
     showNotice('Could not calculate a color. Please check your inputs.', 'error');
@@ -277,6 +287,7 @@ const adjustContrast = () => {
     const clampedContrast = clampContrast(current + delta);
     calculatedColor.value = setContrast(cloneColor(calculatedColor.value), clampedContrast);
     syncInputs(calculatedColor.value);
+    announceResult('Adjusted');
   } catch (error) {
     console.error('Error adjusting contrast:', error);
     showNotice('Could not adjust the contrast.', 'error');
@@ -290,6 +301,7 @@ const adjustChroma = () => {
   try {
     calculatedColor.value = setChroma(cloneColor(calculatedColor.value), (c) => Number(c) + delta);
     syncInputs(calculatedColor.value);
+    announceResult('Adjusted');
   } catch (error) {
     console.error('Error adjusting chroma:', error);
     showNotice('Could not adjust the chroma.', 'error');
@@ -304,6 +316,7 @@ const adjustHue = () => {
     // Hue is an angle: wrap it (apcach would clamp 370 to 360).
     calculatedColor.value = setHue(cloneColor(calculatedColor.value), wrapHue(Number(calculatedColor.value.hue) + delta));
     syncInputs(calculatedColor.value);
+    announceResult('Adjusted');
   } catch (error) {
     console.error('Error adjusting hue:', error);
     showNotice('Could not adjust the hue.', 'error');

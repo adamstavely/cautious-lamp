@@ -1,11 +1,18 @@
 <template>
   <Teleport to="body">
+    <!-- Errors interrupt (assertive); other messages are read when the reader is idle -->
+    <p class="sr-only" aria-live="assertive" aria-atomic="true">{{ urgentText }}</p>
+    <!-- Hovering or focusing a message holds every message until the pointer or focus leaves -->
     <TransitionGroup
       name="toast"
       tag="div"
       class="toast-stack"
       role="status"
       aria-live="polite"
+      @mouseenter="pause"
+      @mouseleave="resume"
+      @focusin="pause"
+      @focusout="resume"
     >
       <div
         v-for="toast in toasts"
@@ -29,24 +36,58 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { nextTick, ref, onMounted, onBeforeUnmount } from 'vue';
 
 const toasts = ref([]);
 let toastId = 0;
 let timeoutIds = new Map();
+/** Time left for each message that closes itself, so a pause can resume where it stopped */
+const remaining = new Map();
+const startedAt = new Map();
+let paused = false;
+const urgentText = ref('');
 
+const schedule = (id, ms) => {
+  remaining.set(id, ms);
+  startedAt.set(id, Date.now());
+  timeoutIds.set(id, setTimeout(() => removeToast(id), ms));
+};
+
+/**
+ * Errors stay until closed; other messages close themselves after `duration`
+ * ms (0 keeps them), unless the pointer or focus is on the stack.
+ */
 const showToast = (message, type = 'info', duration = 5000) => {
   const id = toastId++;
   toasts.value.push({ id, message, type });
-  
-  if (duration > 0) {
-    const timeoutId = setTimeout(() => {
-      removeToast(id);
-    }, duration);
-    timeoutIds.set(id, timeoutId);
+  if (type === 'error') {
+    urgentText.value = '';
+    nextTick(() => {
+      urgentText.value = message;
+    });
+  } else if (duration > 0) {
+    if (paused) remaining.set(id, duration);
+    else schedule(id, duration);
   }
-  
   return id;
+};
+
+const pause = () => {
+  if (paused) return;
+  paused = true;
+  timeoutIds.forEach((timeoutId, id) => {
+    clearTimeout(timeoutId);
+    remaining.set(id, Math.max(1000, remaining.get(id) - (Date.now() - startedAt.get(id))));
+  });
+  timeoutIds.clear();
+};
+
+const resume = (event) => {
+  // Moving between messages inside the stack isn't leaving it
+  if (event?.relatedTarget && event.currentTarget?.contains?.(event.relatedTarget)) return;
+  if (!paused) return;
+  paused = false;
+  remaining.forEach((ms, id) => schedule(id, ms));
 };
 
 const removeToast = (id) => {
@@ -60,6 +101,8 @@ const removeToast = (id) => {
     clearTimeout(timeoutId);
     timeoutIds.delete(id);
   }
+  remaining.delete(id);
+  startedAt.delete(id);
 };
 
 const toneFor = (type) => ({ error: 'danger', warning: 'warning', success: 'success' })[type] || 'info';
@@ -91,8 +134,9 @@ defineExpose({
 </script>
 
 <style scoped>
+/* Below the top bar, so messages never cover its notification and account buttons */
 .toast-stack {
-  @apply pointer-events-none fixed right-4 top-4 z-50 flex flex-col gap-2;
+  @apply pointer-events-none fixed right-4 top-topbar mt-2 z-50 flex flex-col gap-2 max-w-full;
 }
 .toast {
   @apply pointer-events-auto flex w-80 max-w-full items-start gap-3 rounded-tile border bg-surface-raised p-4 shadow-overlay;

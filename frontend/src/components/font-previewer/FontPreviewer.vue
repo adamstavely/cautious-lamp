@@ -1,6 +1,7 @@
 <template>
   <div>
     <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+    <UiAnnounce :text="resultsAnnouncement" />
 
     <PageSection title="Preview settings" description="Filter the library and set the text every card shows.">
       <template #actions>
@@ -27,7 +28,7 @@
     <PageSection v-if="comparisonFonts.length" title="Comparison" :description="`${comparisonFonts.length} of 3 families. Add a family from its card.`" divided>
       <template #actions>
         <UiButton v-if="comparisonFonts.length === 2" icon="columns-2" @click="startABTest(comparisonFonts[0], comparisonFonts[1])">A/B test</UiButton>
-        <UiButton variant="ghost" icon="x" @click="compareList = []">Clear</UiButton>
+        <UiButton variant="ghost" icon="x" @click="compareList = []">Clear comparison</UiButton>
       </template>
       <ComparisonView :comparison-fonts="comparisonFonts" :sample-text="sampleText" :toggle-compare="toggleCompare" />
     </PageSection>
@@ -45,14 +46,14 @@
 
     <PageSection v-if="recentFonts.length && !hasFilters" title="Recently viewed" divided>
       <template #actions>
-        <UiButton variant="ghost" icon="x" @click="clearRecentlyViewed">Clear</UiButton>
+        <UiButton variant="ghost" icon="x" @click="clearRecentlyViewed">Clear recently viewed</UiButton>
       </template>
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <FontCard v-for="font in recentFonts" :key="font.name" v-bind="cardProps(font)" @toggle-preview="quickPreview" @add-to-recently-viewed="addToRecentlyViewed" />
       </div>
     </PageSection>
 
-    <PageSection :title="hasFilters ? 'Results' : 'All fonts'" :description="`${filteredFonts.length} of ${fontData.length} ${fontData.length === 1 ? 'family' : 'families'}`" divided>
+    <PageSection :title="hasFilters ? 'Results' : 'All fonts'" :description="resultsSummary" divided>
       <template v-if="hasFilters" #actions>
         <UiButton variant="ghost" icon="x" @click="clearFilters">Clear filters</UiButton>
       </template>
@@ -148,13 +149,13 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, watchEffect } from 'vue'
+import { computed, onBeforeUnmount, ref, watch, watchEffect } from 'vue'
 import FontControls from './FontControls.vue'
 import FontCard from './FontCard.vue'
 import FontSample from './FontSample.vue'
 import ComparisonView from './ComparisonView.vue'
 import InlineNotice from '../InlineNotice.vue'
-import { PageSection, UiButton, UiChip, UiCodeBlock, UiDialog, UiEmptyState, UiInput, UiRange, UiSelect, UiTextarea } from '../ui'
+import { PageSection, UiAnnounce, UiButton, UiChip, UiCodeBlock, UiDialog, UiEmptyState, UiInput, UiRange, UiSelect, UiTextarea } from '../ui'
 import { loadFont } from '../../composables/useFontLoader.js'
 import { useLocalStorage } from '../../composables/useLocalStorage.js'
 import { useNotice } from '../../composables/useNotice.js'
@@ -217,6 +218,18 @@ const recentFonts = computed(() => recentlyViewed.value.slice(0, 8).map(byName).
 const recommendations = computed(() => pairingRecommendations(fontData, favorites.value))
 const compareFull = computed(() => compareList.value.length >= MAX_COMPARE)
 const exportCount = computed(() => new Set([...favorites.value, ...compareList.value]).size)
+
+// The count shown in the results heading, said once the filters settle
+const resultsSummary = computed(() => `${filteredFonts.value.length} of ${fontData.length} ${fontData.length === 1 ? 'family' : 'families'}`)
+const resultsAnnouncement = ref('')
+let resultsTimer
+watch([search, selectedTag, selectedScript, selectedWeight], () => {
+  clearTimeout(resultsTimer)
+  resultsTimer = setTimeout(() => {
+    resultsAnnouncement.value = resultsSummary.value
+  }, 400)
+})
+onBeforeUnmount(() => clearTimeout(resultsTimer))
 
 const weightOptions = Object.entries(WEIGHT_NAMES).map(([value, name]) => ({ value: Number(value), label: `${name} (${value})` }))
 
@@ -330,6 +343,7 @@ function download(fonts, filename) {
   link.download = filename
   link.click()
   URL.revokeObjectURL(url)
+  showNotice(`Downloaded ${filename}.`, 'success')
 }
 
 const exportFavorites = () => download(favoriteFonts.value, 'favorite-fonts.json')

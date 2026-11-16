@@ -430,8 +430,14 @@ const splitColorList = (text) => {
 
 const convertBulk = () => {
   const colors = splitColorList(bulkInput.value);
-  
+  if (colors.length === 0) {
+    bulkResults.value = '';
+    showNotice('Enter at least one color to convert, one per line.', 'error');
+    return;
+  }
+
   const results = [];
+  let invalid = 0;
   
   colors.forEach(colorInput => {
     try {
@@ -449,12 +455,17 @@ const convertBulk = () => {
       results.push(`  OKLCH: oklch(${fmt(okLch[0] * 100)}% ${fmt(okLch[1], 4)} ${fmt(okLch[2])}${alphaSuffix(alpha)})`);
       results.push('');
     } catch (error) {
+      invalid += 1;
       results.push(`${colorInput}: Invalid color`);
       results.push('');
     }
   });
   
   bulkResults.value = results.join('\n');
+  // The results fill in silently, so say how it went
+  const converted = colors.length - invalid;
+  const summary = `Converted ${converted} ${converted === 1 ? 'color' : 'colors'}${invalid ? ` (${invalid} not recognized)` : ''}.`;
+  showNotice(summary, invalid ? 'warning' : 'success');
 };
 
 const clearBulk = () => {

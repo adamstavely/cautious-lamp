@@ -30,6 +30,8 @@
       </div>
 
       <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+      <!-- The number of results after each filter change or page turn; always mounted so it is announced -->
+      <UiAnnounce :text="resultsAnnouncement" />
 
       <UiSpinner v-if="loading" label="Loading applications…" />
 
@@ -88,7 +90,7 @@
                   class="mt-1 -ml-3"
                   @click="confirmVersionUpdate(app)"
                 >
-                  Update to v{{ currentVersion }}
+                  Update<span class="sr-only"> {{ app.name }}</span> to v{{ currentVersion }}
                 </UiButton>
               </td>
               <td>
@@ -149,12 +151,12 @@
           </tbody>
         </UiTable>
         <nav v-if="pageCount > 1" class="app-pager" aria-label="Application pages">
-          <span class="text-sm text-ink-secondary" aria-live="polite">
+          <span class="text-sm text-ink-secondary">
             Showing {{ pageStart + 1 }}–{{ Math.min(pageStart + PAGE_SIZE, filteredApplications.length) }} of {{ filteredApplications.length }}
           </span>
           <div class="flex gap-2">
-            <UiButton size="sm" icon="chevron-left" :disabled="page === 1" @click="page -= 1">Previous</UiButton>
-            <UiButton size="sm" trailing-icon="chevron-right" :disabled="page === pageCount" @click="page += 1">Next</UiButton>
+            <UiButton ref="previousButton" size="sm" icon="chevron-left" :disabled="page === 1" @click="goToPage(page - 1)">Previous</UiButton>
+            <UiButton ref="nextButton" size="sm" trailing-icon="chevron-right" :disabled="page === pageCount" @click="goToPage(page + 1)">Next</UiButton>
           </div>
         </nav>
       </UiPanel>
@@ -208,7 +210,7 @@
                 :loading="updatingVersion === action.applicationId"
                 @click="updateApplicationVersion(action.applicationId, action.targetVersion)"
               >
-                Update
+                Update<span class="sr-only"> {{ action.applicationName }}</span>
               </UiButton>
             </li>
           </ul>
@@ -264,13 +266,14 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
   PageSection,
   PageShell,
+  UiAnnounce,
   UiButton,
   UiCallout,
   UiChip,
@@ -296,6 +299,7 @@ import { useAuth } from '../composables/useAuth.js';
 import { useConfirmDialog } from '../composables/useConfirmDialog.js';
 import { useNotice } from '../composables/useNotice.js';
 import apiClient, { apiErrorMessage } from '../services/api.js';
+import { focusSoon } from '../utils/focusAfterRemoval.js';
 import { compareVersions, parseVersion } from '../utils/semver.js';
 
 /**
@@ -386,6 +390,32 @@ watch(pageCount, (count) => {
   if (page.value > count) page.value = count;
 });
 
+// Screen readers hear how many applications a filter leaves, and which ones a page turn shows (WCAG 4.1.3)
+const resultsAnnouncement = ref('');
+const announce = async (text) => {
+  // Cleared first so the same count after another filter change is announced again
+  resultsAnnouncement.value = '';
+  await nextTick();
+  resultsAnnouncement.value = text;
+};
+const countText = () => {
+  const total = filteredApplications.value.length;
+  return total === 0 ? 'No applications' : `${total} application${total === 1 ? '' : 's'}`;
+};
+const rangeText = () =>
+  `Showing ${pageStart.value + 1} to ${Math.min(pageStart.value + PAGE_SIZE, filteredApplications.value.length)} of ${filteredApplications.value.length}`;
+const announceCount = () => announce(pageCount.value > 1 ? `${countText()}. ${rangeText()}` : countText());
+
+const previousButton = ref(null);
+const nextButton = ref(null);
+const goToPage = (target) => {
+  page.value = Math.min(Math.max(1, target), pageCount.value);
+  announce(rangeText());
+  // The button just used is disabled at either end: keep focus on the pager's other button
+  if (page.value === pageCount.value) focusSoon(previousButton.value);
+  else if (page.value === 1) focusSoon(nextButton.value);
+};
+
 const workspaceName = (id) => workspaces.value.find((ws) => ws.id === id)?.name ?? 'Another workspace';
 const isBehind = (version) => !!currentVersion.value && (!parseVersion(version) || compareVersions(version, currentVersion.value) < 0);
 
@@ -412,15 +442,23 @@ const loadApplications = async () => {
 let searchTimer;
 const reloadForFilters = () => {
   page.value = 1;
-  loadApplications().catch((error) => showNotice(apiErrorMessage(error, 'Applications could not be loaded.'), 'error'));
+  const mine = listRequest + 1;
+  loadApplications()
+    .then(() => {
+      // Only the latest request's count: an older answer arriving late is dropped
+      if (mine === listRequest) announceCount();
+    })
+    .catch((error) => showNotice(apiErrorMessage(error, 'Applications could not be loaded.'), 'error'));
 };
 watch([filterCapability, filterTeam, filterEnvironment], reloadForFilters);
+// After a pause in typing, so the count isn't read out for every keystroke
 watch(search, () => {
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(reloadForFilters, 300);
+  searchTimer = setTimeout(reloadForFilters, 400);
 });
 watch(scope, () => {
   page.value = 1;
+  announceCount();
 });
 onBeforeUnmount(() => clearTimeout(searchTimer));
 

@@ -34,6 +34,9 @@
           <UiCallout v-if="busy" tone="warning" role="status" title="The analyzer is busy">{{ busy }}</UiCallout>
 
           <UiCallout v-if="error" tone="danger" role="alert">{{ error }}</UiCallout>
+
+          <!-- Progress and the outcome, said briefly: an analysis can take minutes -->
+          <UiAnnounce :text="progressAnnouncement" />
         </div>
 
         <template #footer>
@@ -51,8 +54,8 @@
       </UiPanel>
     </PageSection>
 
-    <PageSection v-if="analysisResult && analysisResult.summary" title="Analysis results" divided>
-      <div class="space-y-6" role="status">
+    <PageSection v-if="analysisResult && analysisResult.summary" id="photosensitivity-results" title="Analysis results" divided>
+      <div class="space-y-6">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <UiStat label="Status" :icon="statusIcon" :tone="statusTone">
             <span class="capitalize">{{ analysisResult.summary.status }}</span>
@@ -100,9 +103,10 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { PageHero, PageSection, PageShell, UiButton, UiCallout, UiCheckbox, UiInput, UiPanel, UiStat } from '../components/ui';
+import { PageHero, PageSection, PageShell, UiAnnounce, UiButton, UiCallout, UiCheckbox, UiInput, UiPanel, UiStat } from '../components/ui';
 import UiFileDropzone from '../components/ui/UiFileDropZone.vue';
 import apiClient from '../services/api.js';
+import { focusSoon } from '../utils/focusAfterRemoval.js';
 
 const selectedFile = ref(null);
 const isAnalyzing = ref(false);
@@ -116,6 +120,7 @@ const enablePatternDetection = ref(true);
 // From GET /photosensitivity/verify: whether IRIS is installed (nothing is run)
 const irisStatus = ref(null);
 const irisUnavailable = computed(() => irisStatus.value?.installed === false);
+const progressAnnouncement = ref('');
 
 onMounted(async () => {
   try {
@@ -150,6 +155,7 @@ const analyzeVideo = async () => {
   error.value = null;
   busy.value = null;
   analysisResult.value = null;
+  progressAnnouncement.value = 'Uploading video…';
 
   try {
     const formData = new FormData();
@@ -169,18 +175,26 @@ const analyzeVideo = async () => {
       // The server gives IRIS up to 10 minutes (IRIS_TIMEOUT_MS), and an
       // admitted video may first wait in its queue (IRIS_MAX_QUEUED)
       timeout: 31 * 60 * 1000,
+      onUploadProgress: (event) => {
+        if (event.total && event.loaded >= event.total) progressAnnouncement.value = 'Analyzing video…';
+      },
     });
 
     if (!response.data?.summary) {
       throw new Error('The server returned no analysis summary.');
     }
     analysisResult.value = response.data;
+    const { summary } = response.data;
+    const failures = (summary.luminanceFailures || 0) + (summary.redFailures || 0) + (summary.patternFailures || 0);
+    progressAnnouncement.value = `Analysis complete: ${summary.status}, ${failures} ${failures === 1 ? 'failure' : 'failures'}`;
+    focusSoon('#photosensitivity-results h2');
   } catch (err) {
     const data = err.response?.data;
     const message = data?.message;
     if (data?.code === 'PHOTOSENSITIVITY_BUSY' || data?.code === 'PHOTOSENSITIVITY_QUOTA_EXCEEDED') {
       const seconds = Number(data.retryAfterSeconds) || Number(err.response.headers?.['retry-after']) || null;
       const wait = seconds ? `Try again in ${seconds} seconds.` : 'Try again shortly.';
+      progressAnnouncement.value = '';
       busy.value =
         data.code === 'PHOTOSENSITIVITY_QUOTA_EXCEEDED'
           ? `You already have as many analyses running as you're allowed. ${wait}`
@@ -198,6 +212,7 @@ const analyzeVideo = async () => {
     } else {
       error.value = err.message || 'Failed to analyze video. Make sure IRIS is installed and accessible.';
     }
+    progressAnnouncement.value = '';
     console.error('IRIS analysis error:', err);
   } finally {
     isAnalyzing.value = false;

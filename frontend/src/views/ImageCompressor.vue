@@ -57,7 +57,7 @@
               <img :src="previewUrl" :alt="`Preview of ${selectedFile?.name || 'the chosen image'}`" class="max-w-full max-h-64" />
             </div>
 
-            <dl v-if="compressedSize > 0" class="rounded-tile border border-line bg-surface-sunken p-4 space-y-2 text-sm" aria-live="polite">
+            <dl v-if="compressedSize > 0" class="rounded-tile border border-line bg-surface-sunken p-4 space-y-2 text-sm">
               <div class="flex items-center justify-between">
                 <dt class="text-ink-secondary">Original size:</dt>
                 <dd class="font-medium text-ink-strong">{{ formatFileSize(selectedFile?.size || 0) }}</dd>
@@ -280,10 +280,13 @@ const compressImage = async () => {
     imageWidth.value = width;
     imageHeight.value = height;
 
-    if (file.type !== result.type) {
-      showNotice(`Converted to ${EXTENSIONS[result.type]?.toUpperCase() || result.type} for compression.`, 'info');
-    } else if (result.size >= file.size) {
-      showNotice('The compressed image is not smaller than the original. Try a lower quality or smaller dimensions.', 'warning');
+    // The results list appears silently, so the outcome is also said as a notice
+    const saved = file.size ? Math.round(((file.size - result.size) / file.size) * 100) : 0;
+    const converted = file.type !== result.type ? ` Converted to ${EXTENSIONS[result.type]?.toUpperCase() || result.type} for compression.` : '';
+    if (result.size >= file.size) {
+      showNotice(`The compressed image (${formatFileSize(result.size)}) is not smaller than the original. Try a lower quality or smaller dimensions.${converted}`, 'warning');
+    } else {
+      showNotice(`Compressed to ${formatFileSize(result.size)} (${saved}% smaller).${converted}`, 'success');
     }
   } catch (error) {
     console.error('Compression error:', error);

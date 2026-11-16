@@ -8,6 +8,8 @@
     />
 
     <InlineNotice :notice="notice" class="mb-6" @dismiss="clearNotice" />
+    <!-- What a search or page turn found; always mounted so it is announced -->
+    <UiAnnounce :text="resultsAnnouncement" />
 
     <PageSection v-if="stats" title="Summary">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -20,7 +22,7 @@
 
     <PageSection title="Filters" :divided="!!stats">
       <UiPanel>
-        <form class="space-y-5" @submit.prevent="loadLogs">
+        <form class="space-y-5" @submit.prevent="search">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <UiInput v-model="filters.userId" label="User ID" placeholder="Filter by user ID" />
             <UiSelect v-model="filters.action" label="Action" :options="actionOptions" />
@@ -84,8 +86,8 @@
         <template v-if="total > 0" #footer>
           <span class="text-sm text-ink-secondary">Showing {{ offset + 1 }} to {{ Math.min(offset + logs.length, total) }} of {{ total }} results</span>
           <span class="flex gap-2">
-            <UiButton size="sm" icon="chevron-left" :disabled="offset === 0" @click="previousPage">Previous</UiButton>
-            <UiButton size="sm" trailing-icon="chevron-right" :disabled="offset + logs.length >= total" @click="nextPage">Next</UiButton>
+            <UiButton ref="previousButton" size="sm" icon="chevron-left" :disabled="offset === 0" @click="previousPage">Previous</UiButton>
+            <UiButton ref="nextButton" size="sm" trailing-icon="chevron-right" :disabled="offset + logs.length >= total" @click="nextPage">Next</UiButton>
           </span>
         </template>
       </UiPanel>
@@ -150,12 +152,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { nextTick, ref, onMounted } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
   PageSection,
   PageShell,
+  UiAnnounce,
   UiButton,
   UiChip,
   UiDialog,
@@ -169,6 +172,7 @@ import {
 } from '../components/ui';
 import { useNotice } from '../composables/useNotice.js';
 import { authHeaders } from '../services/api.js';
+import { focusSoon } from '../utils/focusAfterRemoval.js';
 
 const { notice, showNotice, clearNotice } = useNotice();
 
@@ -181,6 +185,9 @@ const offset = ref(0);
 const limit = ref(100);
 const stats = ref(null);
 const selectedLog = ref(null);
+const resultsAnnouncement = ref('');
+const previousButton = ref(null);
+const nextButton = ref(null);
 
 const filters = ref({
   userId: '',
@@ -208,7 +215,17 @@ const actionOptions = [
   { value: 'API_CALL', label: 'API Call' },
 ];
 
-const loadLogs = async () => {
+/** Screen readers hear what a search or page turn found (WCAG 4.1.3) */
+const announceResults = async () => {
+  resultsAnnouncement.value = '';
+  await nextTick();
+  resultsAnnouncement.value = total.value
+    ? `Showing ${offset.value + 1} to ${Math.min(offset.value + logs.value.length, total.value)} of ${total.value} results`
+    : 'No audit logs found';
+};
+
+/** announce: after a search or page turn, not on the first load */
+const loadLogs = async ({ announce = false } = {}) => {
   loading.value = true;
   try {
     const params = new URLSearchParams();
@@ -228,6 +245,7 @@ const loadLogs = async () => {
     const data = await response.json();
     logs.value = data.logs || [];
     total.value = data.total || 0;
+    if (announce) announceResults();
   } catch (error) {
     console.error('Failed to load audit logs:', error);
     showNotice('The audit logs could not be loaded.', 'error');
@@ -295,21 +313,31 @@ const clearFilters = () => {
     endDate: '',
   };
   offset.value = 0;
-  loadLogs();
+  loadLogs({ announce: true });
   loadStats();
 };
 
-const previousPage = () => {
+// A new search starts from the first page
+const search = () => {
+  offset.value = 0;
+  loadLogs({ announce: true });
+};
+
+// On the first or last page the button just used is disabled and would drop
+// focus to the page: move it to the pager's other button
+const previousPage = async () => {
   if (offset.value > 0) {
     offset.value = Math.max(0, offset.value - limit.value);
-    loadLogs();
+    await loadLogs({ announce: true });
+    if (offset.value === 0) focusSoon(nextButton.value);
   }
 };
 
-const nextPage = () => {
+const nextPage = async () => {
   if (offset.value + logs.value.length < total.value) {
     offset.value += limit.value;
-    loadLogs();
+    await loadLogs({ announce: true });
+    if (offset.value + logs.value.length >= total.value) focusSoon(previousButton.value);
   }
 };
 

@@ -1,6 +1,6 @@
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-    <UiInput v-model="model.name" label="Application name" required maxlength="100" placeholder="My Application" />
+    <UiInput v-model="model.name" label="Application name" required maxlength="100" placeholder="My Application" :error="errors.name" />
     <UiInput
       v-model="model.teamId"
       label="Team ID"
@@ -38,6 +38,8 @@ import { UiInput, UiSelect, UiTextarea } from '../ui';
 const model = defineModel({ type: Object, required: true });
 defineProps({
   showDesignSystemVersion: { type: Boolean, default: false },
+  /** Messages for fields the page validated, by field name (e.g. { name: 'Enter a name.' }) */
+  errors: { type: Object, default: () => ({}) },
 });
 
 const environmentOptions = [

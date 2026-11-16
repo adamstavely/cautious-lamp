@@ -66,7 +66,7 @@
                     <UiChip :tone="statusTone(component.status)">{{ component.status }}</UiChip>
                   </td>
                   <td class="whitespace-nowrap">
-                    <UiButton variant="ghost" size="sm" @click="analyzeComponent(component.componentId)">Analyze</UiButton>
+                    <UiButton variant="ghost" size="sm" @click="analyzeComponent(component.componentId)">Analyze<span class="sr-only"> {{ component.componentName }}</span></UiButton>
                   </td>
                 </tr>
               </tbody>
@@ -163,6 +163,7 @@
     <!-- Create/Edit Budget Modal -->
     <UiDialog v-model:open="budgetModalOpen" :title="editingBudget ? 'Edit budget' : 'Create performance budget'">
       <form id="performance-budget-form" class="space-y-4" @submit.prevent="saveBudget">
+        <UiCallout v-if="saveError" tone="danger" role="alert">{{ saveError }}</UiCallout>
         <UiInput v-model="budgetForm.name" label="Budget name" required placeholder="e.g., Bundle Size Budget" />
         <UiSelect
           v-model="budgetForm.metric"
@@ -292,7 +293,7 @@
 </template>
 
 <script setup>
-import { nextTick, ref, computed, onMounted } from 'vue';
+import { nextTick, ref, computed, onMounted, watch } from 'vue';
 import InlineNotice from '../components/InlineNotice.vue';
 import {
   PageHero,
@@ -371,6 +372,12 @@ const budgetModalOpen = computed({
   set: (open) => {
     if (!open) closeModal();
   },
+});
+
+// Shown inside the budget dialog (the page behind it is inert); each opening starts without it
+const saveError = ref('');
+watch(budgetModalOpen, (open) => {
+  if (open) saveError.value = '';
 });
 
 // Bundle Analysis Functions
@@ -561,6 +568,7 @@ const getSuggestedThreshold = (metric) => (metric === 'component-size' ? 50 : me
 const getSuggestedUnit = () => 'KB';
 
 const saveBudget = async () => {
+  saveError.value = '';
   try {
     // An emptied number field comes back as '': send no alert threshold
     const payload = {
@@ -572,11 +580,13 @@ const saveBudget = async () => {
     } else {
       await apiClient.post(`${API_BASE_URL}/performance/budgets`, payload);
     }
+    const wasEditing = Boolean(editingBudget.value);
     closeModal();
+    showNotice(wasEditing ? 'Budget updated' : 'Budget created', 'success');
     loadBudgets();
   } catch (error) {
     console.error('Error saving budget:', error);
-    showNotice('Error saving budget. Please try again.', 'error');
+    saveError.value = 'Error saving budget. Please try again.';
   }
 };
 
@@ -599,6 +609,7 @@ const deleteBudget = async (id) => {
   try {
     await apiClient.delete(`${API_BASE_URL}/performance/budgets/${id}`);
     await loadBudgets();
+    showNotice('Budget deleted', 'success');
     // Its Delete button went with it: focus the budget now in its place
     await nextTick();
     focusAfterRemoval(budgetList.value, index, { fallback: createBudgetButton.value });
