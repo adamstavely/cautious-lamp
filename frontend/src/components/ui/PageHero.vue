@@ -15,6 +15,9 @@
 </template>
 
 <script setup>
+import { watchEffect } from 'vue';
+import { useRoute } from 'vue-router';
+import { setPageTitle } from '../../utils/pageTitle.js';
 import SpotArt from './SpotArt.vue';
 
 /**
@@ -22,7 +25,7 @@ import SpotArt from './SpotArt.vue';
  * two sentences, optional actions, and a spot illustration. `page` is for
  * index pages, `tool` for tool and detail pages.
  */
-defineProps({
+const props = defineProps({
   title: { type: String, required: true },
   /** The section the page belongs to, or a short tagline */
   eyebrow: { type: String, default: '' },
@@ -33,6 +36,10 @@ defineProps({
   spot: { type: String, default: '' },
   size: { type: String, default: 'page', validator: (v) => ['page', 'tool'].includes(v) },
 });
+
+// The page's own name becomes the document title, so tabs and screen readers can tell pages apart
+const route = useRoute();
+watchEffect(() => setPageTitle(props.title, route?.path));
 </script>
 
 <style scoped>

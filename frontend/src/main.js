@@ -11,6 +11,7 @@ if (import.meta.env.VITE_OTEL_ENABLED !== 'false') {
 
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
+import { setPageTitle, titleFromPath } from './utils/pageTitle.js';
 import App from './App.vue';
 import AppIcon from './components/ui/AppIcon.vue';
 import './style.css';
@@ -855,6 +856,11 @@ const router = createRouter({
 
 // Every route except /login needs a signed-in user (docs/AUTH.md). Someone
 // who must change their password sees only /change-password until they do.
+// A title from the path until the page's hero names it properly (PageHero sets it)
+router.afterEach((to) => {
+  setPageTitle(titleFromPath(to.path), to.path);
+});
+
 router.beforeEach(async (to) => {
   let user = null;
   let unreachable = false;
