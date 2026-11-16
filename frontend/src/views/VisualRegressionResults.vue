@@ -546,7 +546,7 @@ const scrollToSelected = async () => {
   await nextTick();
   if (resultRefs.value[selectedIndex.value]) {
     resultRefs.value[selectedIndex.value].scrollIntoView({
-      behavior: 'smooth',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
       block: 'center',
     });
   }
