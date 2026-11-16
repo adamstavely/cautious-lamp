@@ -12,7 +12,7 @@
         :aria-describedby="describedBy"
         :aria-invalid="invalid || undefined"
         class="ui-control ui-input"
-        :class="[`ui-input-${size}`, { 'ui-input-has-icon': icon, 'ui-input-has-trailing': $slots.trailing, 'font-code': mono }]"
+        :class="[`ui-input-${size}`, { 'ui-input-color': type === 'color', 'ui-input-has-icon': icon, 'ui-input-has-trailing': $slots.trailing, 'font-code': mono }]"
         @input="onInput"
       />
       <span v-if="suffix" class="ui-input-suffix">{{ suffix }}</span>
@@ -81,6 +81,23 @@ const onInput = (event) => {
 }
 .ui-input.ui-input-has-trailing {
   @apply pr-12;
+}
+/* A colour input is all swatch: a text field's side padding left a sliver of
+   colour in narrow columns. At least a square the height of the field. */
+.ui-input.ui-input-color {
+  @apply min-w-11 p-1 cursor-pointer;
+}
+.ui-input.ui-input-sm.ui-input-color {
+  @apply min-w-8 p-0.5;
+}
+.ui-input-color::-webkit-color-swatch-wrapper {
+  @apply p-0;
+}
+.ui-input-color::-webkit-color-swatch {
+  @apply border-0 rounded-control;
+}
+.ui-input-color::-moz-color-swatch {
+  @apply border-0 rounded-control;
 }
 .ui-input-trailing {
   @apply absolute right-1.5 flex items-center;
