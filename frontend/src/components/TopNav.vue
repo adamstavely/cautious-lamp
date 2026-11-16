@@ -54,23 +54,28 @@
               @keydown.enter.prevent="selectSearchResult"
               class="search-input"
               aria-label="Search design system"
-              :aria-expanded="showSearchResults ? 'true' : 'false'"
-              aria-haspopup="listbox"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="top-search-results"
+              :aria-expanded="resultsOpen ? 'true' : 'false'"
+              :aria-activedescendant="resultsOpen && selectedSearchIndex >= 0 ? `top-search-option-${selectedSearchIndex}` : undefined"
             />
+            <UiAnnounce :text="resultsAnnouncement" />
             <button
               v-if="searchQuery"
               type="button"
+              ref="filtersToggle"
               @click="showAdvancedFilters = !showAdvancedFilters"
               class="search-filters-toggle"
               title="Advanced filters"
               aria-label="Advanced filters"
               :aria-expanded="showAdvancedFilters ? 'true' : 'false'"
             >
-              <AppIcon name="sliders-horizontal" class="text-sm" />
+              <AppIcon name="sliders-horizontal" class="text-base" />
             </button>
 
-            <!-- Advanced filters panel -->
-            <div v-if="showAdvancedFilters" class="popover p-4">
+            <!-- Advanced filters panel; Escape closes it and returns to its button -->
+            <div v-if="showAdvancedFilters" class="popover p-4" @keydown.escape.stop="closeFilters">
               <div class="space-y-3">
                 <div>
                   <p class="filter-label">Type</p>
@@ -124,12 +129,7 @@
             </div>
 
             <!-- Search results dropdown -->
-            <div
-              v-if="showSearchResults && (searchQuery.trim() || filteredSearchResults.length > 0)"
-              class="popover overflow-hidden"
-              role="listbox"
-              aria-label="Search results"
-            >
+            <div v-if="resultsOpen" class="popover overflow-hidden">
               <div class="overflow-y-auto max-h-96">
                 <div v-if="filteredSearchResults.length === 0 && searchQuery.trim()" class="p-8 text-center">
                   <AppIcon name="search-x" class="text-5xl mb-3 text-ink-disabled" />
@@ -137,16 +137,19 @@
                   <p class="text-xs text-ink-muted">Try a different search term</p>
                 </div>
 
-                <div v-else-if="filteredSearchResults.length > 0" class="divide-y divide-line">
+                <!-- The input owns focus; options are reached with the arrow keys (aria-activedescendant), not Tab -->
+                <div v-else-if="filteredSearchResults.length > 0" id="top-search-results" class="divide-y divide-line" role="listbox" aria-label="Search results">
                   <router-link
                     v-for="(result, index) in filteredSearchResults"
+                    :id="`top-search-option-${index}`"
                     :key="result.id"
                     :to="result.path"
                     @click="finishSearch"
                     class="popover-row block px-4 py-3"
                     :class="{ 'popover-row-on': selectedSearchIndex === index }"
                     role="option"
-                    :aria-selected="selectedSearchIndex === index"
+                    tabindex="-1"
+                    :aria-selected="selectedSearchIndex === index ? 'true' : 'false'"
                   >
                     <div class="flex items-start gap-3">
                       <div class="result-icon">
@@ -347,13 +350,13 @@
 
 <script setup>
 import { usePhoneNav } from '../composables/usePhoneNav.js';
-import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '../composables/useAuth.js';
 import { apiErrorMessage, authHeaders } from '../services/api.js';
 import { canAccessPath } from '../router/rbacGuards.js';
 import { buildSearchIndex } from '../router/searchIndex.js';
-import { UiButton, UiChip, UiLink, UiSpinner } from './ui';
+import { UiAnnounce, UiButton, UiChip, UiLink, UiSpinner } from './ui';
 import { formatRelativeTime, useNotifications } from '../composables/useNotifications.js';
 
 const router = useRouter();
@@ -365,6 +368,15 @@ const searchQuery = ref('');
 const showSearchResults = ref(false);
 const showAdvancedFilters = ref(false);
 const selectedSearchIndex = ref(-1);
+const filtersToggle = ref(null);
+const closeFilters = () => {
+  showAdvancedFilters.value = false;
+  filtersToggle.value?.focus();
+};
+// Keep the option picked with the arrow keys in view
+watch(selectedSearchIndex, (index) => {
+  if (index >= 0) nextTick(() => document.getElementById(`top-search-option-${index}`)?.scrollIntoView({ block: 'nearest' }));
+});
 const searchFilters = ref({
   type: [],
   category: [],
@@ -403,6 +415,15 @@ const filteredSearchResults = computed(() => {
            item.tags.some(tag => tag.toLowerCase().includes(query)) ||
            item.category.toLowerCase().includes(query);
   }).slice(0, 8); // Limit to 8 results
+});
+
+/** The results popup is on screen (what the combobox's aria-expanded reports) */
+const resultsOpen = computed(() => showSearchResults.value && (searchQuery.value.trim() !== '' || filteredSearchResults.value.length > 0));
+/** Read out once the results settle: how many there are, or that there are none */
+const resultsAnnouncement = computed(() => {
+  if (!resultsOpen.value || !searchQuery.value.trim()) return '';
+  const n = filteredSearchResults.value.length;
+  return n ? `${n} result${n === 1 ? '' : 's'}` : 'No results found';
 });
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
@@ -788,8 +809,9 @@ onBeforeUnmount(() => {
   @apply w-full h-10 pl-10 pr-10 rounded-pill border border-solid border-line bg-surface-sunken text-sm text-ink placeholder:text-ink-muted transition-colors;
   @apply hover:border-line-control-hover focus:outline focus:outline-2 focus:outline-offset-0 outline-focus focus:border-transparent focus:bg-surface-control;
 }
+/* At least 24px, the WCAG 2.5.8 minimum */
 .search-filters-toggle {
-  @apply absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-control text-ink-muted hover:bg-fill-hover hover:text-ink-strong;
+  @apply absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center min-w-6 min-h-6 p-1 rounded-control text-ink-muted hover:bg-fill-hover hover:text-ink-strong;
   @apply focus-visible:outline focus-visible:outline-2 outline-focus;
 }
 
@@ -881,7 +903,9 @@ onBeforeUnmount(() => {
 .account-menu {
   @apply fixed left-2 right-2 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72 z-50 overflow-hidden rounded-card border border-line bg-surface-overlay shadow-overlay;
 }
+/* The fill alone is too faint to see, so focus also draws the ring (inset, inside the menu) */
 .user-menu-item {
-  @apply w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-ink hover:bg-fill-hover focus:bg-fill-hover focus:outline-none;
+  @apply w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left text-ink hover:bg-fill-hover focus:bg-fill-hover;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 outline-focus;
 }
 </style>

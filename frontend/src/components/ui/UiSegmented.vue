@@ -79,7 +79,8 @@ const onKey = async (event, index) => {
   @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 outline-focus;
   @apply disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-ink-secondary;
 }
+/* The selected option also gets the control border, since its fill alone is barely distinct from the track (WCAG 1.4.11) */
 .ui-segment-on {
-  @apply bg-surface-raised text-ink-strong shadow-control;
+  @apply bg-surface-raised text-ink-strong shadow-control ring-1 ring-inset ring-line-control;
 }
 </style>

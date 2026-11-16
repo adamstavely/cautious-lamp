@@ -36,14 +36,15 @@ const hintId = `switch-${useId()}-hint`;
   @apply inline-flex items-start gap-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed;
   @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 outline-focus rounded-control;
 }
+/* Off: the control border (at least 3:1) outlines the track, so the switch can be seen and read as off (WCAG 1.4.11) */
 .ui-switch-track {
-  @apply relative mt-0.5 inline-flex shrink-0 w-9 h-5 rounded-pill bg-fill-strong transition-colors;
+  @apply relative mt-0.5 inline-flex shrink-0 w-9 h-5 rounded-pill border border-solid border-line-control bg-fill-strong transition-colors;
 }
 .ui-switch-on {
-  @apply bg-accent;
+  @apply border-accent bg-accent;
 }
 .ui-switch-thumb {
-  @apply absolute top-0.5 left-0.5 w-4 h-4 rounded-pill bg-surface-raised shadow-control transition-transform;
+  @apply absolute top-px left-px w-4 h-4 rounded-pill bg-surface-raised shadow-control transition-transform;
 }
 .ui-switch-on .ui-switch-thumb {
   @apply translate-x-4;
