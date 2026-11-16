@@ -51,6 +51,19 @@ const DEFAULT_ROWS: Record<string, any>[] = ${scriptSafeJson(rowsData, 2)};
 const DEFAULT_CONFIG: TableConfig = ${scriptSafeJson(config, 2)};
 const defaultGetRowId = (row: Record<string, any>, index: number): RowId => row.id ?? index;
 
+// Cells are typed text, so "false", "no" and "0" must read as false.
+const toBool = (value: unknown): boolean =>
+  value === true || /^(true|yes|y|1)$/i.test(String(value ?? '').trim());
+
+// Numbers and dates compare by value, booleans by toBool, and text
+// numeric-aware so "Item 2" sorts before "Item 10".
+const compareValues = (a: unknown, b: unknown, type: Column['type']): number => {
+  if (type === 'number') return (Number(a) || 0) - (Number(b) || 0);
+  if (type === 'date') return (new Date(a as any).getTime() || 0) - (new Date(b as any).getTime() || 0);
+  if (type === 'boolean') return Number(toBool(a)) - Number(toBool(b));
+  return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+};
+
 export const DataTable: React.FC<DataTableProps> = ({
   columns = DEFAULT_COLUMNS,
   rows = DEFAULT_ROWS,
@@ -86,7 +99,7 @@ export const DataTable: React.FC<DataTableProps> = ({
     // Apply filters
     if (config.enableFiltering) {
       Object.keys(filters).forEach(columnName => {
-        const filterValue = filters[columnName]?.toLowerCase() || '';
+        const filterValue = String(filters[columnName] || '').toLowerCase();
         if (filterValue) {
           result = result.filter(({ row }) => {
             const cellValue = String(row[columnName] ?? '').toLowerCase();
@@ -100,26 +113,10 @@ export const DataTable: React.FC<DataTableProps> = ({
     if (config.enableSorting && sortColumn) {
       const column = columns.find(c => c.name === sortColumn);
       if (column && column.sortable) {
-        result = [...result].sort(({ row: a }, { row: b }) => {
-          const aVal = a[sortColumn] ?? '';
-          const bVal = b[sortColumn] ?? '';
-          
-          if (column.type === 'number') {
-            const aNum = Number(aVal) || 0;
-            const bNum = Number(bVal) || 0;
-            return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
-          } else if (column.type === 'date') {
-            const aDate = new Date(aVal).getTime() || 0;
-            const bDate = new Date(bVal).getTime() || 0;
-            return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
-          } else {
-            const aStr = String(aVal).toLowerCase();
-            const bStr = String(bVal).toLowerCase();
-            return sortDirection === 'asc' 
-              ? aStr.localeCompare(bStr)
-              : bStr.localeCompare(aStr);
-          }
-        });
+        const direction = sortDirection === 'asc' ? 1 : -1;
+        result = [...result].sort(
+          ({ row: a }, { row: b }) => direction * compareValues(a[sortColumn], b[sortColumn], column.type)
+        );
       }
     }
     
@@ -172,7 +169,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
   const formatCellValue = (value: any, type: string) => {
     if (value === null || value === undefined || value === '') return '-';
-    if (type === 'boolean') return value ? 'Yes' : 'No';
+    if (type === 'boolean') return toBool(value) ? 'Yes' : 'No';
     return value;
   };
 

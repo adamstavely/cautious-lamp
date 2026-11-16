@@ -3,6 +3,8 @@
 //      prop changed identity, so a parent rerender or sort lost it.
 // R24: filtering from a later page showed nothing, and shrinking the data or
 //      raising the page size left the table on a page that no longer existed.
+// Booleans and sorting match the preview: typed "false"/"no"/"0" cells read
+// as No, and text sorts numeric-aware ("Item 2" before "Item 10").
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -154,6 +156,44 @@ describe('generated React DataTable', () => {
       await act(() => setConfig({ ...CONFIG, rowsPerPage: 5 }));
       expect(lastCells()).toEqual(['Row 5', 'Row 6']);
       expect(button('Next').disabled).toBe(true);
+    });
+  });
+  describe('matches the preview', () => {
+    const COLUMNS = [
+      { name: 'Name', type: 'text', sortable: true, filterable: true },
+      { name: 'Active', type: 'boolean', sortable: true, filterable: true },
+    ];
+    const ROWS = [
+      { id: 1, Name: 'Item 10', Active: 'false' },
+      { id: 2, Name: 'Item 2', Active: 'yes' },
+      { id: 3, Name: 'item 1', Active: '0' },
+      { id: 4, Name: 'Item 20', Active: 'true' },
+      { id: 5, Name: 'Item 3', Active: 'no' },
+      { id: 6, Name: 'Item 4', Active: 'YES' },
+      { id: 7, Name: 'Item 5', Active: true },
+      { id: 8, Name: 'Item 6', Active: '' },
+    ];
+    const config = { ...CONFIG, enablePagination: false, selectionMode: 'none' };
+    const cells = (index) => $('tbody tr').map((tr) => tr.children[index].textContent);
+    const renderTable = () => render(React.createElement(DataTable, { config, rows: ROWS, columns: COLUMNS }));
+
+    it('reads typed false/no/0 as No and true/yes as Yes', async () => {
+      await renderTable();
+      expect(cells(1)).toEqual(['No', 'Yes', 'No', 'Yes', 'No', 'Yes', 'Yes', '-']);
+    });
+
+    it('sorts text numeric-aware and case-insensitively', async () => {
+      await renderTable();
+      await click(header('Name'));
+      expect(cells(0)).toEqual(['item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5', 'Item 6', 'Item 10', 'Item 20']);
+      await click(header('Name'));
+      expect(cells(0)).toEqual(['Item 20', 'Item 10', 'Item 6', 'Item 5', 'Item 4', 'Item 3', 'Item 2', 'item 1']);
+    });
+
+    it('sorts booleans by their meaning, not their text', async () => {
+      await renderTable();
+      await click(header('Active'));
+      expect(cells(1)).toEqual(['No', 'No', 'No', '-', 'Yes', 'Yes', 'Yes', 'Yes']);
     });
   });
 });
